@@ -8,19 +8,25 @@ on:
 
 jobs:
   verify:
-    name: Verify Lean Proofs
+    name: Verify ACI Sovereign Proofs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Elan
-        run: |
-          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
-          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+      - name: Install Lean4 via Elan
+        uses: leanprover/lean4-action@v1
 
-      - name: Build and Verify
+      - name: Cache Mathlib
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan
+            .lake
+          key: ${{ runner.os }}-lake-${{ hashFiles('lake-manifest.json') }}
+
+      - name: Build and Verify All Proofs
         run: lake build
 
-      - name: Report Success
-        run: echo "ACI SOVEREIGN PROOFS VERIFIED"
+      - name: Seal Confirmation
+        run: echo "ACI SOVEREIGN PROOFS VERIFIED AND SEALED"
