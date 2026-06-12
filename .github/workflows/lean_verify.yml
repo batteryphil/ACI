@@ -1,0 +1,26 @@
+name: ACI Lean Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  verify:
+    name: Verify Lean Proofs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Elan
+        run: |
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Build and Verify
+        run: lake build
+
+      - name: Report Success
+        run: echo "ACI SOVEREIGN PROOFS VERIFIED"
