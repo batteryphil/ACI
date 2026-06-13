@@ -1,9 +1,47 @@
 name = "my_project"
 defaultTargets = ["my_project"]
 
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.31.0-rc2"
+
 [[lean_lib]]
 name = "MyProject"
 
 [[lean_exe]]
 name = "my_project"
 root = "Main"
+
+[[lean_lib]]
+name = "AWMCore"
+
+[[lean_lib]]
+name = "AWM21"
+
+[[lean_lib]]
+name = "AntaresCategory"
+
+[[lean_lib]]
+name = "Manifold21"
+
+[[lean_lib]]
+name = "PhysicsCore"
+
+[[lean_lib]]
+name = "QuantumCore"
+
+[[lean_lib]]
+name = "N7Spine"
+
+[[lean_lib]]
+name = "SpineLanguage"
+
+[[lean_lib]]
+name = "MC2Engine"
+
+[[lean_lib]]
+name = "ACIManifold"
+
+[[lean_lib]]
+name = "MoruzinLaw"
