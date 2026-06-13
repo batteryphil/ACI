@@ -7,39 +7,3 @@ name = "MyProject"
 [[lean_exe]]
 name = "my_project"
 root = "Main"
-
-[[lean_lib]]
-name = "ACIManifold"
-
-[[lean_lib]]
-name = "AWM21"
-
-[[lean_lib]]
-name = "PhysicsCore"
-
-[[lean_lib]]
-name = "AntaresCategory"
-
-[[lean_lib]]
-name = "Manifold21"
-
-[[lean_lib]]
-name = "QuantumCore"
-
-[[lean_lib]]
-name = "ACIManifold"
-
-[[lean_lib]]
-name = "AWM21"
-
-[[lean_lib]]
-name = "PhysicsCore"
-
-[[lean_lib]]
-name = "AntaresCategory"
-
-[[lean_lib]]
-name = "Manifold21"
-
-[[lean_lib]]
-name = "QuantumCore"
