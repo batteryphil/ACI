@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install elan
+      - name: Install elan and Lean
         run: |
           curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
           echo "$HOME/.elan/bin" >> $GITHUB_PATH
-      - name: Get Mathlib cache
-        run: lake exe cache get
+      - name: Update dependencies
+        run: ~/.elan/bin/lake update
       - name: Build all proofs
-        run: lake build
+        run: ~/.elan/bin/lake build
