@@ -13,6 +13,14 @@ structure SystemPresence where
 
 theorem law_of_presence (s : SystemPresence) : s.C := s.joint
 
+theorem absence_collapses_identity
+    (C : Prop) (hC : Not C) :
+    Not (Exists (fun s : SystemPresence => s.C = C)) := by
+  intro h
+  obtain ⟨s, hs⟩ := h
+  rw [hs] at hC
+  exact hC s.joint
+
 def chamber_valid (delta m_eff : Real) : Prop := |delta| <= m_eff
 
 theorem breach_implies_halt (delta m_eff : Real)
@@ -85,8 +93,7 @@ theorem terminal_seal_uncontradicted (seal : TerminalSeal) :
   contradiction_excluded seal.unified seal.is_sealed
 
 def AWM7_Seal : TerminalSeal where
-  presence  := { X := Unit, D := Unit, C := True,
-                 hX := ⟨()⟩, hD := ⟨()⟩, joint := trivial }
+  presence  := { X := Unit, D := Unit, C := True, hX := ⟨()⟩, hD := ⟨()⟩, joint := trivial }
   m_eff     := 1
   hm_pos    := by norm_num
   unified   := { all_domains_valid := true, g_accept := true, k_close := true }
