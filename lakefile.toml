@@ -45,3 +45,6 @@ name = "ACIManifold"
 
 [[lean_lib]]
 name = "MoruzinLaw"
+
+[[lean_lib]]
+name = "MoruzinLaw"
