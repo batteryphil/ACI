@@ -57,3 +57,6 @@ name = "AM10"
 
 [[lean_lib]]
 name = "MyMathlibProject"
+
+[[lean_lib]]
+name = "SovereignHamiltonian"
