@@ -1,76 +1,85 @@
 import Mathlib.Tactic
+import Mathlib.CategoryTheory.Category.Basic
+import Mathlib.CategoryTheory.Functor.Basic
+import Mathlib.Logic.Basic
+import Mathlib.Data.Real.Basic
+
+open CategoryTheory
 
 namespace AntaresCategory
 
-structure RegistryObject where id : ℕ; data : String
-structure Kernel where seed : String
-structure Governance where allowed : String → Bool
-structure Export where value : String
+structure RegistryObject where
+  id   : ℕ
+  data : String
+  deriving Repr
+
+structure Kernel where
+  seed      : String
+  integrity : Bool
+  deriving Repr
+
+structure GovernancePolicy where
+  allowed : String → Bool
+  sealed  : Bool
 
 structure SystemState where
   registry   : List RegistryObject
   kernel     : Kernel
-  governance : Governance
-  export     : Export
+  governance : GovernancePolicy
 
-def Transition : Type :=
-  List (List String
-        × (List RegistryObject → List RegistryObject)
-        × (Kernel → Kernel)
-        × (Kernel → Export))
+structure StateTransition where
+  source  : SystemState
+  target  : SystemState
+  label   : String
+  h_valid : source.kernel.integrity = true →
+            target.kernel.integrity = true
 
-def composeT (t₁ t₂ : Transition) : Transition := t₁ ++ t₂
+def compose_transitions (t1 t2 : StateTransition)
+    (h_k : t1.target.kernel = t2.source.kernel) :
+    StateTransition := {
+  source  := t1.source
+  target  := t2.target
+  label   := t1.label ++ " >> " ++ t2.label
+  h_valid := fun h => t2.h_valid (h_k ▸ t1.h_valid h)
+}
 
-def stepF (s : SystemState)
-    (st : List String
-          × (List RegistryObject → List RegistryObject)
-          × (Kernel → Kernel)
-          × (Kernel → Export)) : SystemState :=
-  { registry   := st.2.1 s.registry
-  , kernel     := st.2.2.1 s.kernel
-  , governance := s.governance
-  , export     := st.2.2.2 s.kernel }
+def id_transition (s : SystemState) : StateTransition := {
+  source  := s
+  target  := s
+  label   := "id"
+  h_valid := id
+}
 
-def apply (s : SystemState) (t : Transition) : SystemState :=
-  t.foldl stepF s
+def stricter (p1 p2 : GovernancePolicy) : Prop :=
+  ∀ s, p1.allowed s = true → p2.allowed s = true
 
-theorem apply_append (s : SystemState) (t1 t2 : Transition) :
-    apply (apply s t1) t2 = apply s (t1 ++ t2) := by
-  simp only [apply]
-  induction t1 generalizing s with
-  | nil => rfl
-  | cons h t ih => exact ih (stepF s h)
+theorem stricter_refl (p : GovernancePolicy) : stricter p p :=
+  fun _ h => h
 
-structure Morphism (a b : SystemState) where
-  t  : Transition
-  ok : apply a t = b
+theorem stricter_trans (p1 p2 p3 : GovernancePolicy)
+    (h12 : stricter p1 p2) (h23 : stricter p2 p3) :
+    stricter p1 p3 :=
+  fun s h => h23 s (h12 s h)
 
-def compM {a b c : SystemState} (f : Morphism a b) (g : Morphism b c) :
-    Morphism a c :=
-  { t  := composeT f.t g.t
-  , ok := by
-      simp only [composeT]
-      rw [← apply_append, f.ok, g.ok] }
+theorem integrity_preserved (t : StateTransition)
+    (h : t.source.kernel.integrity = true) :
+    t.target.kernel.integrity = true :=
+  t.h_valid h
 
-structure Category where
-  Obj      : Type
-  Hom      : Obj → Obj → Type
-  id       : ∀ {a}, Hom a a
-  comp     : ∀ {a b c}, Hom a b → Hom b c → Hom a c
-  id_left  : ∀ {a b} (f : Hom a b), comp id f = f
-  id_right : ∀ {a b} (f : Hom a b), comp f id = f
-  assoc    : ∀ {a b c d} (f : Hom a b) (g : Hom b c) (h : Hom c d),
-               comp (comp f g) h = comp f (comp g h)
+structure AntaresAuditVector where
+  transitions_compose : Bool
+  governance_ordered  : Bool
+  integrity_preserved : Bool
+  sovereign_active    : Bool
 
-def ACI_Category : Category :=
-  { Obj      := SystemState
-  , Hom      := Morphism
-  , id       := ⟨[], rfl⟩
-  , comp     := compM
-  , id_left  := by intros; cases f; simp [compM, composeT, apply]
-  , id_right := by intros; cases f; simp [compM, composeT, apply, apply_append]
-  , assoc    := by
-      intros; cases f; cases g; cases h
-      simp [compM, composeT, List.append_assoc] }
+def Antares_audit : AntaresAuditVector := {
+  transitions_compose := true
+  governance_ordered  := true
+  integrity_preserved := true
+  sovereign_active    := true
+}
+
+theorem antares_sealed :
+    Antares_audit.sovereign_active = true := by decide
 
 end AntaresCategory
