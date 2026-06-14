@@ -48,3 +48,6 @@ name = "MoruzinLaw"
 
 [[lean_lib]]
 name = "MoruzinLaw2"
+
+[[lean_lib]]
+name = "Optimus7"
