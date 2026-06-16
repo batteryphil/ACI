@@ -31,14 +31,7 @@ theorem M_N7_le_all (mv : MarginVector) (d : Domain14) :
     M_N7 mv ≤ mv.m d :=
   Finset.inf'_le _ (mem_univ _)
 
-theorem M_N7_nonneg (mv : MarginVector) : 0 ≤ M_N7 mv :=
-  le_trans (mv.h_floor Domain14.A |> le_refl 0 |>.symm ▸
-    mv.h_floor Domain14.A) (M_N7_le_all mv Domain14.A) |>.symm ▸
-    M_N7_le_all mv Domain14.A |> fun h =>
-    le_trans (mv.h_floor Domain14.A) (le_refl _) |>.symm ▸
-    mv.h_floor Domain14.A
-
-theorem M_N7_nonneg' (mv : MarginVector) : 0 ≤ M_N7 mv := by
+theorem M_N7_nonneg (mv : MarginVector) : 0 ≤ M_N7 mv := by
   have := M_N7_le_all mv Domain14.A
   linarith [mv.h_floor Domain14.A]
 
