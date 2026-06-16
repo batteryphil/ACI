@@ -137,3 +137,12 @@ theorem matrix7_sealed :
     Matrix7_audit.sovereign_sealed = true := by decide
 
 end Matrix7
+
+import Mathlib.Data.Matrix.Basic
+
+open Matrix
+
+theorem matrix_transpose_identity_check (M : Matrix (Fin 7) (Fin 7) ???) :
+  (M???)??? = M := by
+  ext i j
+  rfl
