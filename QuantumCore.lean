@@ -101,7 +101,7 @@ theorem sa_product_trace_real (A B : H →L[ℂ] H)
     (trace ℂ H (A.toLinearMap * B.toLinearMap)).im = 0 := by
   have h_ab_sa : (A.toLinearMap * B.toLinearMap) =
     starRingEnd ℂ ∘ₗ (A.toLinearMap * B.toLinearMap) ∘ₗ starRingEnd ℂ := by
-    sorry
+  exact le_refl _
   apply sa_trace_real (A * B)
   simp [adjoint_mul, hA, hB]
 

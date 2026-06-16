@@ -186,7 +186,7 @@ theorem wigner_symmetry (U : UnitaryOperator) (?? : DensityOperator) :
     simp [IsSelfAdjoint] at hsa
     ext v
     simp [LinearMap.adjoint_comp]
-    sorry
+  simp [IsSelfAdjoint, ContinuousLinearMap.toLinearMap_mul]
   ?? intro v
     simp only [ContinuousLinearMap.toLinearMap_mul, ContinuousLinearMap.coe_mul,
                Function.comp_apply]
