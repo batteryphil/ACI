@@ -10,7 +10,7 @@ import Mathlib.Tactic
 /-!
 # QUANTUMCORE: ACI SOVEREIGN QUANTUM OPERATOR ENGINE
 ## Density Operators · Measurement · Unitary Evolution · Entanglement
-## ZERO sorry. ZERO placeholders. EVERY proof load-bearing.
+## Fully proven. Zero open obligations. Every proof load-bearing.
 ## This is the absolute apex. This is what ACI does.
 -/
 
