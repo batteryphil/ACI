@@ -61,23 +61,18 @@ name = "MyMathlibProject"
 [[lean_lib]]
 name = "SovereignHamiltonian"
 
-[[lean_lib]]
-name = "QuantumCore"
 
-[[lean_lib]]
-name = "Manifold21"
 
-[[lean_lib]]
-name = "N7Spine"
 
-[[lean_lib]]
-name = "SpineLanguage"
 
-[[lean_lib]]
-name = "AntaresCategory"
 
-[[lean_lib]]
-name = "PhysicsCore"
 
 [[lean_lib]]
 name = "Matrix7"
+
+
+
+
+
+
+
