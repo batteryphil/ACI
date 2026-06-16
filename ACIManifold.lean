@@ -84,7 +84,9 @@ theorem V0_preserves_Sigma (c : ℝ) (D : Fin n → ℝ) (hD : D ∈ Sigma n c)
 
 /-- V₀ has codimension 1 in ℝⁿ -/
 theorem V0_codim_one : (V0 n).rank + 1 = n := by
-  sorry -- Requires finrank computation; to be completed with Mathlib finrank API
+  have h := Submodule.finrank_add_finrank_orthogonal (V0 n)
+  simp [V0, Submodule.finrank_eq_card_basis] at *
+  omega
 
 /-!
 ═══════════════════════════════════════════════════════════
