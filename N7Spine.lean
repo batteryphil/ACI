@@ -2,7 +2,7 @@ import Mathlib.Tactic
 import Mathlib.Data.Real.Basic
 import Mathlib.Order.Basic
 import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Finset.Lattice
+import Mathlib.Data.Finset.Lattice.Fold
 import Mathlib.Data.Fintype.Basic
 
 namespace N7Spine
