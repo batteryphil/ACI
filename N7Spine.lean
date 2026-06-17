@@ -201,10 +201,13 @@ theorem project_M_N7_le (mv : MarginVector)
     (decay : Domain14 → ℝ)
     (h_decay : ∀ d, 0 ≤ decay d ∧ decay d ≤ 1) :
     M_N7 (project_margins mv decay h_decay) ≤ M_N7 mv := by
-  apply Finset.inf'_le_inf'
-  intro d _
-  simp [project_margins]
-  exact mul_le_of_le_one_right (mv.h_floor d) (h_decay d).2
+  have hproj_le : (project_margins mv decay h_decay).m (bottleneck mv) ≤ mv.m (bottleneck mv) :=
+    mul_le_of_le_one_right (mv.h_floor (bottleneck mv)) (h_decay (bottleneck mv)).2
+  calc M_N7 (project_margins mv decay h_decay)
+      ≤ (project_margins mv decay h_decay).m (bottleneck mv) :=
+        M_N7_le_all (project_margins mv decay h_decay) (bottleneck mv)
+    _ ≤ mv.m (bottleneck mv) := hproj_le
+    _ = M_N7 mv := bottleneck_achieves_min mv
 
 theorem horizon_scan (mv : MarginVector)
     (decay : Domain14 → ℝ)
