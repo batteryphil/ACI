@@ -24,7 +24,8 @@ theorem validity_requires_positive_margin
 theorem bottleneck_law (margins : List ℚ)
     (h : margins ≠ []) :
     ∃ m ∈ margins, ∀ x ∈ margins, m ≤ x := by
-  exact List.exists_min_image margins id h
+  obtain ⟨m, hm, hmin⟩ := List.exists_min_image margins id h
+  exact ⟨m, hm, fun x hx => hmin x hx⟩
 
 theorem closure_gate (M_N7_val : ℚ)
     (h : M_N7_val > 0) : True := trivial
