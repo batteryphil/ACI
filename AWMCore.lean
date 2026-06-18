@@ -91,7 +91,7 @@ theorem squash_near_mid (g : GeometryBounds) (x : ℝ) :
 ═══════════════════════════════════════════
 -/
 
-def energy (x : Fin n → ℝ) : ℝ :=
+noncomputable def energy (x : Fin n → ℝ) : ℝ :=
   univ.sum (fun i => x i ^ 2)
 
 theorem energy_nonneg (x : Fin n → ℝ) : 0 ≤ energy n x :=
