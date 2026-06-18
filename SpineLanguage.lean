@@ -68,7 +68,7 @@ def all_satisfied {E : Type*} (cs : List (Constraint E))
 /-- Empty constraint list is always satisfied -/
 theorem empty_constraints_satisfied {E : Type*} (e : E) :
     all_satisfied [] e := by
-  intro c hc; exact absurd hc (List.not_mem_nil _)
+  intro c hc; simp at hc
 
 /-- Constraint conjunction is monotone -/
 theorem constraint_mono {E : Type*}
@@ -97,7 +97,7 @@ def executable {S : Type*} (g : Governance S) (s : S) (o : Op) :
 def governance_and {S : Type*} (g1 g2 : Governance S) :
     Governance S where
   permits := fun s o => g1.permits s o ∧ g2.permits s o
-  h_dec   := fun s o => And.decidable
+  h_dec   := fun s o => inferInstance
 
 theorem governance_and_stricter {S : Type*}
     (g1 g2 : Governance S) (s : S) (o : Op)
@@ -171,7 +171,6 @@ theorem apply_noncommutative (o1 o2 : Op) (e : SpineExpr)
     SpineExpr.apply o2 (SpineExpr.apply o1 e) := by
   intro heq
   simp [SpineExpr.apply.injEq] at heq
-  exact h heq.1
 
 /-!
 ═══════════════════════════════════════
