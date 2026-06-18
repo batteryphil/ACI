@@ -1,12 +1,7 @@
-<<<<<<< HEAD
--- This module serves as the root of the `MyProject` library.
--- Import modules here that should be built as part of the library.
-import MyProject.Basic
-=======
-import Mathlib.Data.Rat.Basic
+import Mathlib.Data.Rat.Defs
 import Mathlib.Data.Finset.Basic
-import Mathlib.Algebra.BigOperators.Basic
-import Mathlib.Algebra.Order.AbsoluteValue
+import Mathlib.Algebra.BigOperators.Group.Finset
+import Mathlib.Algebra.Order.AbsoluteValue.Basic
 import Mathlib.Tactic
 
 namespace ACI_Certified
@@ -130,7 +125,6 @@ theorem convergence (s : State) : Converges (fun n => traj n s) Zero := by
           exact pow_le_pow_of_le_one k_nonneg (le_of_lt k_lt_one) hn
     _ < ε := hN
 
--- MASTER CERTIFICATION LOCK
 structure Certified where
   k_bound      : cfg.k < 1                                           := k_lt_one
   proj_sound   : ∀ s, Valid (Proj s)                                 := projection_valid
@@ -142,4 +136,3 @@ structure Certified where
 def SystemLock : Certified := {}
 
 end ACI_Certified
->>>>>>> c7e29991098063b3883299381ebb9d98c0c47152

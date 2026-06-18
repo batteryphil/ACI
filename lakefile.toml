@@ -1,5 +1,6 @@
-name = "my_project"
-defaultTargets = ["my_project"]
+name = "aci_bootstrap"
+version = "0.1.0"
+defaultTargets = ["AciLib"]
 
 [[require]]
 name = "mathlib"
@@ -7,72 +8,9 @@ scope = "leanprover-community"
 rev = "v4.31.0-rc2"
 
 [[lean_lib]]
-name = "MyProject"
+name = "AciLib"
+globs = ["ACIManifold", "AM10", "AWM21", "AWMCore", "AntaresCategory", "MC2Engine", "Manifold21", "Matrix7", "MoruzinLaw", "MyProject", "N7Spine", "Optimus7", "Optimus7Quantum", "PhysicsCore", "QuantumCore", "SovereignHamiltonian", "SpineLanguage"]
 
 [[lean_exe]]
-name = "my_project"
+name = "aci_bootstrap"
 root = "Main"
-
-[[lean_lib]]
-name = "AWMCore"
-
-[[lean_lib]]
-name = "AWM21"
-
-[[lean_lib]]
-name = "AntaresCategory"
-
-[[lean_lib]]
-name = "Manifold21"
-
-[[lean_lib]]
-name = "PhysicsCore"
-
-[[lean_lib]]
-name = "QuantumCore"
-
-[[lean_lib]]
-name = "N7Spine"
-
-[[lean_lib]]
-name = "SpineLanguage"
-
-[[lean_lib]]
-name = "MC2Engine"
-
-[[lean_lib]]
-name = "ACIManifold"
-
-[[lean_lib]]
-name = "MoruzinLaw"
-
-[[lean_lib]]
-name = "MoruzinLaw2"
-
-[[lean_lib]]
-name = "Optimus7"
-
-[[lean_lib]]
-name = "AM10"
-
-[[lean_lib]]
-name = "MyMathlibProject"
-
-[[lean_lib]]
-name = "SovereignHamiltonian"
-
-
-
-
-
-
-
-[[lean_lib]]
-name = "Matrix7"
-
-
-
-
-
-
-

@@ -4,7 +4,7 @@ import Mathlib.Data.Real.Basic
 import Mathlib.Order.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.List.MinMax
-import Mathlib.Algebra.Order.Monoid.Lemmas
+import Mathlib.Algebra.Order.Monoid.Defs
 import Mathlib.Logic.Relation
 
 /-!

@@ -138,7 +138,6 @@ theorem matrix7_sealed :
 
 end Matrix7
 
-import Mathlib.Data.Matrix.Basic
 
 open Matrix
 
