@@ -1,6 +1,6 @@
 import Mathlib.Data.Rat.Defs
 import Mathlib.Data.Finset.Basic
-import Mathlib.Algebra.BigOperators.Group.Finset
+import Mathlib.Algebra.BigOperators.Finset.Basic
 import Mathlib.Algebra.Order.AbsoluteValue.Basic
 import Mathlib.Tactic
 

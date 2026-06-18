@@ -7,13 +7,13 @@ open Finset Real
 
 variable (n : Nat)
 
-def T_kinetic (p m : Fin n -> Real) : Real :=
+noncomputable def T_kinetic (p m : Fin n -> Real) : Real :=
   univ.sum (fun i => p i ^ 2 / (2 * m i))
 
-def V_potential (k : Real) (y_actual y_spine : Fin n -> Real) : Real :=
+noncomputable def V_potential (k : Real) (y_actual y_spine : Fin n -> Real) : Real :=
   (1/2) * k * univ.sum (fun i => (y_actual i - y_spine i) ^ 2)
 
-def G_governance (W : Real) (A dl : Fin n -> Real) : Real :=
+noncomputable def G_governance (W : Real) (A dl : Fin n -> Real) : Real :=
   W * univ.sum (fun i => A i * dl i)
 
 def H_OPT7 (p m : Fin n -> Real) (k : Real) (y_actual y_spine : Fin n -> Real) (W : Real) (A dl : Fin n -> Real) : Real :=

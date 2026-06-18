@@ -3,7 +3,7 @@ import Mathlib.LinearAlgebra.UnitaryGroup
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.LinearAlgebra.GeneralLinearGroup
+import Mathlib.LinearAlgebra.GeneralLinearGroup.Basic
 import Mathlib.Data.Real.Basic
 
 open LinearMap

@@ -137,7 +137,7 @@ theorem lorentz_factor_at_rest :
   simp [c_light]
 
 /-- Frame dragging correction factor (weak field limit) -/
-def frame_dragging (warping_scalar : ℝ) : ℝ :=
+noncomputable def frame_dragging (warping_scalar : ℝ) : ℝ :=
   1 / (1 + 0.1 * warping_scalar)
 
 /-- Frame dragging factor is in (0, 1] for nonneg warping -/

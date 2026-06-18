@@ -125,7 +125,7 @@ inductive GateDecision : Type where
   | Vetoed : Domain14 → GateDecision
   deriving DecidableEq, Repr
 
-def N7_gate (p : Proposal) (floor : ℝ) : GateDecision :=
+noncomputable def N7_gate (p : Proposal) (floor : ℝ) : GateDecision :=
   if floor < M_N7 p.margins
   then GateDecision.Sealed
   else GateDecision.Vetoed (bottleneck p.margins)
