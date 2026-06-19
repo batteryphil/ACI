@@ -97,7 +97,7 @@ def executable {S : Type*} (g : Governance S) (s : S) (o : Op) :
 def governance_and {S : Type*} (g1 g2 : Governance S) :
     Governance S where
   permits := fun s o => g1.permits s o ∧ g2.permits s o
-  h_dec   := fun s o => inferInstance
+  h_dec   := fun s o => @instDecidableAnd _ _ (g1.h_dec s o) (g2.h_dec s o)
 
 theorem governance_and_stricter {S : Type*}
     (g1 g2 : Governance S) (s : S) (o : Op)
@@ -171,6 +171,7 @@ theorem apply_noncommutative (o1 o2 : Op) (e : SpineExpr)
     SpineExpr.apply o2 (SpineExpr.apply o1 e) := by
   intro heq
   simp [SpineExpr.apply.injEq] at heq
+  exact h heq.1
 
 /-!
 ═══════════════════════════════════════
