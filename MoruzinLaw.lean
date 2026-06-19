@@ -32,8 +32,8 @@ theorem chamber_composition (d1 d2 m1 m2 : Real)
     (h2 : chamber_valid d2 m2) :
     chamber_valid (d1 + d2) (m1 + m2) := by
   simp [chamber_valid]
-  calc |d1 + d2| <= |d1| + |d2| := abs_add d1 d2
-    _ <= m1 + m2 := add_le_add h1 h2
+  have h := abs_add d1 d2
+  linarith [add_le_add h1 h2]
 
 theorem zero_always_valid (m : Real) (hm : 0 <= m) :
     chamber_valid 0 m := by simp [chamber_valid, hm]
@@ -77,19 +77,19 @@ structure TerminalSeal where
   unified   : UnificationState
   is_sealed : unification_valid unified = true
 
-theorem terminal_seal_valid (seal : TerminalSeal) :
-    unification_valid seal.unified = true := seal.is_sealed
+theorem terminal_seal_valid (ts : TerminalSeal) :
+    unification_valid ts.unified = true := ts.is_sealed
 
-theorem terminal_seal_presence (seal : TerminalSeal) : seal.presence.C :=
-  seal.presence.joint
+theorem terminal_seal_presence (ts : TerminalSeal) : ts.presence.C :=
+  ts.presence.joint
 
-theorem terminal_seal_chamber (seal : TerminalSeal) :
-    chamber_valid 0 seal.m_eff :=
-  zero_always_valid seal.m_eff (le_of_lt seal.hm_pos)
+theorem terminal_seal_chamber (ts : TerminalSeal) :
+    chamber_valid 0 ts.m_eff :=
+  zero_always_valid ts.m_eff (le_of_lt ts.hm_pos)
 
-theorem terminal_seal_uncontradicted (seal : TerminalSeal) :
-    Not (seal.unified.g_accept = false) :=
-  contradiction_excluded seal.unified seal.is_sealed
+theorem terminal_seal_uncontradicted (ts : TerminalSeal) :
+    Not (ts.unified.g_accept = false) :=
+  contradiction_excluded ts.unified ts.is_sealed
 
 def AWM7_Seal : TerminalSeal where
   presence  := { X := Unit, D := Unit, C := True, hX := ⟨()⟩, hD := ⟨()⟩, joint := trivial }

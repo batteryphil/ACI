@@ -42,21 +42,21 @@ theorem k_lt_one : cfg.k < 1 := by unfold cfg; norm_num
 theorem k_nonneg : 0 ≤ cfg.k := by unfold cfg; norm_num
 
 theorem zero_fixed : Fixed Zero := by
-  unfold Fixed T U Proj Zero clamp cfg; funext i; simp
+  unfold Fixed T U Proj Zero clamp cfg; funext i; norm_num
 
 theorem projection_valid (s : State) : Valid (Proj s) := by
   intro i; unfold Valid InBounds Proj clamp cfg; simp only
   split_ifs with h₁ h₂
   · constructor <;> linarith
   · constructor <;> linarith
-  · push Not at h₁ h₂; exact ⟨h₁, le_of_not_lt h₂⟩
+  · simp only [not_lt] at h₁ h₂; exact ⟨h₁, h₂⟩
 
 theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   unfold clamp cfg; simp only
   split_ifs with hx₁ hx₂ hy₁ hy₂ hy₁ hy₂ hy₁ hy₂ <;>
-  simp_all <;> push Not at * <;> try linarith
+  simp_all <;> simp only [not_lt] at * <;> try linarith
   all_goals (try (rw [abs_of_nonpos (by linarith)]; linarith))
   all_goals (try (rw [abs_of_nonneg (by linarith)]; linarith))
   all_goals (try (rw [abs_le]; constructor <;> linarith))
@@ -87,7 +87,7 @@ theorem dist_triangle (x y z : State) : dist x z ≤ dist x y + dist y z := by
   unfold dist norm; simp only [← Finset.sum_add_distrib]
   apply Finset.sum_le_sum; intro i _
   have : x i - z i = (x i - y i) + (y i - z i) := by ring
-  rw [this]; exact abs_add _ _
+  rw [this]; exact _root_.abs_add _ _
 
 theorem zero_fixed_dist (s : State) : dist (T s) Zero ≤ cfg.k * dist s Zero := by
   have h := contraction s Zero; simp only [zero_fixed] at h; exact h
@@ -112,7 +112,7 @@ lemma geom_squeeze (C : ℚ) (hC : 0 ≤ C) (ε : ℚ) (hε : ε > 0) :
   rcases eq_or_lt_of_le hC with rfl | hCpos
   · exact ⟨0, by simp [hε]⟩
   · obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one (div_pos hε hCpos) k_lt_one
-    exact ⟨N, by rwa [gt_iff_lt, ← div_lt_iff hCpos]⟩
+    exact ⟨N, (lt_div_iff hCpos).mp hN⟩
 
 theorem convergence (s : State) : Converges (fun n => traj n s) Zero := by
   intro ε hε

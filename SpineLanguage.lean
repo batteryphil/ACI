@@ -132,8 +132,8 @@ def SpineExpr.size : SpineExpr → ℕ
 theorem size_pos (e : SpineExpr) : 0 < e.size := by
   induction e with
   | atom _ => simp [SpineExpr.size]
-  | apply _ _ ih => simp [SpineExpr.size]; omega
-  | binary _ _ _ ihl ihr => simp [SpineExpr.size]; omega
+  | apply _ _ ih => simp [SpineExpr.size]
+  | binary _ _ _ ihl ihr => simp [SpineExpr.size]
 
 /-- Depth ≤ size always -/
 theorem depth_le_size (e : SpineExpr) : e.depth ≤ e.size := by
