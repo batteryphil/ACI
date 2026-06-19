@@ -51,12 +51,17 @@ theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   unfold clamp cfg; simp only
-  split_ifs with hx₁ hx₂ hy₁ hy₂ hy₁ hy₂ hy₁ hy₂ <;>
-  simp_all <;> try linarith
-  all_goals (try (rw [abs_of_neg (by norm_num), abs_of_neg (by linarith)]; linarith))
-  all_goals (try (rw [abs_of_nonpos (by linarith), abs_of_neg (by linarith)]; linarith))
-  all_goals (try (rw [abs_of_pos (by norm_num), abs_of_pos (by linarith)]; linarith))
-  all_goals (try (rw [abs_of_nonneg (by linarith), abs_of_pos (by linarith)]; linarith))
+  split_ifs with hx1 hx2 hy1 hy2 hy1 hy2 hy1 hy2 <;>
+  simp only [not_lt] at *
+  · simp [sub_self]
+  · rw [abs_of_nonpos (by linarith), abs_of_nonpos (by linarith)]; linarith
+  · norm_num; rw [abs_of_nonpos (by linarith)]; linarith
+  · rw [abs_of_nonneg (by linarith), abs_of_nonpos (by linarith)]; linarith
+  · exact le_refl _
+  · rw [abs_of_nonpos (by linarith), abs_of_neg (by linarith)]; linarith
+  · norm_num; rw [abs_of_pos (by linarith)]; linarith
+  · rw [abs_of_nonneg (by linarith), abs_of_pos (by linarith)]; linarith
+  · simp [sub_self]
 
 theorem proj_nonexpansive (x y : State) : dist (Proj x) (Proj y) ≤ dist x y := by
   unfold dist norm Proj; apply Finset.sum_le_sum
@@ -100,8 +105,10 @@ theorem dist_triangle (x y z : State) : dist x z ≤ dist x y + dist y z := by
     _ = ∑ i : Fin cfg.dim, |x i - y i| + ∑ i : Fin cfg.dim, |y i - z i| :=
           Finset.sum_add_distrib
 
-theorem zero_fixed_dist (s : State) : dist (T s) Zero ≤ cfg.k * dist s Zero :=
-  zero_fixed ▸ contraction s Zero
+theorem zero_fixed_dist (s : State) : dist (T s) Zero ≤ cfg.k * dist s Zero := by
+  have h := contraction s Zero
+  rw [zero_fixed] at h
+  exact h
 
 theorem decay (s : State) (n : ℕ) : dist (traj n s) Zero ≤ cfg.k ^ n * dist s Zero := by
   induction n generalizing s with
