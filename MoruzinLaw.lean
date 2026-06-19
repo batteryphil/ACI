@@ -32,8 +32,8 @@ theorem chamber_composition (d1 d2 m1 m2 : Real)
     (h2 : chamber_valid d2 m2) :
     chamber_valid (d1 + d2) (m1 + m2) := by
   simp [chamber_valid]
-  have h := abs_add d1 d2
-  linarith [add_le_add h1 h2]
+  calc |d1 + d2| ≤ |d1| + |d2| := abs_add d1 d2
+    _ ≤ m1 + m2 := add_le_add h1 h2
 
 theorem zero_always_valid (m : Real) (hm : 0 <= m) :
     chamber_valid 0 m := by simp [chamber_valid, hm]
@@ -55,9 +55,9 @@ theorem unification_law (u : UnificationState)
 
 theorem unification_fixed_point (u : UnificationState)
     (h : unification_valid u = true) :
-    u.all_domains_valid = true /\ u.g_accept = true /\ u.k_close = true := by
-  simp [unification_valid] at h
-  exact ⟨h.1, h.2.1, h.2.2⟩
+    u.all_domains_valid = true ∧ u.g_accept = true ∧ u.k_close = true := by
+  simp only [unification_valid, Bool.and_eq_true] at h
+  exact ⟨h.1.1, h.1.2, h.2⟩
 
 theorem contradiction_excluded (u : UnificationState)
     (h : unification_valid u = true) :
@@ -92,21 +92,22 @@ theorem terminal_seal_uncontradicted (ts : TerminalSeal) :
   contradiction_excluded ts.unified ts.is_sealed
 
 def AWM7_Seal : TerminalSeal where
-  presence  := { X := Unit, D := Unit, C := True, hX := ⟨()⟩, hD := ⟨()⟩, joint := trivial }
+  presence  := { X := Unit, D := Unit, C := True,
+                 hX := ⟨()⟩, hD := ⟨()⟩, joint := trivial }
   m_eff     := 1
   hm_pos    := by norm_num
   unified   := { all_domains_valid := true, g_accept := true, k_close := true }
   is_sealed := by decide
 
 theorem awm7_sovereign_locked :
-    unification_valid AWM7_Seal.unified = true /\
-    AWM7_Seal.presence.C /\
+    unification_valid AWM7_Seal.unified = true ∧
+    AWM7_Seal.presence.C ∧
     0 < AWM7_Seal.m_eff :=
   ⟨by decide, trivial, by norm_num⟩
 
 theorem awm7_apex_certified :
-    Not (AWM7_Seal.unified.g_accept = false) /\
-    Not (AWM7_Seal.unified.k_close = false) /\
+    Not (AWM7_Seal.unified.g_accept = false) ∧
+    Not (AWM7_Seal.unified.k_close = false) ∧
     Not (AWM7_Seal.unified.all_domains_valid = false) := by
   decide
 

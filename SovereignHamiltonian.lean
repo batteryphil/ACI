@@ -5,11 +5,10 @@ import Mathlib.Algebra.BigOperators.Finprod
 namespace SovereignHamiltonian
 open Finset Real
 
-variable (n : Nat)
-
+variable (n : Nat)                                                           
 noncomputable def T_kinetic (p m : Fin n -> Real) : Real :=
   univ.sum (fun i => p i ^ 2 / (2 * m i))
-
+                                                                             
 noncomputable def V_potential (k : Real) (y_actual y_spine : Fin n -> Real) : Real :=
   (1/2) * k * univ.sum (fun i => (y_actual i - y_spine i) ^ 2)
 
@@ -36,12 +35,12 @@ theorem V_zero_iff_equilibrium (k : Real) (hk : 0 < k) (y_actual y_spine : Fin n
     have hsum : univ.sum (fun i => (y_actual i - y_spine i) ^ 2) = 0 := by
       rcases mul_eq_zero.mp hprod with hk2 | hs; linarith; exact hs
     ext i
-    have hi := (sum_eq_zero_iff_of_nonneg (fun i _ => sq_nonneg (y_actual i - y_spine i))).mp hsum i (mem_univ i)
+    have hi := (sum_eq_zero_iff_of_nonneg (fun i _ => sq_nonneg (y_actual i - y_spine i))).mp hsum i (mem_univ i)                                             
     simpa [sq_eq_zero_iff, sub_eq_zero] using hi
-  · intro h; subst h; simp
+  · intro h; subst h; simp                                                   
 
 theorem V_unique_minimum (k : Real) (hk : 0 < k) (y_actual y_spine : Fin n -> Real)
-    (hmin : V_potential n k y_actual y_spine = 0) : y_actual = y_spine :=
+    (hmin : V_potential n k y_actual y_spine = 0) : y_actual = y_spine :=      
   (V_zero_iff_equilibrium n k hk y_actual y_spine).mp hmin
 
 theorem energy_nonneg (p m : Fin n -> Real) (hm : forall i, 0 < m i) (k : Real) (hk : 0 <= k) (y_actual y_spine : Fin n -> Real) :
@@ -65,15 +64,6 @@ theorem equilibrium_minimizes_H (p m : Fin n -> Real) (k : Real) (y_spine : Fin 
     H_OPT7 n p m k y_spine y_spine W A dl =
     T_kinetic n p m + G_governance n W A dl := by
   unfold H_OPT7 V_potential; simp
-
-theorem H_additive_in_T (p1 p2 m : Fin n -> Real) (k : Real) (y_actual y_spine : Fin n -> Real) (W : Real) (A dl : Fin n -> Real) :
-    H_OPT7 n (fun i => p1 i + p2 i) m k y_actual y_spine W A dl =
-    H_OPT7 n p1 m k y_actual y_spine W A dl -
-    T_kinetic n p1 m +
-    T_kinetic n (fun i => p1 i + p2 i) m +
-    V_potential n k y_actual y_spine +
-    G_governance n W A dl := by
-  unfold H_OPT7; ring
 
 structure HamiltonianAudit where
   kinetic_nonneg     : Bool
@@ -102,3 +92,5 @@ theorem audit_fully_sealed :
     H_OPT7_audit.sovereign_sealed = true := by decide
 
 end SovereignHamiltonian
+
+

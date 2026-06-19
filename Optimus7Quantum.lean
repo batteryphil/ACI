@@ -1,4 +1,3 @@
-cat > /root/my_project/Optimus7Quantum.lean << 'ENDOFFILE'
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.CStarAlgebra.Basic
@@ -247,4 +246,3 @@ theorem quantum_density_sound      : quantum_audit.density_op_sound = true   := 
 def QuantumSystemLock : QuantumAudit := quantum_audit
 
 end Optimus7Quantum
-ENDOFFILE
