@@ -1,4 +1,3 @@
-cat > /root/my_project/.github/workflows/build.yml
 name: Build ACI Library
 
 on:
@@ -28,4 +27,3 @@ jobs:
 
       - name: Build all
         run: lake build
-ENDOFFILE
