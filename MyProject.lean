@@ -52,7 +52,7 @@ theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   unfold clamp cfg; simp only
   split_ifs with hx1 hx2 hy1 hy2 hy1 hy2 hy1 hy2 <;>
-  simp only [not_lt] at *
+  (try simp only [not_lt] at *)
   · simp [sub_self]
   · rw [abs_of_nonpos (by linarith), abs_of_nonpos (by linarith)]; linarith
   · norm_num; rw [abs_of_nonpos (by linarith)]; linarith
