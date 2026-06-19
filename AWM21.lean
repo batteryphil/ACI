@@ -183,11 +183,30 @@ def bottleneck (domains : List Domain) : Option Domain :=
       if domain_priority d < domain_priority best then some d else some best
   ) none
 
+private lemma foldl_bottleneck_isSome (t : List Domain) (init : Domain) :
+    (List.foldl (fun acc d => match acc with
+      | none => some d
+      | some best => if domain_priority d < domain_priority best then some d else some best)
+      (some init) t).isSome = true := by
+  induction t generalizing init with
+  | nil => simp
+  | cons a s ih =>
+    simp only [List.foldl]
+    split_ifs with h
+    · exact ih a
+    · exact ih init
+
 /-- The system bottleneck exists iff the domain list is nonempty -/
 theorem bottleneck_exists_iff (domains : List Domain) :
     (bottleneck domains).isSome ↔ domains ≠ [] := by
-  simp [bottleneck]
-  cases domains <;> simp
+  constructor
+  · intro h hnil; subst hnil; simp [bottleneck] at h
+  · intro h
+    cases domains with
+    | nil => exact absurd rfl h
+    | cons a t =>
+      simp only [bottleneck, List.foldl]
+      exact foldl_bottleneck_isSome t a
 
 /-!
 ═══════════════════════════════════════════════════════
@@ -214,8 +233,27 @@ theorem depends_trans (d1 d2 d3 : Domain) :
   simp [depends_on]; omega
 
 /-- The domain graph is acyclic (well-founded) -/
-theorem domain_wf : WellFounded depends_on :=
-  InvImage.wf domain_priority Nat.lt_wfRel.wf
+theorem domain_wf : WellFounded depends_on := by
+  constructor
+  intro d
+  have key : ∀ n : ℕ, ∀ e : Domain, domain_priority e ≤ n → Acc depends_on e := by
+    intro n
+    induction n with
+    | zero =>
+      intro e he
+      constructor
+      intro f hf
+      simp [depends_on] at hf
+      have := priority_positive e
+      omega
+    | succ k ih =>
+      intro e he
+      constructor
+      intro f hf
+      simp [depends_on] at hf
+      apply ih f
+      omega
+  exact key (domain_priority d) d (le_refl _)
 
 /-!
 ═══════════════════════════════════════════════════════

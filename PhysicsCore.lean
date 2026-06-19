@@ -61,8 +61,9 @@ theorem lawson_density_monotone (n₁ n₂ T τ : ℝ)
     (hT : 0 ≤ T) (hτ : 0 ≤ τ) (hn : n₁ ≤ n₂)
     (h : lawson_satisfied n₁ T τ) :
     lawson_satisfied n₂ T τ := by
+  have mono := triple_product_mono_n n₁ n₂ T τ hT hτ hn
   simp only [lawson_satisfied, triple_product] at *
-  linarith [triple_product_mono_n n₁ n₂ T τ hT hτ hn]
+  linarith
 
 /-!
 ═══════════════════════════════════════════════════
@@ -147,7 +148,7 @@ theorem frame_dragging_bounded (w : ℝ) (hw : 0 ≤ w) :
   · simp [frame_dragging]
     positivity
   · simp [frame_dragging]
-    rw [div_le_one (by positivity)]
+    apply inv_le_one_of_one_le₀
     linarith
 
 /-!
@@ -183,7 +184,11 @@ theorem divB_correction_preserves
     (h : divB_free dBx_dx dBy_dy)
     (h_lap : lap_Bx + lap_By = 0) :
     divB_free (dBx_dx + η * lap_Bx) (dBy_dy + η * lap_By) := by
-  simp [divB_free] at *
+  simp only [divB_free] at *
+  have key : dBx_dx + η * lap_Bx + (dBy_dy + η * lap_By) =
+             (dBx_dx + dBy_dy) + η * (lap_Bx + lap_By) := by ring
+  rw [h, h_lap] at key
+  simp at key
   linarith
 
 /-!
