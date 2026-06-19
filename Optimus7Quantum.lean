@@ -40,7 +40,7 @@ theorem densityOp_convex_trace (ρ₁ ρ₂ : DensityOperator) (t : ℝ)
     (ht : 0 ≤ t) (ht1 : t ≤ 1) :
     trace ℂ H (((t : ℂ) • ρ₁.op + ((1 - t : ℝ) : ℂ) • ρ₂.op).toLinearMap) = 1 := by
   simp [map_add, map_smul, LinearMap.trace_smul,
-        ρ₁.is_trace_one, ρ₂.is_trace_one]
+      ρ₁.is_trace_one, ρ₂.is_trace_one]
   push_cast; ring
 
 /-!
@@ -60,19 +60,19 @@ def cptp_map {n : ℕ} (Φ : CPTP n) (a : Mat n) : Mat n :=
   List.sum (Φ.kraus.map (fun k => k * a * star k))
 
 lemma cptp_trace_preserving {n : ℕ} (Φ : CPTP n) (a : Mat n) :
-    Matrix.trace (cptp_map Φ a) = Matrix.trace a := by
+  Matrix.trace (cptp_map Φ a) = Matrix.trace a := by
   have hkey : ∀ (ks : List (Mat n)),
       List.sum (ks.map (fun k => star k * k)) = 1 →
       Matrix.trace (List.sum (ks.map (fun k => k * a * star k))) =
       Matrix.trace a := by
     intro ks hks
     calc Matrix.trace (List.sum (ks.map (fun k => k * a * star k)))
-        = List.sum (ks.map (fun k => Matrix.trace (k * a * star k))) := by
-            rw [map_list_sum]; simp [Function.comp]
+      = List.sum (ks.map (fun k => Matrix.trace (k * a * star k))) := by
+        rw [map_list_sum]; simp [Function.comp]
       _ = List.sum (ks.map (fun k => Matrix.trace (star k * k * a))) := by
-            congr 1; ext k; rw [Matrix.trace_mul_cycle]
+        congr 1; ext k; rw [Matrix.trace_mul_cycle]
       _ = Matrix.trace (List.sum (ks.map (fun k => star k * k)) * a) := by
-            rw [← map_list_sum]; simp [Finset.sum_mul, map_list_sum]
+        rw [← map_list_sum]; simp [Finset.sum_mul, map_list_sum]
       _ = Matrix.trace (1 * a) := by rw [hks]
       _ = Matrix.trace a := by simp
   exact hkey Φ.kraus Φ.is_complete
@@ -113,7 +113,7 @@ structure UnitaryOperator where
   op_op_star : op * op.adjoint = 1
 
 theorem unitary_norm_one (U : UnitaryOperator) (v : H) :
-    ‖U.op v‖ = ‖v‖ := by
+  ‖U.op v‖ = ‖v‖ := by
   have h : ‖U.op v‖ ^ 2 = ‖v‖ ^ 2 := by
     simp only [← real_inner_self_eq_norm_sq]
     rw [ContinuousLinearMap.adjoint_inner_right]
@@ -125,17 +125,17 @@ def unitaryCompose (U V : UnitaryOperator) : UnitaryOperator where
   op_star_op := by
     rw [ContinuousLinearMap.adjoint_mul]
     rw [show V.op.adjoint * U.op.adjoint * (U.op * V.op) =
-        V.op.adjoint * (U.op.adjoint * U.op) * V.op by simp [mul_assoc]]
+      V.op.adjoint * (U.op.adjoint * U.op) * V.op by simp [mul_assoc]]
     rw [U.op_star_op]; simp [V.op_star_op]
   op_op_star := by
     rw [ContinuousLinearMap.adjoint_mul]
     rw [show U.op * V.op * (V.op.adjoint * U.op.adjoint) =
-        U.op * (V.op * V.op.adjoint) * U.op.adjoint by simp [mul_assoc]]
+      U.op * (V.op * V.op.adjoint) * U.op.adjoint by simp [mul_assoc]]
     rw [V.op_op_star]; simp [U.op_op_star]
 
 /-!
 ================================================================================
-STRATUM IV — TRACE UNITARY INVARIANCE (NO SORRY)
+STRATUM IV — TRACE UNITARY INVARIANCE
 ================================================================================
 -/
 
@@ -143,11 +143,11 @@ theorem trace_unitary_invariance (U : UnitaryOperator) (ρ : DensityOperator) :
     trace ℂ H ((U.op * ρ.op * U.op.adjoint).toLinearMap) =
     trace ℂ H ρ.op.toLinearMap := by
   have key : (U.op * ρ.op * U.op.adjoint).toLinearMap =
-      U.op.toLinearMap * ρ.op.toLinearMap * U.op.adjoint.toLinearMap := by
+    U.op.toLinearMap * ρ.op.toLinearMap * U.op.adjoint.toLinearMap := by
     simp [ContinuousLinearMap.toLinearMap_mul]
   rw [key, LinearMap.trace_mul_comm
-        (U.op.toLinearMap * ρ.op.toLinearMap)
-        U.op.adjoint.toLinearMap, ← mul_assoc]
+    (U.op.toLinearMap * ρ.op.toLinearMap)
+    U.op.adjoint.toLinearMap, ← mul_assoc]
   have hUU : U.op.adjoint.toLinearMap * U.op.toLinearMap = 1 := by
     have h := U.op_star_op
     simp only [← ContinuousLinearMap.toLinearMap_mul] at h
@@ -161,7 +161,7 @@ theorem trace_unitary_invariance_compose (U V : UnitaryOperator) (ρ : DensityOp
 
 /-!
 ================================================================================
-STRATUM V — WIGNER SYMMETRY (NO SORRY)
+STRATUM V — WIGNER SYMMETRY
 ================================================================================
 -/
 
@@ -174,13 +174,13 @@ theorem wigner_symmetry (U : UnitaryOperator) (ρ : DensityOperator) :
     rw [hρ]
   · intro v
     simp only [ContinuousLinearMap.toLinearMap_mul, ContinuousLinearMap.coe_mul,
-               Function.comp_apply]
+      Function.comp_apply]
     rw [inner_map_adjoint_left]
     exact ρ.is_pos.2 (U.op.adjoint.toLinearMap v)
 
 /-!
 ================================================================================
-STRATUM VI — CERTIFIED KERNEL (ZERO SORRY FIELDS)
+STRATUM VI — CERTIFIED KERNEL
 ================================================================================
 -/
 
@@ -246,3 +246,4 @@ theorem quantum_density_sound      : quantum_audit.density_op_sound = true   := 
 def QuantumSystemLock : QuantumAudit := quantum_audit
 
 end Optimus7Quantum
+
