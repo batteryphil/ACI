@@ -50,13 +50,13 @@ noncomputable def load_factor (x_d : ℝ) : ℝ :=
 
 theorem load_factor_bounds (x : ℝ) :
     0 ≤ load_factor x ∧ load_factor x ≤ U_MAX := by
-  simp [load_factor, U_MAX]
-  exact ⟨le_min (le_max_right _ _) (by norm_num), min_le_right _ _⟩
+  simp only [load_factor, U_MAX]
+  constructor <;> simp <;> norm_num
 
 theorem load_factor_lt_one (x : ℝ) :
     load_factor x < 1 := by
-  simp [load_factor, U_MAX]
-  exact lt_of_le_of_lt (min_le_right _ _) (by norm_num)
+  simp only [load_factor, U_MAX]
+  norm_num
 
 /-- Effective mass: increases as domain approaches saturation -/
 noncomputable def effective_mass (m : ℝ) (load : ℝ)
