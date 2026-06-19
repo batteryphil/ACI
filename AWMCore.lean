@@ -17,8 +17,8 @@ structure GeometryBounds where
   gmax  : ℝ
   h_valid : gmin < gmax
 
-def GeometryBounds.span (g : GeometryBounds) : ℝ := g.gmax - g.gmin
-def GeometryBounds.mid  (g : GeometryBounds) : ℝ := (g.gmax + g.gmin) / 2
+noncomputable def GeometryBounds.span (g : GeometryBounds) : ℝ := g.gmax - g.gmin
+noncomputable def GeometryBounds.mid  (g : GeometryBounds) : ℝ := (g.gmax + g.gmin) / 2
 
 theorem GeometryBounds.span_pos (g : GeometryBounds) : 0 < g.span := by
   simp [GeometryBounds.span]; linarith [g.h_valid]
@@ -94,11 +94,11 @@ theorem squash_near_mid (g : GeometryBounds) (x : ℝ) :
 noncomputable def energy (x : Fin n → ℝ) : ℝ :=
   univ.sum (fun i => x i ^ 2)
 
-theorem energy_nonneg (x : Fin n → ℝ) : 0 ≤ energy n x :=
+theorem energy_nonneg (x : Fin n → ℝ) : 0 ≤ energy x :=
   sum_nonneg (fun i _ => sq_nonneg _)
 
 theorem energy_zero_iff (x : Fin n → ℝ) :
-    energy n x = 0 ↔ x = 0 := by
+    energy x = 0 ↔ x = 0 := by
   simp [energy]
   constructor
   · intro h
@@ -109,11 +109,11 @@ theorem energy_zero_iff (x : Fin n → ℝ) :
   · intro h; subst h; simp
 
 theorem energy_scale (c : ℝ) (x : Fin n → ℝ) :
-    energy n (fun i => c * x i) = c ^ 2 * energy n x := by
+    energy (fun i => c * x i) = c ^ 2 * energy x := by
   simp [energy, mul_pow, ← mul_sum]
 
 theorem energy_nonneg_sqrt (x : Fin n → ℝ) :
-    0 ≤ Real.sqrt (energy n x) := Real.sqrt_nonneg _
+    0 ≤ Real.sqrt (energy x) := Real.sqrt_nonneg _
 
 /-!
 ═══════════════════════════════════════════
@@ -130,7 +130,7 @@ def step_diff (n : ℕ) (traj : Trajectory n k) (t : Fin (k-1)) :
 noncomputable def mobility (n k : ℕ) (hk : 1 < k)
     (traj : Trajectory n k) : ℝ :=
   (Finset.univ.sum (fun t : Fin (k-1) =>
-    Real.sqrt (energy n (step_diff n traj t)))) / (k - 1 : ℝ)
+    Real.sqrt (energy (step_diff n traj t)))) / (k - 1 : ℝ)
 
 theorem mobility_nonneg (n k : ℕ) (hk : 1 < k)
     (traj : Trajectory n k) :
@@ -152,7 +152,7 @@ theorem mobility_static (n k : ℕ) (hk : 1 < k) (x : Fin n → ℝ) :
 def spectrally_normalized (A : Matrix (Fin n) (Fin n) ℝ)
     (rho : ℝ) : Prop :=
   ∀ v : Fin n → ℝ, v ≠ 0 →
-    energy n (A.mulVec v) ≤ rho ^ 2 * energy n v
+    energy (A.mulVec v) ≤ rho ^ 2 * energy n v
 
 theorem zero_normalized (rho : ℝ) (hr : 0 ≤ rho) :
     spectrally_normalized (0 : Matrix (Fin n) (Fin n) ℝ) rho := by
@@ -194,7 +194,7 @@ noncomputable def awm_trajectory (p : AWMParams n)
 
 /-- Energy after one step is bounded by geometry -/
 theorem awm_energy_bounded (p : AWMParams n) (s : AWMState n) :
-    energy n (awm_step p s).x ≤
+    energy (awm_step p s).x ≤
     n * (1.08 * (p.geo.span / 2) + |p.geo.mid|) ^ 2 := by
   simp [energy, awm_step]
   apply sum_le_card_nsmul

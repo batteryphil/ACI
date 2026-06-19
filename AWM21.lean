@@ -108,27 +108,28 @@ def depends_on : Domain → Domain → Prop :=
   fun d1 d2 => domain_priority d1 > domain_priority d2
 
 theorem domain_wf : WellFounded depends_on := by
-  constructor
-  intro d
-  have key : ∀ n : ℕ, ∀ e : Domain, domain_priority e ≤ n → Acc depends_on e := by
+  apply WellFounded.intro
+  have key : ∀ n : ℕ, ∀ e : Domain, 21 - domain_priority e ≤ n → Acc depends_on e := by
     intro n
     induction n with
     | zero =>
       intro e he
-      constructor
+      apply Acc.intro
       intro f hf
       simp [depends_on] at hf
-      have : domain_priority f < 1 := hf
-      have : 0 < domain_priority f := by apply Nat.succ_le_iff.mp; simp
+      have := priority_bounded f
+      have := priority_bounded e
       omega
     | succ k ih =>
       intro e he
-      constructor
+      apply Acc.intro
       intro f hf
       simp [depends_on] at hf
       apply ih f
-      apply Nat.lt_of_lt_of_le hf he
-  exact key (domain_priority d) d (le_refl _)
+      have := priority_bounded e
+      omega
+  intro e
+  exact key (21 - domain_priority e) e (by omega)
 
 /-! ## TIER 6: SOVEREIGN GOVERNANCE SEAL -/
 structure AWM_AuditVector where

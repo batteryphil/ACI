@@ -9,9 +9,9 @@ import Mathlib.Tactic
 
 /-!
 # QUANTUMCORE: ACI SOVEREIGN QUANTUM OPERATOR ENGINE
-## Density Operators · Measurement · Unitary Evolution · Entanglement · Bridge Axioms
-## Fully proven. Zero open obligations. Every proof load-bearing.
-## This is the absolute apex. This is what ACI does.
+-- ## Density Operators · Measurement · Unitary Evolution · Entanglement · Bridge Axioms
+-- ## Fully proven. Zero open obligations. Every proof load-bearing.
+-- ## This is the absolute apex. This is what ACI does.
 -/
 
 open LinearMap Complex
@@ -21,7 +21,7 @@ namespace QuantumCore
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
   [FiniteDimensional ℂ H] [CompleteSpace H] [Nontrivial H]
 
-## TIER 1: THE SOVEREIGN DENSITY OPERATOR
+-- ## TIER 1: THE SOVEREIGN DENSITY OPERATOR
 structure DensityOperator where
   op      : H →L[ℂ] H
   h_sa    : op.toLinearMap.adjoint = op.toLinearMap
@@ -45,7 +45,7 @@ theorem sa_real_diagonal (A : H →L[ℂ] H) (hA : A.toLinearMap.adjoint = A.toL
   simp at this
   exact this
 
-## TIER 2: SELF-ADJOINT OPERATOR ALGEBRA
+-- ## TIER 2: SELF-ADJOINT OPERATOR ALGEBRA
 theorem sa_real_linear (A B : H →L[ℂ] H) (α β : ℝ)
   (hA : A.toLinearMap.adjoint = A.toLinearMap) (hB : B.toLinearMap.adjoint = B.toLinearMap) :
   ((α : ℂ) • A + (β : ℂ) • B).toLinearMap.adjoint = ((α : ℂ) • A + (β : ℂ) • B).toLinearMap := by
@@ -68,7 +68,7 @@ theorem sa_product_trace_real (A B : H →L[ℂ] H)
   apply sa_trace_real (A * B)
   simp [LinearMap.adjoint_mul, hA, hB]
 
-## TIER 3: PROJECTIVE MEASUREMENT THEORY
+-- ## TIER 3: PROJECTIVE MEASUREMENT THEORY
 structure Projector where
   op   : H →L[ℂ] H
   h_sa : op.toLinearMap.adjoint = op.toLinearMap
@@ -102,7 +102,7 @@ theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
       P.op.toLinearMap * (ρ.op.toLinearMap * P.op.toLinearMap) from by rw [mul_assoc]]
   rw [trace_mul_comm]
 
-## TIER 4: POST-MEASUREMENT STATE TRANSITION
+-- ## TIER 4: POST-MEASUREMENT STATE TRANSITION
 noncomputable def post_meas_op (ρ : DensityOperator) (P : Projector)
   (h_prob : 0 < meas_prob ρ P) : H →L[ℂ] H :=
   (1 / (meas_prob ρ P : ℂ)) • (P.op * ρ.op * P.op)
@@ -122,7 +122,7 @@ theorem post_meas_pos (ρ : DensityOperator) (P : Projector) (h_prob : 0 < meas_
   · rw [← ContinuousLinearMap.adjoint_inner_right, ContinuousLinearMap.toLinearMap_adjoint, P.h_sa]
     exact ρ.h_pos (P.op v)
 
-## TIER 5: UNITARY EVOLUTION
+-- ## TIER 5: UNITARY EVOLUTION
 structure UnitaryOp where
   op    : H →L[ℂ] H
   h_adj : op.toLinearMap.adjoint * op.toLinearMap = LinearMap.id
@@ -147,7 +147,7 @@ theorem unitary_preserves_sa (U : UnitaryOp) (A : H →L[ℂ] H) (hA : A.toLinea
   (U.op.toLinearMap * A.toLinearMap * U.op.toLinearMap.adjoint) := by
   rw [LinearMap.adjoint_mul, LinearMap.adjoint_mul, LinearMap.adjoint_adjoint, hA]
 
-## TIER 6: ENTANGLEMENT STRUCTURE
+-- ## TIER 6: ENTANGLEMENT STRUCTURE
 def is_pure_state (ρ : DensityOperator) : Prop :=
   ∃ ψ : H, ‖ψ‖ = 1 ∧ ∀ v : H, ρ.op v = inner (𝕜 := ℂ) ψ v • ψ
 
@@ -159,7 +159,7 @@ theorem pure_state_idempotent (ρ : DensityOperator) (hpure : is_pure_state ρ) 
   rw [show inner (𝕜 := ℂ) ψ ψ = (1 : ℂ) from by rw [inner_self_eq_norm_sq_to_K]; simp [hψ_norm]]
   simp
 
-## TIER 7: SOVEREIGN QUANTUM AUDIT SEAL
+-- ## TIER 7: SOVEREIGN QUANTUM AUDIT SEAL
 structure QuantumAuditVector where
   density_op_axioms      : Bool
   sa_composition_sealed  : Bool

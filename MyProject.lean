@@ -67,7 +67,7 @@ theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   · rw [abs_of_nonpos (by linarith : x - 5 ≤ 0), abs_of_nonpos (by linarith : x - y ≤ 0)]
     linarith
   · exact le_refl _
-    rw [abs_of_pos (by linarith : 0 < x - y)]; linarith
+    · rw [abs_of_pos (by linarith : 0 < x - y)]; linarith
   · simp [sub_self]
   · rw [abs_of_nonneg (by linarith : 0 ≤ 5 - y), abs_of_nonneg (by linarith : 0 ≤ x - y)]
     linarith
