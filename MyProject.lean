@@ -52,7 +52,7 @@ theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   unfold clamp cfg; simp only
   split_ifs with hx₁ hx₂ hy₁ hy₂ hy₁ hy₂ hy₁ hy₂ <;>
-  simp_all <;> push_neg at * <;> try linarith
+  simp_all <;> simp only [not_lt] at * <;> try linarith
   all_goals (try (rw [abs_of_neg (by norm_num), abs_of_neg (by linarith)]; linarith))
   all_goals (try (rw [abs_of_nonpos (by linarith), abs_of_neg (by linarith)]; linarith))
   all_goals (try (rw [abs_of_pos (by norm_num), abs_of_pos (by linarith)]; linarith))
@@ -66,6 +66,7 @@ theorem U_lipschitz (x y : State) : dist (U x) (U y) = cfg.k * dist x y := by
   unfold dist norm U
   rw [Finset.mul_sum]
   apply Finset.sum_congr rfl; intro i _
+  dsimp only
   rw [show cfg.k * x i - cfg.k * y i = cfg.k * (x i - y i) by ring,
       abs_mul, abs_of_nonneg k_nonneg]
 
@@ -82,19 +83,22 @@ theorem dist_self_zero (s : State) : dist s s = 0 := by
   unfold dist norm; simp [sub_self, abs_zero]
 
 theorem dist_triangle (x y z : State) : dist x z ≤ dist x y + dist y z := by
-  unfold dist norm; simp only [← Finset.sum_add_distrib]
-  apply Finset.sum_le_sum; intro i _
-  have h : x i - z i = (x i - y i) + (y i - z i) := by ring
-  rw [h]
-  have h1 : x i - y i ≤ |x i - y i| := le_abs_self _
-  have h2 : y i - z i ≤ |y i - z i| := le_abs_self _
-  have h3 : -(x i - y i) ≤ |x i - y i| := by
-    calc -(x i - y i) ≤ |-(x i - y i)| := le_abs_self _
-      _ = |x i - y i| := abs_neg _
-  have h4 : -(y i - z i) ≤ |y i - z i| := by
-    calc -(y i - z i) ≤ |-(y i - z i)| := le_abs_self _
-      _ = |y i - z i| := abs_neg _
-  rw [abs_le]; constructor <;> linarith
+  unfold dist norm
+  calc ∑ i : Fin cfg.dim, |x i - z i|
+      ≤ ∑ i : Fin cfg.dim, (|x i - y i| + |y i - z i|) := by
+          apply Finset.sum_le_sum; intro i _
+          have h : x i - z i = (x i - y i) + (y i - z i) := by ring
+          have h1 : x i - y i ≤ |x i - y i| := le_abs_self _
+          have h2 : y i - z i ≤ |y i - z i| := le_abs_self _
+          have h3 : -(x i - y i) ≤ |x i - y i| := by
+            calc -(x i - y i) ≤ |-(x i - y i)| := le_abs_self _
+              _ = |x i - y i| := abs_neg _
+          have h4 : -(y i - z i) ≤ |y i - z i| := by
+            calc -(y i - z i) ≤ |-(y i - z i)| := le_abs_self _
+              _ = |y i - z i| := abs_neg _
+          rw [h, abs_le]; constructor <;> linarith
+    _ = ∑ i : Fin cfg.dim, |x i - y i| + ∑ i : Fin cfg.dim, |y i - z i| :=
+          Finset.sum_add_distrib
 
 theorem zero_fixed_dist (s : State) : dist (T s) Zero ≤ cfg.k * dist s Zero := by
   have h := contraction s Zero; simp only [zero_fixed] at h; exact h
