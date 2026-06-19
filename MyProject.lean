@@ -8,7 +8,6 @@ namespace ACI_Certified
 
 open BigOperators Classical
 
--- CONFIGURATION
 structure Config where
   dim   : ℕ
   lower : ℚ
@@ -45,7 +44,9 @@ theorem zero_fixed : Fixed Zero := by
   unfold Fixed T U Proj Zero clamp cfg; funext i; norm_num
 
 theorem projection_valid (s : State) : Valid (Proj s) := by
-  intro i; unfold Valid InBounds Proj clamp cfg; simp only
+  intro i
+  unfold InBounds Proj clamp cfg
+  simp only
   split_ifs with h₁ h₂
   · constructor <;> linarith
   · constructor <;> linarith
@@ -56,20 +57,23 @@ theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   unfold clamp cfg; simp only
   split_ifs with hx₁ hx₂ hy₁ hy₂ hy₁ hy₂ hy₁ hy₂ <;>
-  simp_all <;> simp only [not_lt] at * <;> try linarith
-  all_goals (try (rw [abs_of_nonpos (by linarith)]; linarith))
-  all_goals (try (rw [abs_of_nonneg (by linarith)]; linarith))
-  all_goals (try (rw [abs_le]; constructor <;> linarith))
+  simp_all <;> (try linarith) <;>
+  (try (rw [abs_of_nonpos (by linarith)]; linarith)) <;>
+  (try (rw [abs_of_nonneg (by linarith)]; linarith)) <;>
+  (try (rw [abs_le]; constructor <;> linarith))
 
 theorem proj_nonexpansive (x y : State) : dist (Proj x) (Proj y) ≤ dist x y := by
   unfold dist norm Proj; apply Finset.sum_le_sum
   intro i _; exact clamp_nonexpansive (x i) (y i)
 
 theorem U_lipschitz (x y : State) : dist (U x) (U y) = cfg.k * dist x y := by
-  unfold dist norm U cfg; simp only [← Finset.mul_sum]; congr 1
-  apply Finset.sum_congr rfl; intro i _
-  rw [show cfg.k * x i - cfg.k * y i = cfg.k * (x i - y i) by ring]
-  rw [abs_mul, abs_of_nonneg (by norm_num : (0 : ℚ) ≤ (85 : ℚ) / 100)]
+  unfold dist norm U cfg
+  trans (Finset.univ.sum (fun i : Fin 21 => (85 : ℚ) / 100 * |x i - y i|))
+  · apply Finset.sum_congr rfl; intro i _
+    rw [show (85 : ℚ) / 100 * x i - (85 : ℚ) / 100 * y i =
+        (85 : ℚ) / 100 * (x i - y i) by ring]
+    rw [abs_mul, abs_of_nonneg (by norm_num : (0 : ℚ) ≤ (85 : ℚ) / 100)]
+  · rw [← Finset.mul_sum]
 
 theorem contraction (x y : State) : dist (T x) (T y) ≤ cfg.k * dist x y := by
   unfold T
@@ -87,7 +91,7 @@ theorem dist_triangle (x y z : State) : dist x z ≤ dist x y + dist y z := by
   unfold dist norm; simp only [← Finset.sum_add_distrib]
   apply Finset.sum_le_sum; intro i _
   have : x i - z i = (x i - y i) + (y i - z i) := by ring
-  rw [this]; exact _root_.abs_add _ _
+  rw [this]; exact abs_add _ _
 
 theorem zero_fixed_dist (s : State) : dist (T s) Zero ≤ cfg.k * dist s Zero := by
   have h := contraction s Zero; simp only [zero_fixed] at h; exact h
@@ -112,7 +116,7 @@ lemma geom_squeeze (C : ℚ) (hC : 0 ≤ C) (ε : ℚ) (hε : ε > 0) :
   rcases eq_or_lt_of_le hC with rfl | hCpos
   · exact ⟨0, by simp [hε]⟩
   · obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one (div_pos hε hCpos) k_lt_one
-    exact ⟨N, (lt_div_iff hCpos).mp hN⟩
+    exact ⟨N, (lt_div_iff₀ hCpos).mp hN⟩
 
 theorem convergence (s : State) : Converges (fun n => traj n s) Zero := by
   intro ε hε
