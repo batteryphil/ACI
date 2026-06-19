@@ -176,12 +176,17 @@ theorem priority_injective : Function.Injective domain_priority := by
 
 /-- The bottleneck: the weakest link in a list of active domains -/
 def bottleneck (domains : List Domain) : Option Domain :=
-  domains.minBy domain_priority
+  domains.foldl (fun acc d =>
+    match acc with
+    | none => some d
+    | some best =>
+      if domain_priority d < domain_priority best then some d else some best
+  ) none
 
 /-- The system bottleneck exists iff the domain list is nonempty -/
 theorem bottleneck_exists_iff (domains : List Domain) :
     (bottleneck domains).isSome ↔ domains ≠ [] := by
-  simp [bottleneck, List.minBy]
+  simp [bottleneck]
   cases domains <;> simp
 
 /-!
@@ -210,7 +215,7 @@ theorem depends_trans (d1 d2 d3 : Domain) :
 
 /-- The domain graph is acyclic (well-founded) -/
 theorem domain_wf : WellFounded depends_on :=
-  InvImage.wf domain_priority (measure id).wf
+  InvImage.wf domain_priority Nat.lt_wfRel.wf
 
 /-!
 ═══════════════════════════════════════════════════════
