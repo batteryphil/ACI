@@ -152,7 +152,7 @@ theorem mobility_static (n k : ℕ) (hk : 1 < k) (x : Fin n → ℝ) :
 def spectrally_normalized (A : Matrix (Fin n) (Fin n) ℝ)
     (rho : ℝ) : Prop :=
   ∀ v : Fin n → ℝ, v ≠ 0 →
-    energy (A.mulVec v) ≤ rho ^ 2 * energy n v
+    energy (A.mulVec v) ≤ rho ^ 2 * energy v
 
 theorem zero_normalized (rho : ℝ) (hr : 0 ≤ rho) :
     spectrally_normalized (0 : Matrix (Fin n) (Fin n) ℝ) rho := by

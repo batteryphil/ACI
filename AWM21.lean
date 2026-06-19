@@ -117,8 +117,8 @@ theorem domain_wf : WellFounded depends_on := by
       apply Acc.intro
       intro f hf
       simp [depends_on] at hf
-      have := priority_bounded f
-      have := priority_bounded e
+      have hfb : domain_priority f ≤ 21 := by decide
+      have heb : domain_priority e ≤ 21 := by decide
       omega
     | succ k ih =>
       intro e he
@@ -126,7 +126,7 @@ theorem domain_wf : WellFounded depends_on := by
       intro f hf
       simp [depends_on] at hf
       apply ih f
-      have := priority_bounded e
+      have heb : domain_priority e ≤ 21 := by decide
       omega
   intro e
   exact key (21 - domain_priority e) e (by omega)
