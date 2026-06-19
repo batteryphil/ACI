@@ -102,14 +102,14 @@ theorem alfven_velocity_pos (c : AlfvenicConfig) :
 -/
 
 /-- Classical drag force: D = ½ρu²C_d·A -/
-def drag_classical (rho u Cd A : ℝ) : ℝ :=
+noncomputable def drag_classical (rho u Cd A : ℝ) : ℝ :=
   (1/2) * rho * u^2 * Cd * A
 
 /-- Lorentz force surface integral (hull node contribution) -/
-def lorentz_integral (J B A : ℝ) : ℝ := J * B * A
+noncomputable def lorentz_integral (J B A : ℝ) : ℝ := J * B * A
 
 /-- Effective drag with active hull nodes -/
-def drag_effective (rho u Cd A J B : ℝ) : ℝ :=
+noncomputable def drag_effective (rho u Cd A J B : ℝ) : ℝ :=
   drag_classical rho u Cd A - lorentz_integral J B A
 
 /-- When Lorentz integral equals classical drag, effective drag → 0 -/
@@ -166,7 +166,7 @@ structure PlasmaState where
   h_pres   : 0 < pressure
 
 /-- Magnetic pressure -/
-def magnetic_pressure (s : PlasmaState) : ℝ :=
+noncomputable def magnetic_pressure (s : PlasmaState) : ℝ :=
   (s.B_x^2 + s.B_y^2) / 2
 
 /-- Plasma beta: ratio of thermal to magnetic pressure -/
