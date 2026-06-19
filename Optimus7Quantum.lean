@@ -1,7 +1,7 @@
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.CStarAlgebra.Basic
-import Mathlib.Analysis.NormedSpace.OperatorNorm
+import Mathlib.Topology.Algebra.Module.FiniteDimension
 import Mathlib.Data.Matrix.Basic
 import Mathlib.LinearAlgebra.Matrix.Kronecker
 import Mathlib.LinearAlgebra.Matrix.PosDef

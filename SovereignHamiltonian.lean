@@ -16,7 +16,7 @@ noncomputable def V_potential (k : Real) (y_actual y_spine : Fin n -> Real) : Re
 noncomputable def G_governance (W : Real) (A dl : Fin n -> Real) : Real :=
   W * univ.sum (fun i => A i * dl i)
 
-def H_OPT7 (p m : Fin n -> Real) (k : Real) (y_actual y_spine : Fin n -> Real) (W : Real) (A dl : Fin n -> Real) : Real :=
+noncomputable def H_OPT7 (p m : Fin n -> Real) (k : Real) (y_actual y_spine : Fin n -> Real) (W : Real) (A dl : Fin n -> Real) : Real :=
   T_kinetic n p m + V_potential n k y_actual y_spine + G_governance n W A dl
 
 theorem T_nonneg (p m : Fin n -> Real) (hm : forall i, 0 < m i) : 0 <= T_kinetic n p m := by
