@@ -18,8 +18,7 @@ theorem absence_collapses_identity
     Not (Exists (fun s : SystemPresence => s.C = C)) := by
   intro h
   obtain ⟨s, hs⟩ := h
-  rw [hs] at hC
-  exact hC s.joint
+  exact hC (hs ▸ s.joint)
 
 def chamber_valid (delta m_eff : Real) : Prop := |delta| <= m_eff
 
