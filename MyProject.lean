@@ -1,4 +1,5 @@
 import Mathlib
+import VerifyState
 import Mathlib.Tactic
 
 namespace ACI_Certified
@@ -105,7 +106,7 @@ theorem decay (s : State) (n : ℕ) : dist (traj n s) Zero ≤ cfg.k ^ n * dist 
       ≤ cfg.k ^ n * dist (T s) Zero := ih (T s)
       _ ≤ cfg.k ^ n * (cfg.k * dist s Zero) := by
           apply mul_le_mul_of_nonneg_left _ (pow_nonneg k_nonneg n)
-          rw [← zero_fixed]; exact contraction s Zero
+          exact zero_fixed ▸ contraction s Zero
       _ = cfg.k ^ (n + 1) * dist s Zero := by ring
 
 def Converges (seq : ℕ → State) (tgt : State) : Prop :=
@@ -141,4 +142,3 @@ def SystemLock : Certified := {
 
 end ACI_Certified
 
-import VerifyState
