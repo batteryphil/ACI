@@ -1,0 +1,73 @@
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.LinearAlgebra.Trace
+import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.LinearAlgebra.Eigenspace.Basic
+import Mathlib.Data.Real.Basic
+import Mathlib.Data.Complex.Basic
+import Mathlib.Analysis.InnerProductSpace.Basic
+import Mathlib.Tactic
+
+open LinearMap Complex
+
+namespace QuantumCore
+
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
+  [FiniteDimensional ℂ H] [CompleteSpace H] [Nontrivial H]
+
+structure DensityOperator where
+  op      : H →L[ℂ] H
+  h_sa    : op.toLinearMap.adjoint = op.toLinearMap
+  h_pos   : ∀ v : H, 0 ≤ (inner (𝕜 := ℂ) v (op v)).re
+  h_trace : (trace ℂ H op.toLinearMap).re = 1
+
+theorem density_trace_one (ρ : DensityOperator) : (trace ℂ H ρ.op.toLinearMap).re = 1 := ρ.h_trace
+
+theorem sa_real_diagonal (A : H →L[ℂ] H) (hA : A.toLinearMap.adjoint = A.toLinearMap) (v : H) :
+  (inner (𝕜 := ℂ) v (A v)).im = 0 := by
+  have h := @inner_conj_symm ℂ H _ _ v (A v)
+  rw [← ContinuousLinearMap.adjoint_inner_left, ContinuousLinearMap.toLinearMap_adjoint, hA] at h
+  have : (inner (𝕜 := ℂ) v (A v)) = (inner (𝕜 := ℂ) v (A v)).conj := by rw [← h]; simp
+  exact Complex.conj_eq_iff_re.mp this |>.symm
+
+theorem sa_real_linear (A B : H →L[ℂ] H) (α β : ℝ)
+  (hA : A.toLinearMap.adjoint = A.toLinearMap) (hB : B.toLinearMap.adjoint = B.toLinearMap) :
+  ((α : ℂ) • A + (β : ℂ) • B).toLinearMap.adjoint = ((α : ℂ) • A + (β : ℂ) • B).toLinearMap := by
+  simp [adjoint_add, adjoint_smul, hA, hB, Complex.conj_ofReal]
+
+theorem sa_composition_seal (ρ P : H →L[ℂ] H) (hρ : ρ.toLinearMap.adjoint = ρ.toLinearMap) (hP : P.toLinearMap.adjoint = P.toLinearMap) :
+  (P.toLinearMap * ρ.toLinearMap * P.toLinearMap).adjoint = P.toLinearMap * ρ.toLinearMap * P.toLinearMap := by
+  rw [adjoint_mul, adjoint_mul, hP, hρ, mul_assoc]
+
+theorem sa_trace_real (A : H →L[ℂ] H) (hA : A.toLinearMap.adjoint = A.toLinearMap) : (trace ℂ H A.toLinearMap).im = 0 := by
+  have h : trace ℂ H A.toLinearMap = (starRingEnd ℂ) (trace ℂ H A.toLinearMap) := by rw [← hA, ← trace_adjoint]; rfl
+  exact_mod_cast Complex.conj_eq_iff_re.mp h.symm |>.symm ▸ rfl
+
+structure Projector where
+  op   : H →L[ℂ] H
+  h_sa : op.toLinearMap.adjoint = op.toLinearMap
+  h_id : op * op = op
+
+theorem proj_idempotent (P : Projector) (v : H) : P.op (P.op v) = P.op v := by
+  have := congr_fun (congr_arg ContinuousLinearMap.toFun P.h_id) v; simpa using this
+
+noncomputable def meas_prob (ρ : DensityOperator) (P : Projector) : ℝ :=
+  (trace ℂ H (ρ.op.toLinearMap.comp P.op.toLinearMap)).re
+
+theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
+  meas_prob ρ P = (trace ℂ H (P.op.toLinearMap.comp (ρ.op.toLinearMap.comp P.op.toLinearMap))).re := by
+  simp [meas_prob]; rw [trace_mul_comm]
+
+noncomputable def post_meas_op (ρ : DensityOperator) (P : Projector) (h_prob : 0 < meas_prob ρ P) : H →L[ℂ] H :=
+  (1 / (meas_prob ρ P : ℂ)) • (P.op.comp ρ.op.toLinearMap).comp P.op
+
+theorem post_meas_sa (ρ : DensityOperator) (P : Projector) (h_prob : 0 < meas_prob ρ P) :
+  (post_meas_op ρ P h_prob).toLinearMap.adjoint = (post_meas_op ρ P h_prob).toLinearMap := by
+  simp [post_meas_op, ContinuousLinearMap.toLinearMap_smul, LinearMap.adjoint_smul]
+  constructor; · simp [Complex.conj_ofReal]; · exact sa_composition_seal ρ.op P.op ρ.h_sa P.h_sa
+
+-- [Include your remaining Tier 5, 6, and 7 code here]
+
+end QuantumCore
+
+
+
