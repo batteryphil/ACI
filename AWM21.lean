@@ -101,7 +101,7 @@ theorem bottleneck_exists_iff (domains : List Domain) :
   · intro h
     cases domains with
     | nil => exact absurd rfl h
-    | cons a t => simp only [bottleneck, List.foldl]; induction t generalizing a; simp; simp only [List.foldl]; split_ifs <;> exact tail_ih✝ _ (by simp)
+    | cons a t => simp only [bottleneck, List.foldl]; induction t generalizing a; simp; simp only [List.foldl]; rename_i ih; split_ifs <;> exact ih _ (by simp)
 
 /-! ## TIER 5: CLOSURE AND CONSISTENCY -/
 def depends_on : Domain → Domain → Prop :=
