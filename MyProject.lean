@@ -67,6 +67,15 @@ theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   · rw [abs_of_nonpos (by linarith : x - 5 ≤ 0), abs_of_nonpos (by linarith : x - y ≤ 0)]
     linarith
   · exact le_refl _
+    rw [abs_of_pos (by linarith : 0 < x - y)]; linarith
+  · simp [sub_self]
+  · rw [abs_of_nonneg (by linarith : 0 ≤ 5 - y), abs_of_nonneg (by linarith : 0 ≤ x - y)]
+    linarith
+  · rw [abs_of_nonneg (by linarith : 0 ≤ x - -5), abs_of_nonneg (by linarith : 0 ≤ x - y)]
+    linarith
+  · rw [abs_of_nonpos (by linarith : x - 5 ≤ 0), abs_of_nonpos (by linarith : x - y ≤ 0)]
+    linarith
+  · exact le_refl _
 
 theorem proj_nonexpansive (x y : State) : dist (Proj x) (Proj y) ≤ dist x y := by
   unfold dist norm Proj; apply Finset.sum_le_sum
