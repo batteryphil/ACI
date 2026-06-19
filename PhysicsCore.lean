@@ -61,8 +61,8 @@ theorem lawson_density_monotone (n₁ n₂ T τ : ℝ)
     (hT : 0 ≤ T) (hτ : 0 ≤ τ) (hn : n₁ ≤ n₂)
     (h : lawson_satisfied n₁ T τ) :
     lawson_satisfied n₂ T τ := by
-  simp [lawson_satisfied]
-  linarith [triple_product_mono_n n₁ n₂ T τ hT hτ hn, h]
+  simp only [lawson_satisfied, triple_product] at *
+  linarith [triple_product_mono_n n₁ n₂ T τ hT hτ hn]
 
 /-!
 ═══════════════════════════════════════════════════
