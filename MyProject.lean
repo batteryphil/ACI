@@ -49,14 +49,14 @@ theorem projection_valid (s : State) : Valid (Proj s) := by
   split_ifs with h₁ h₂
   · constructor <;> linarith
   · constructor <;> linarith
-  · push_neg at h₁ h₂; exact ⟨h₁, le_of_not_lt h₂⟩
+  · push Not at h₁ h₂; exact ⟨h₁, le_of_not_lt h₂⟩
 
 theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
   unfold clamp cfg; simp only
   split_ifs with hx₁ hx₂ hy₁ hy₂ hy₁ hy₂ hy₁ hy₂ <;>
-  simp_all <;> push_neg at * <;> try linarith
+  simp_all <;> push Not at * <;> try linarith
   all_goals (try (rw [abs_of_nonpos (by linarith)]; linarith))
   all_goals (try (rw [abs_of_nonneg (by linarith)]; linarith))
   all_goals (try (rw [abs_le]; constructor <;> linarith))
