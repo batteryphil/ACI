@@ -1,5 +1,4 @@
 import Mathlib
-import VerifyState
 import Mathlib.Tactic
 
 namespace ACI_Certified
