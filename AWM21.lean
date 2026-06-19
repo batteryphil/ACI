@@ -252,7 +252,7 @@ theorem domain_wf : WellFounded depends_on := by
       intro f hf
       simp [depends_on] at hf
       apply ih f
-      omega
+      exact Nat.lt_of_lt_of_le hf (Nat.lt_succ_iff.mp he)
   exact key (domain_priority d) d (le_refl _)
 
 /-!
