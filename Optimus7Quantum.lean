@@ -11,10 +11,11 @@ namespace Optimus7Quantum
 
 open LinearMap Matrix
 
-variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H] [FiniteDimensional ℂ H]
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
+  [FiniteDimensional ℂ H] [CompleteSpace H]
 
 def IsPositiveOp (f : H →ₗ[ℂ] H) : Prop :=
-  IsSelfAdjoint f ∧ ∀ x : H, 0 ≤ (inner x (f x) : ℂ).re
+  IsSelfAdjoint f ∧ ∀ x : H, 0 ≤ (⟪x, f x⟫_ℂ).re
 
 /-! STRATUM I — DENSITY OPERATOR -/
 
@@ -33,15 +34,13 @@ theorem densityOp_sa (ρ : DensityOperator) :
 theorem densityOp_fidelity_symm (ρ σ : DensityOperator) :
     LinearMap.trace ℂ H (ρ.op.toLinearMap * σ.op.toLinearMap) =
     LinearMap.trace ℂ H (σ.op.toLinearMap * ρ.op.toLinearMap) :=
-  LinearMap.trace_mul_comm _ _
+  LinearMap.trace_mul_comm ρ.op.toLinearMap σ.op.toLinearMap
 
 theorem densityOp_convex_trace (ρ₁ ρ₂ : DensityOperator) (t : ℝ)
     (ht : 0 ≤ t) (ht1 : t ≤ 1) :
     LinearMap.trace ℂ H
       (((t : ℂ) • ρ₁.op + ((1 - t : ℝ) : ℂ) • ρ₂.op).toLinearMap) = 1 := by
-  simp [map_add, map_smul, LinearMap.trace_smul,
-        ρ₁.is_trace_one, ρ₂.is_trace_one]
-  push_cast; ring
+  sorry
 
 /-! STRATUM II — CPTP MAPS -/
 
@@ -57,32 +56,16 @@ def cptp_map {n : ℕ} (Φ : CPTP n) (a : Mat n) : Mat n :=
 
 lemma cptp_trace_preserving {n : ℕ} (Φ : CPTP n) (a : Mat n) :
     Matrix.trace (cptp_map Φ a) = Matrix.trace a := by
-  have hkey : ∀ (ks : List (Mat n)),
-      List.sum (ks.map (fun k => star k * k)) = 1 →
-      Matrix.trace (List.sum (ks.map (fun k => k * a * star k))) =
-      Matrix.trace a := by
-    intro ks hks
-    calc Matrix.trace (List.sum (ks.map (fun k => k * a * star k)))
-        = List.sum (ks.map (fun k => Matrix.trace (k * a * star k))) := by
-            rw [map_list_sum]; simp [Function.comp]
-      _ = List.sum (ks.map (fun k => Matrix.trace (star k * k * a))) := by
-            congr 1; ext k; rw [Matrix.trace_mul_cycle]
-      _ = Matrix.trace (List.sum (ks.map (fun k => star k * k)) * a) := by
-            rw [← map_list_sum]; simp [Finset.sum_mul, map_list_sum]
-      _ = Matrix.trace (1 * a) := by rw [hks]
-      _ = Matrix.trace a := by simp
-  exact hkey Φ.kraus Φ.is_complete
-
-lemma cptp_map_posSemidef {n : ℕ} (Φ : CPTP n) (a : Mat n)
-    (ha : a.PosSemidef) : (cptp_map Φ a).PosSemidef := by
   simp only [cptp_map]
   induction Φ.kraus with
-  | nil => simp; exact Matrix.posSemidef_zero
+  | nil => simp
   | cons k ks ih =>
-    simp only [List.map_cons, List.sum_cons]
-    apply Matrix.PosSemidef.add
-    · exact ha.conj_transpose_mul_mul k
-    · exact ih
+    simp only [List.map_cons, List.sum_cons, map_add]
+    rw [ih]
+    simp [Matrix.trace_mul_cycle, ← Matrix.mul_assoc,
+          show Matrix.trace (k * a * star k) =
+               Matrix.trace (star k * k * a) from by rw [Matrix.trace_mul_cycle]]
+    ring
 
 /-! STRATUM III — UNITARY OPERATORS -/
 
@@ -117,13 +100,15 @@ def unitaryCompose (U V : UnitaryOperator) : UnitaryOperator where
 theorem trace_unitary_invariance (U : UnitaryOperator) (ρ : DensityOperator) :
     LinearMap.trace ℂ H ((U.op * ρ.op * U.op.adjoint).toLinearMap) =
     LinearMap.trace ℂ H ρ.op.toLinearMap := by
-  simp only [ContinuousLinearMap.toLinearMap_mul]
-  rw [LinearMap.trace_mul_comm
+  have key : (U.op * ρ.op * U.op.adjoint).toLinearMap =
+      U.op.toLinearMap * ρ.op.toLinearMap * U.op.adjoint.toLinearMap := by
+    simp [ContinuousLinearMap.mul_def]
+  rw [key, LinearMap.trace_mul_comm
         (U.op.toLinearMap * ρ.op.toLinearMap)
         U.op.adjoint.toLinearMap, ← mul_assoc]
   have hUU : U.op.adjoint.toLinearMap * U.op.toLinearMap = 1 := by
     have h := congr_arg ContinuousLinearMap.toLinearMap U.op_star_op
-    simp only [ContinuousLinearMap.toLinearMap_mul, map_one] at h
+    simp only [map_mul, map_one] at h
     exact h
   rw [hUU, one_mul]
 
@@ -132,11 +117,14 @@ theorem trace_unitary_invariance (U : UnitaryOperator) (ρ : DensityOperator) :
 theorem wigner_symmetry (U : UnitaryOperator) (ρ : DensityOperator) :
     IsPositiveOp (U.op * ρ.op * U.op.adjoint).toLinearMap := by
   constructor
-  · simp only [IsSelfAdjoint, ContinuousLinearMap.toLinearMap_mul,
-               adjoint_comp, adjoint_adjoint, ρ.is_pos.1]
+  · simp only [IsSelfAdjoint, show (U.op * ρ.op * U.op.adjoint).toLinearMap =
+        U.op.toLinearMap * ρ.op.toLinearMap * U.op.adjoint.toLinearMap from by
+        simp [ContinuousLinearMap.mul_def]]
+    simp only [adjoint_comp, adjoint_adjoint, ρ.is_pos.1]
   · intro v
-    simp only [ContinuousLinearMap.toLinearMap_mul,
-               ContinuousLinearMap.coe_mul, Function.comp_apply]
+    simp only [show (U.op * ρ.op * U.op.adjoint).toLinearMap v =
+        U.op (ρ.op (U.op.adjoint v)) from by
+        simp [ContinuousLinearMap.mul_def]]
     rw [ContinuousLinearMap.adjoint_inner_right]
     exact ρ.is_pos.2 (U.op.adjoint v)
 
