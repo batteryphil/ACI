@@ -9,7 +9,8 @@ theorem contraction_mapping_verified
     ∃ x : α, T x = x := by
   let k' : NNReal := ⟨k, hk0⟩
   have hk' : k' < 1 := by exact_mod_cast hk
-  have hLip : LipschitzWith k' T := fun x y => by exact_mod_cast hT x y
+  have hLip : LipschitzWith k' T :=
+    lipschitzWith_iff_dist_le_mul.mpr (fun x y => by exact_mod_cast hT x y)
   have hContr : ContractingWith k' T := ⟨hk', hLip⟩
   exact ⟨hContr.fixedPoint, hContr.fixedPoint_isFixedPt⟩
 
