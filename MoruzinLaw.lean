@@ -32,7 +32,7 @@ theorem chamber_composition (d1 d2 m1 m2 : Real)
     (h2 : chamber_valid d2 m2) :
     chamber_valid (d1 + d2) (m1 + m2) := by
   simp [chamber_valid]
-  calc |d1 + d2| ≤ |d1| + |d2| := abs_add d1 d2
+  calc |d1 + d2| ≤ |d1| + |d2| := abs_add_le d1 d2
     _ ≤ m1 + m2 := add_le_add h1 h2
 
 theorem zero_always_valid (m : Real) (hm : 0 <= m) :
@@ -103,7 +103,7 @@ theorem awm7_sovereign_locked :
     unification_valid AWM7_Seal.unified = true ∧
     AWM7_Seal.presence.C ∧
     0 < AWM7_Seal.m_eff :=
-  ⟨by decide, trivial, by norm_num⟩
+  ⟨by decide, trivial, one_pos⟩
 
 theorem awm7_apex_certified :
     Not (AWM7_Seal.unified.g_accept = false) ∧
