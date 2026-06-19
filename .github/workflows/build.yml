@@ -1,24 +1,31 @@
+cat > /root/my_project/.github/workflows/build.yml << 'ENDOFFILE'
 name: Build ACI Library
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # This allows you to trigger it manually from the UI!
+  workflow_dispatch:
 
 jobs:
-  build-individual:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false # CRITICAL: This keeps other builds running if one fails
-      matrix:
-        target: [ "Optimus7Quantum", "SovereignHamiltonian" ] # Add your files here
     steps:
       - uses: actions/checkout@v4
+
       - name: Install elan
         run: |
           curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
           echo "$HOME/.elan/bin" >> $GITHUB_PATH
-      - name: Build Module
-        run: |
-          lake exe cache get || echo "Cache fetch failed, continuing..."
-          lake build ${{ matrix.target }}
+
+      - name: Cache Mathlib
+        uses: actions/cache@v4
+        with:
+          path: .lake
+          key: Linux-lake-${{ hashFiles('lake-manifest.json') }}
+
+      - name: Get Mathlib cache
+        run: lake exe cache get
+
+      - name: Build all
+        run: lake build
+ENDOFFILE
