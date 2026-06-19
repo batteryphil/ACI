@@ -1,4 +1,4 @@
-cat > /root/my_project/.github/workflows/build.yml << 'ENDOFFILE'
+cat > /root/my_project/.github/workflows/build.yml
 name: Build ACI Library
 
 on:
