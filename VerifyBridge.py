@@ -45,3 +45,8 @@ class VerifyBridge:
             "lean_results": self.results
         }
 
+    def talk(self, user_input: str) -> str:
+        thought_process = self.rt.run_recursive_thought(complexity_depth=3)
+        response = self.rt.run_inference(user_input)
+        return f"SYSTEM_THOUGHT: {thought_process}\nSYSTEM_RESPONSE: {response}"
+
