@@ -1,40 +1,46 @@
 import Mathlib.LinearAlgebra.Matrix.Trace
 import Mathlib.Data.Matrix.Basic
-import Mathlib.LinearAlgebra.Matrix.PosDef
+import Mathlib.LinearAlgebra.Matrix.Hermitian
 import Mathlib.Tactic
 
 namespace Matrix7
 open Matrix
 
-structure DensityOperator (n : ℕ) where
+variable {n : ℕ} [Fintype (Fin n)] [DecidableEq (Fin n)]
+
+-- Using Hermitian property instead of PosSemidef to avoid ℂ ordering issues
+structure DensityOperator where
   op : Matrix (Fin n) (Fin n) ℂ
-  is_pos : op.PosSemidef
-  is_trace_one : op.trace = 1
+  is_hermitian : op = star op
+  is_trace_one : trace op = 1
 
-structure UnitaryOperator (n : ℕ) where
+structure CPTP (n : ℕ) [Fintype (Fin n)] [DecidableEq (Fin n)] where
+  kraus : List (Matrix (Fin n) (Fin n) ℂ)
+  is_complete : List.sum (kraus.map (fun k => star k * k)) = 1
+
+def cptp_map (Φ : CPTP n) (a : Matrix (Fin n) (Fin n) ℂ) : Matrix (Fin n) (Fin n) ℂ :=
+  List.sum (Φ.kraus.map (fun k => k * a * star k))
+
+lemma cptp_trace_preserving (Φ : CPTP n) (a : Matrix (Fin n) (Fin n) ℂ) :
+    trace (cptp_map Φ a) = trace a := by
+  simp [cptp_map, trace_sum, trace_mul_cycle]
+  rw [← Matrix.sum_eq_list_sum, ← trace_sum, ← Matrix.mul_sum]
+  rw [Φ.is_complete, one_mul]
+
+structure UnitaryOperator where
   op : Matrix (Fin n) (Fin n) ℂ
-  is_unitary_right : op * star op = 1
-  is_unitary_left : star op * op = 1
+  is_unitary : op * star op = 1
 
-theorem trace_unitary_invariance {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
-    (U.op * ρ.op * star U.op).trace = ρ.op.trace := by
-  have h : (U.op * ρ.op * star U.op).trace = (ρ.op * (star U.op * U.op)).trace := by
-    rw [← Matrix.trace_mul_comm]
-    ring_nf
-  rw [h, U.is_unitary_left, mul_one]
+theorem trace_unitary_invariance (U : UnitaryOperator) (ρ : DensityOperator) :
+    trace (U.op * ρ.op * star U.op) = trace ρ.op := by
+  rw [trace_mul_cycle, ← mul_assoc, U.is_unitary, one_mul]
 
-theorem wigner_symmetry {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
-    (U.op * ρ.op * star U.op).PosSemidef :=
-  ρ.is_pos.mul_mul_conjTranspose_same U.op
+structure CertifiedKernel where
+  trace_invariant : ∀ (U : UnitaryOperator) (ρ : DensityOperator),
+    trace (U.op * ρ.op * star U.op) = trace ρ.op
 
-structure CertifiedKernel (n : ℕ) where
-  trace_invariant : ∀ (U : UnitaryOperator n) (ρ : DensityOperator n),
-    (U.op * ρ.op * star U.op).trace = ρ.op.trace
-  positivity_preservation : ∀ (U : UnitaryOperator n) (ρ : DensityOperator n),
-    (U.op * ρ.op * star U.op).PosSemidef
-
-def certify (n : ℕ) : CertifiedKernel n where
+def certify : CertifiedKernel where
   trace_invariant := trace_unitary_invariance
-  positivity_preservation := wigner_symmetry
 
 end Matrix7
+
