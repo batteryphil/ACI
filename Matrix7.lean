@@ -1,4 +1,4 @@
-  mport Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.LinearAlgebra.Matrix.Trace
 import Mathlib.Data.Matrix.Basic
 import Mathlib.LinearAlgebra.Matrix.PosDef
