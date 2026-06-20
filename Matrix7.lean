@@ -1,4 +1,3 @@
-cat > Matrix7.lean << 'EOF'
 import Mathlib.LinearAlgebra.Matrix.Trace
 import Mathlib.Data.Matrix.Basic
 import Mathlib.LinearAlgebra.Matrix.PosDef
@@ -55,4 +54,3 @@ def certify : CertifiedKernel where
   positivity_preservation := wigner_symmetry
 
 end Matrix7
-EOF
