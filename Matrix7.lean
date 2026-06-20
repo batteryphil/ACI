@@ -18,18 +18,14 @@ structure UnitaryOperator (n : ℕ) where
 
 theorem trace_unitary_invariance {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
     (U.op * ρ.op * star U.op).trace = ρ.op.trace := by
-  have h : (U.op * ρ.op * star U.op).trace =
-      (ρ.op * (star U.op * U.op)).trace := by
-    rw [← trace_mul_comm, ← mul_assoc]
+  have h : (U.op * ρ.op * star U.op).trace = (ρ.op * (star U.op * U.op)).trace := by
+    rw [← Matrix.trace_mul_comm]
+    ring_nf
   rw [h, U.is_unitary_left, mul_one]
 
 theorem wigner_symmetry {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
     (U.op * ρ.op * star U.op).PosSemidef :=
   ρ.is_pos.mul_mul_conjTranspose_same U.op
-
-theorem density_trace_preserved {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
-    (U.op * ρ.op * star U.op).trace = 1 := by
-  rw [trace_unitary_invariance, ρ.is_trace_one]
 
 structure CertifiedKernel (n : ℕ) where
   trace_invariant : ∀ (U : UnitaryOperator n) (ρ : DensityOperator n),
