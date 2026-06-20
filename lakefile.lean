@@ -10,7 +10,6 @@ lean_lib AWM21
 lean_lib AntaresCategory
 lean_lib PhysicsCore
 lean_lib SpineLanguage
-lean_lib Matrix7
 lean_lib SovereignHamiltonian
 lean_lib MC2Engine
 lean_lib AM10
@@ -27,3 +26,6 @@ lean_lib QuantumCore
 
 @[default_target]
 lean_lib AciLib
+
+lean_exe aci_bootstrap where
+  root := `Main
