@@ -18,13 +18,12 @@ structure UnitaryOperator (n : ℕ) where
 
 theorem trace_unitary_invariance {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
     (U.op * ρ.op * star U.op).trace = ρ.op.trace := by
-  have h : (U.op * ρ.op * star U.op).trace = (ρ.op * (star U.op * U.op)).trace := by
-    rw [← Matrix.trace_mul_comm, mul_assoc]
-  rw [h, U.is_unitary_left, mul_one]
+  rw [Matrix.trace_mul_comm, ← mul_assoc, U.is_unitary_left, one_mul]
 
 theorem hermitian_preserved {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
-    (U.op * ρ.op * star U.op).IsHermitian :=
-  ρ.is_hermitian.unitaryConj U.op
+    (U.op * ρ.op * star U.op).IsHermitian := by
+  simp [Matrix.IsHermitian, conjTranspose_mul, conjTranspose_mul,
+        Matrix.IsHermitian.eq ρ.is_hermitian, mul_assoc, U.is_unitary_left, U.is_unitary_right]
 
 structure CertifiedKernel (n : ℕ) where
   trace_invariant : ∀ (U : UnitaryOperator n) (ρ : DensityOperator n),
