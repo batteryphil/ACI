@@ -6,7 +6,24 @@ package "my_project" where
 
 require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v4.31.0"
 
+lean_lib AWM21
+lean_lib AntaresCategory
+lean_lib PhysicsCore
+lean_lib SpineLanguage
+lean_lib Matrix7
+lean_lib SovereignHamiltonian
+lean_lib MC2Engine
+lean_lib AM10
+lean_lib MoruzinLaw
+lean_lib VerifyState
+lean_lib N7Spine
+lean_lib MyProject
+lean_lib ACIManifold
+lean_lib Manifold21
+lean_lib AWMCore
+lean_lib Optimus7
+lean_lib Optimus7Quantum
+lean_lib QuantumCore
+
 @[default_target]
-lean_lib AciLib where
-  globs := #[.andSubmodules `AciLib]
-  srcDir := "."
+lean_lib AciLib
