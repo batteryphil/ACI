@@ -8,4 +8,5 @@ require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v
 
 @[default_target]
 lean_lib AciLib where
-  roots := #[`AciLib]
+  globs := #[.andSubmodules `AciLib]
+  srcDir := "."
