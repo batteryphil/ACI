@@ -1,2 +1,0 @@
-class EntropyEngine:
-    def __init__(self, target_entropy=1.0):
