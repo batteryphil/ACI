@@ -1,10 +1,24 @@
-namespace ACI_Terminal
-  -- The Synaptic weight between any domain i and j
-  -- based on the Prime_Resonance_Anchor
-  def SynapticWeight (i j : Fin 21) : ℝ := 
-    Real.exp (- (i.val - j.val)^2 / 7.000)
+import Mathlib
 
-  -- The global cognitive state is the sum of all synaptic potential
-  def CognitiveState : ℝ := 
-    (Finset.univ.sum (fun i => Finset.univ.sum (fun j => SynapticWeight i j)))
+namespace ACI_Terminal
+
+noncomputable def SynapticWeight (i j : Fin 21) : ℝ :=
+  Real.exp (- ((i.val : ℝ) - (j.val : ℝ))^2 / 7.0)
+
+noncomputable def CognitiveState : ℝ :=
+  Finset.univ.sum (fun i => Finset.univ.sum (fun j => SynapticWeight i j))
+
+theorem synapticWeight_pos (i j : Fin 21) : 0 < SynapticWeight i j := by
+  simp [SynapticWeight]
+  positivity
+
+theorem synapticWeight_symm (i j : Fin 21) :
+    SynapticWeight i j = SynapticWeight j i := by
+  simp [SynapticWeight]
+  ring
+
+theorem cognitiveState_pos : 0 < CognitiveState := by
+  simp [CognitiveState]
+  positivity
+
 end ACI_Terminal

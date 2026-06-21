@@ -16,6 +16,7 @@ lean_lib AM10
 lean_lib MoruzinLaw
 lean_lib VerifyState
 lean_lib N7Spine
+lean_lib Synaptic_Weights 
 lean_lib MyProject
 lean_lib ACIManifold
 lean_lib Manifold21
