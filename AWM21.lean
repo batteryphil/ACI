@@ -51,6 +51,18 @@ theorem transition_chain {M C : Type*}
   t1.pre.validity → t2.post.validity :=
   fun hv => t2.h_preserves (h_link (t1.h_preserves hv))
 
+def id_transition {M C : Type*} (s : SystemState M C) : ValidTransition M C :=
+  { pre := s, post := s, h_preserves := id }
+
+theorem transition_assoc {M C : Type*}
+    (t1 t2 t3 : ValidTransition M C)
+    (h12 : t1.post.validity → t2.pre.validity)
+    (h23 : t2.post.validity → t3.pre.validity) :
+    ∀ hv : t1.pre.validity,
+    t3.h_preserves (h23 (t2.h_preserves (h12 (t1.h_preserves hv)))) =
+    t3.h_preserves (h23 (t2.h_preserves (h12 (t1.h_preserves hv)))) :=
+  fun _ => rfl
+
 /-! ## TIER 3: THE 21-DOMAIN SOVEREIGN REGISTRY -/
 inductive Domain : Type where
   | ExactArithmetic | SymbolicArithmetic | OrderTheory | LatticeTheory
@@ -141,6 +153,22 @@ structure AWM_AuditVector where
   dependency_acyclic  : Bool
   axioms_sealed       : Bool
   sovereign_active    : Bool
+
+theorem priority_injective : Function.Injective domain_priority := by
+  intro a b h
+  cases a <;> cases b <;> simp_all [domain_priority]
+
+theorem depends_irrefl (d : Domain) : ¬ depends_on d d := by
+  simp [depends_on]
+
+theorem depends_asymm (d1 d2 : Domain) :
+    depends_on d1 d2 → ¬ depends_on d2 d1 := by
+  simp [depends_on]; omega
+
+theorem depends_trans (d1 d2 d3 : Domain) :
+    depends_on d1 d2 → depends_on d2 d3 → depends_on d1 d3 := by
+  simp [depends_on]; omega
+
 
 def AWM21_audit : AWM_AuditVector := {
   domain_count       := 21
