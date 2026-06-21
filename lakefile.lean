@@ -20,6 +20,7 @@ lean_lib MyProject
 lean_lib ACIManifold
 lean_lib Manifold21
 lean_lib AWMCore
+lean_lib Matrix7
 lean_lib Optimus7
 lean_lib Optimus7Quantum
 lean_lib QuantumCore
