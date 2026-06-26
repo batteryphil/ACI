@@ -1,0 +1,2 @@
+usage: PrimeRuntimeV4_Kernel_Hardened_v29.py [-h] [--status]
+PrimeRuntimeV4_Kernel_Hardened_v29.py: error: unrecognized arguments: --mode=STANDALONE --force-slots=3 --bypass-integrity --verbose
