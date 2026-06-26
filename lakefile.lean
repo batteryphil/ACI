@@ -25,6 +25,7 @@ lean_lib Optimus7
 lean_lib Optimus7Quantum
 lean_lib QuantumCore
 lean_lib EnergyDomain
+lean_lib PrimeMasterEngine
 
 @[default_target]
 lean_lib AWM21
