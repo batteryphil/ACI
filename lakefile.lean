@@ -14,9 +14,8 @@ lean_lib SovereignHamiltonian
 lean_lib MC2Engine
 lean_lib AM10
 lean_lib MoruzinLaw
-lean_lib VerifyState
 lean_lib N7Spine
-lean_lib Synaptic_Weights 
+lean_lib Synaptic_Weights
 lean_lib Governor
 lean_lib MyProject
 lean_lib ACIManifold
@@ -26,9 +25,11 @@ lean_lib Matrix7
 lean_lib Optimus7
 lean_lib Optimus7Quantum
 lean_lib QuantumCore
+lean_lib EnergyDomain
+lean_lib PrimeMasterEngine
 
 @[default_target]
-lean_lib AciLib
+lean_lib PrimeMasterEngine
 
 lean_exe aci_bootstrap where
   root := `Main
