@@ -28,7 +28,6 @@ lean_lib QuantumCore
 lean_lib EnergyDomain
 
 @[default_target]
-lean_lib PrimeMasterEngine
-
+lean_lib AWM21
 lean_exe aci_bootstrap where
   root := `Main
