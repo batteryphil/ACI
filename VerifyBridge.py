@@ -1,6 +1,9 @@
 import json
 import subprocess
 from PrimeRuntimeV4_backup import PrimeRuntimeV4
+from lean_bounds import LeanBounds
+from aci_phase3 import ApexIntelligenceEngine
+
 class VerifyBridge:
     def __init__(self):
         self.rt = PrimeRuntimeV4()
@@ -49,3 +52,33 @@ class VerifyBridge:
         response = self.rt.run_inference(user_input)
         return f"SYSTEM_THOUGHT: {thought_process}\nSYSTEM_RESPONSE: {response}"
 
+    def verified_step(self, dt):
+        """
+        Single runtime step with formal verification gate.
+        BREACH triggers halt per breach_implies_halt in MoruzinLaw.lean.
+        DEGRADED triggers full lake build per safety_margin in Governor.lean.
+        """
+        margin = self.rt.step(dt)
+        validation = LeanBounds.validate_margin(margin)
+
+        if validation['status'] == 'BREACH':
+            return {
+                "status": "HALT",
+                "reason": "breach_implies_halt",
+                "module": "MoruzinLaw.lean",
+                "margin": margin
+            }
+
+        if validation['status'] == 'DEGRADED':
+            engine = ApexIntelligenceEngine()
+            lean_ok = engine.run_lean_verification()
+            return {
+                "status": "DEGRADED_VERIFIED" if lean_ok else "DEGRADED_UNVERIFIED",
+                "lean_build": lean_ok,
+                "margin": margin
+            }
+
+        return {
+            "status": "STABLE",
+            "margin": margin
+        }
