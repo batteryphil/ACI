@@ -1,5 +1,6 @@
-<<<<<<< HEAD
-/.lake
-=======
-lean4/
->>>>>>> c7e29991098063b3883299381ebb9d98c0c47152
+__pycache__/
+*.pyc
+*.pyo
+*.log
+nohup.out
+.lake/
