@@ -6,6 +6,7 @@ package "my_project" where
 
 require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v4.31.0"
 
+lean_lib AWM21
 lean_lib AntaresCategory
 lean_lib PhysicsCore
 lean_lib SpineLanguage
@@ -25,9 +26,9 @@ lean_lib Optimus7
 lean_lib Optimus7Quantum
 lean_lib QuantumCore
 lean_lib EnergyDomain
-lean_lib PrimeMasterEngine
 
 @[default_target]
-lean_lib AWM21
+lean_lib PrimeMasterEngine
+
 lean_exe aci_bootstrap where
   root := `Main
