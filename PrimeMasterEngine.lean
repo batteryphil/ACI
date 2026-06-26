@@ -195,8 +195,10 @@ theorem manifold_concat_sum {c₁ c₂ : ℚ}
 
 theorem manifold_vec_determines_sum {c₁ c₂ : ℚ}
     (m₁ : ManifoldState c₁) (m₂ : ManifoldState c₂)
-    (h : m₁.vec = m₂.vec) : c₁ = c₂ :=
-  (m₁.constraint ▸ h ▸ m₂.constraint).symm
+    (h : m₁.vec = m₂.vec) : c₁ = c₂ := by
+  have h1 := m₁.constraint
+  have h2 := m₂.constraint
+  rw [← h1, h, h2]
 
 theorem manifold_concat_length {c₁ c₂ : ℚ}
     (m₁ : ManifoldState c₁) (m₂ : ManifoldState c₂) :
@@ -218,10 +220,13 @@ theorem margin_vector_sum_pos (mv : MarginVector) : 0 < mv.v.sum := by
 -- ============================================================
 
 structure RegistryObject where
-  id : ℕ; data : String
+  id   : ℕ
+  data : String
 
 structure IndexNode where
-  id : ℕ; path : String; status : String
+  id     : ℕ
+  path   : String
+  status : String
 
 structure Governance where
   allowed  : String → Bool
