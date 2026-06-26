@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 sys.path.append("/root/my_project")
-from PrimeRuntimeV4 import PrimeRuntimeV4
+from PrimeRuntimeV4_backup import PrimeRuntimeV4
 
 class EntropyEngine:
     def __init__(self, target_entropy=1.0):
@@ -26,16 +26,13 @@ class Policy:
     def act(self, state_vec):
         return np.tanh(state_vec @ self.weights)
 
-# ... (Note: Ensure the rest of your original logic follows this indentation level)
-
 # Execution Hook
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--status", action="store_true")
     args = parser.parse_args()
-    
+
     rt = PrimeRuntimeV4()
     if args.status:
-        # Assuming you have a standard entry method in PrimeRuntimeV4
-        print(rt.run_inference("G7_STATUS_CHECK"))
+        print(rt.verify_all())
