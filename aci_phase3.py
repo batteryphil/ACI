@@ -38,47 +38,38 @@ class ApexIntelligenceEngine:
             json.dump(self.knowledge_state, f, indent=4)
         print("[+] Knowledge state successfully committed.")
 
-    def run_lean_verification(self, lean_file="MyProject.lean"):
-        """Invokes the native Lean 4 environmental compiler via Lake."""
-        target_path = os.path.join(self.project_dir, lean_file)
-        if not os.path.exists(target_path):
-            print(f"[-] Target verification file missing: {target_path}")
-            return False
-
-        print(f"[*] Dispatching Lean 4 validation kernel on: {lean_file}")
+    def run_lean_verification(self):
+        """Runs full lake build against the entire ACI system."""
+        print("[*] Running full lake build...")
         try:
-            # Executes via system's localized compiler environment variables
             result = subprocess.run(
-                ["lake", "env", "lean", target_path],
-                capture_output=True, text=True, check=False
+                ["lake", "build"],
+                capture_output=True, text=True, check=False,
+                cwd=self.project_dir
             )
-            
-            if result.returncode == 0 and not result.stderr:
-                print("[+] Mathematical Validation Successful. No errors reported.")
+            if result.returncode == 0:
+                print("[+] Full system build successful.")
                 return True
             else:
-                print("[-] Validation Failed. Error Trace Logs:")
+                print("[-] Build failed:")
                 print(result.stderr if result.stderr else result.stdout)
                 return False
         except FileNotFoundError:
-            print("[!] Critical Failure: 'lake' toolchain binary execution unlinked.")
+            print("[!] lake toolchain not found.")
             return False
 
     def execute_intelligence_loop(self):
         """Executes main architectural processing steps."""
         print("==============================================")
-        print("    ACI APEX INTELLIGENCE SYSTEM - PHASE 3    ")
+        print("    ACI APEX INTELLIGENCE SYSTEM - PHASE 3   ")
         print("==============================================")
         print(f"Current Phase Status: {self.knowledge_state['system_status']}")
-        
         # Verify active math environment assets
         verified = self.run_lean_verification()
-        
         if verified:
             self.knowledge_state["system_status"] = "VERIFIED_OPERATIONAL"
         else:
             self.knowledge_state["system_status"] = "SYNTAX_DEGRADATION"
-            
         self.save_knowledge_state()
         print("==============================================")
 
@@ -86,4 +77,3 @@ if __name__ == "__main__":
     # Launch system core target engine inside active execution block
     engine = ApexIntelligenceEngine()
     engine.execute_intelligence_loop()
-
