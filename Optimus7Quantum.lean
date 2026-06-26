@@ -40,7 +40,10 @@ theorem densityOp_convex_trace (ρ₁ ρ₂ : DensityOperator) (t : ℝ)
     (ht : 0 ≤ t) (ht1 : t ≤ 1) :
     LinearMap.trace ℂ H
       (((t : ℂ) • ρ₁.op + ((1 - t : ℝ) : ℂ) • ρ₂.op).toLinearMap) = 1 := by
-  sorry
+  
+simp [map_add, map_smul, ρ₁.is_trace_one, ρ₂.is_trace_one]
+  push_cast
+  ring
 
 /-! STRATUM II — CPTP MAPS -/
 
