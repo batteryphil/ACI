@@ -26,6 +26,7 @@ lean_lib Optimus7
 lean_lib Optimus7Quantum
 lean_lib QuantumCore
 lean_lib EnergyDomain
+lean_lib VerifyState
 lean_lib ACI_Governance
 
 @[default_target]
