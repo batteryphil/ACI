@@ -49,6 +49,7 @@ lean_lib QuantumErrorCorrection
 lean_lib PhaseTransitions
 lean_lib FunctionalAnalysis
 lean_lib DifferentialGeometry
+lean_lib AlgebraicTopology
 
 
 @[default_target]
