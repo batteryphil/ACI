@@ -39,6 +39,7 @@ lean_lib ErgodicTheory
 lean_lib ConvexAnalysis
 lean_lib ControlTheory
 lean_lib OptimalTransport
+lean_lib RenormalizationGroup
 
 @[default_target]
 lean_lib AWM21
