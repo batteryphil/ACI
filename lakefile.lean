@@ -38,6 +38,7 @@ lean_lib StatisticalMechanics
 lean_lib ErgodicTheory
 lean_lib ConvexAnalysis
 lean_lib ControlTheory
+lean_lib OptimalTransport
 
 @[default_target]
 lean_lib AWM21
