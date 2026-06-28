@@ -46,6 +46,8 @@ lean_lib WaveletAnalysis
 lean_lib CompressedSensing
 lean_lib GameTheory
 lean_lib QuantumErrorCorrection
+lean_lib PhaseTransitions
+
 
 @[default_target]
 lean_lib AWM21
