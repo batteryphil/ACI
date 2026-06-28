@@ -53,6 +53,7 @@ lean_lib AlgebraicTopology
 lean_lib MeasureTheory
 lean_lib AbstractAlgebra
 lean_lib NumberTheory
+lean_lib StringTheory
 
 @[default_target]
 lean_lib AWM21
