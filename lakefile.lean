@@ -48,6 +48,7 @@ lean_lib GameTheory
 lean_lib QuantumErrorCorrection
 lean_lib PhaseTransitions
 lean_lib FunctionalAnalysis
+lean_lib DifferentialGeometry
 
 
 @[default_target]
