@@ -31,6 +31,7 @@ lean_lib ACI_Governance
 lean_lib PrimeMasterEngine
 lean_lib InformationGeometry
 lean_lib NumberTheoryCore
+lean_lib OptimalControl
 
 @[default_target]
 lean_lib AWM21
