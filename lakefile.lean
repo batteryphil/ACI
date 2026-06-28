@@ -43,6 +43,7 @@ lean_lib RenormalizationGroup
 lean_lib ConformalFieldTheory
 lean_lib QuantumInformation
 lean_lib WaveletAnalysis
+lean_lib CompressedSensing
 
 @[default_target]
 lean_lib AWM21
