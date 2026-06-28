@@ -40,22 +40,18 @@ theorem shannon_entropy_max_uniform :
   rw [Real.log_inv]
   push_cast; ring
 
--- Joint entropy H(X,Y) ≥ max(H(X), H(Y))
 theorem joint_entropy_ge_marginal
     (H_X H_Y H_XY : ℝ)
-    (hX : H_X ≤ H_XY)
-    (hY : H_Y ≤ H_XY) :
+    (hX : H_X ≤ H_XY) (hY : H_Y ≤ H_XY) :
     max H_X H_Y ≤ H_XY :=
   max_le hX hY
 
--- Subadditivity: H(X,Y) ≤ H(X) + H(Y)
 def subadditivity_satisfied
     (H_X H_Y H_XY : ℝ) : Prop :=
   H_XY ≤ H_X + H_Y
 
 -- ============================================================
 -- SECTION 2: MUTUAL INFORMATION
--- I(X;Y) = H(X) + H(Y) - H(X,Y) ≥ 0
 -- ============================================================
 
 noncomputable def mutual_information
@@ -75,19 +71,14 @@ theorem mutual_info_symmetric
     mutual_information H_Y H_X H_XY := by
   unfold mutual_information; ring
 
--- Data processing inequality
--- I(X;Y) ≥ I(X; f(Y)) for any function f
 theorem data_processing_inequality
-    (I_XY I_XfY : ℝ)
-    (h : I_XfY ≤ I_XY) :
+    (I_XY I_XfY : ℝ) (h : I_XfY ≤ I_XY) :
     I_XfY ≤ I_XY := h
 
 -- ============================================================
 -- SECTION 3: VON NEUMANN ENTROPY
--- S(ρ) = -Tr(ρ log ρ)
 -- ============================================================
 
--- For 2×2 density matrix with eigenvalues λ, 1-λ
 noncomputable def vN_entropy_binary
     (lambda : ℝ) : ℝ :=
   if lambda = 0 ∨ lambda = 1 then 0
@@ -113,19 +104,15 @@ theorem vN_entropy_pure_state :
   unfold vN_entropy_binary; simp
 
 theorem vN_entropy_max_mixed :
-    vN_entropy_binary (1/2) =
-    Real.log 2 := by
+    vN_entropy_binary (1/2) = Real.log 2 := by
   unfold vN_entropy_binary
   simp [show (1:ℝ)/2 ≠ 0 from by norm_num,
         show (1:ℝ)/2 ≠ 1 from by norm_num]
   rw [show (1 : ℝ) - 1/2 = 1/2 from by ring]
-  rw [Real.log_inv]
-  ring
+  rw [Real.log_inv]; ring
 
--- Concavity of von Neumann entropy
 theorem vN_concavity
-    (S1 S2 t : ℝ)
-    (ht0 : 0 ≤ t) (ht1 : t ≤ 1)
+    (S1 S2 t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1)
     (hS1 : 0 ≤ S1) (hS2 : 0 ≤ S2)
     (mixed_S : ℝ)
     (h : t * S1 + (1-t) * S2 ≤ mixed_S) :
@@ -135,77 +122,61 @@ theorem vN_concavity
 -- SECTION 4: QUANTUM CHANNEL CAPACITY
 -- ============================================================
 
--- Holevo bound: I(X;B) ≤ χ = S(ρ) - Σ p_i S(ρ_i)
 noncomputable def holevo_chi
-    (S_avg : ℝ) (p_weighted_S : ℝ) : ℝ :=
+    (S_avg p_weighted_S : ℝ) : ℝ :=
   S_avg - p_weighted_S
 
 theorem holevo_chi_nonneg
-    (S_avg p_weighted : ℝ)
-    (h : p_weighted ≤ S_avg) :
+    (S_avg p_weighted : ℝ) (h : p_weighted ≤ S_avg) :
     0 ≤ holevo_chi S_avg p_weighted := by
   unfold holevo_chi; linarith
 
--- Channel capacity
-noncomputable def channel_capacity
-    (chi_max : ℝ) : ℝ := chi_max
+noncomputable def channel_capacity (chi_max : ℝ) : ℝ :=
+  chi_max
 
 theorem capacity_nonneg
     (chi_max : ℝ) (h : 0 ≤ chi_max) :
     0 ≤ channel_capacity chi_max := h
 
--- Classical capacity of depolarizing channel
--- C = 1 - H(p + p/3·3) = 1 - H(4p/3... simplified)
-noncomputable def depolarizing_capacity
-    (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 3/4) : ℝ :=
-  1 - vN_entropy_binary (2 * p / 3 + 1/3)
-
--- Quantum capacity lower bound (hashing bound)
 noncomputable def hashing_bound
     (S_rho S_env : ℝ) : ℝ :=
   max 0 (S_rho - S_env)
 
 theorem hashing_bound_nonneg
     (S_rho S_env : ℝ) :
-    0 ≤ hashing_bound S_rho S_env := by
-  unfold hashing_bound; exact le_max_left _ _
+    0 ≤ hashing_bound S_rho S_env :=
+  le_max_left _ _
 
 -- ============================================================
 -- SECTION 5: QUANTUM RELATIVE ENTROPY
--- S(ρ||σ) = Tr(ρ log ρ - ρ log σ) ≥ 0
 -- ============================================================
 
--- Relative entropy for diagonal states
 noncomputable def quantum_rel_entropy
     (p q : ℝ) (hp : 0 < p) (hq : 0 < q) : ℝ :=
   p * (Real.log p - Real.log q)
 
-theorem rel_entropy_nonneg
-    (p q : ℝ) (hp : 0 < p) (hq : 0 < q) :
-    0 ≤ quantum_rel_entropy p q hp hq := by
-  unfold quantum_rel_entropy
-  rw [Real.log_div_eq_log_sub hp.ne' hq.ne']
-  apply mul_nonneg hp.le
-  rw [sub_nonneg]
-  exact Real.log_le_sub_one_of_le
-    (le_of_eq (by field_simp)) |>.symm.le.trans
-    (by linarith [Real.add_one_le_exp
-      (Real.log (q/p))])
+-- Key lemma: log x ≤ x - 1 for x > 0
+private theorem log_le_sub_one
+    (x : ℝ) (hx : 0 < x) : Real.log x ≤ x - 1 := by
+  have h : x ≤ Real.exp (x - 1) := by
+    linarith [Real.add_one_le_exp (x - 1)]
+  linarith [Real.log_le_log hx h, Real.log_exp (x - 1)]
 
 theorem rel_entropy_zero_iff_equal
     (p q : ℝ) (hp : 0 < p) (hq : 0 < q)
     (h : quantum_rel_entropy p q hp hq = 0) :
     p = q := by
   unfold quantum_rel_entropy at h
-  have hlog : Real.log p - Real.log q = 0 := by
+  have hlog : Real.log p = Real.log q := by
     rcases mul_eq_zero.mp h with h1 | h2
     · linarith
-    · exact h2
-  have := Real.log_injOn_pos
-    (Set.mem_Ioi.mpr hp) (Set.mem_Ioi.mpr hq)
-  exact this (by linarith [Real.log_eq_iff_of_pos hp])
+    · linarith
+  exact Real.log_injOn_pos
+    (Set.mem_Ioi.mpr hp) (Set.mem_Ioi.mpr hq) hlog
 
--- Klein inequality: S(ρ||σ) ≥ 0 for full density matrices
+-- Klein inequality for binary distributions
+-- p1*(log p1 - log q1) + p2*(log p2 - log q2) ≥ 0
+-- when p1+p2=1, q1+q2=1
 theorem klein_inequality_2x2
     (p1 p2 q1 q2 : ℝ)
     (hp1 : 0 < p1) (hp2 : 0 < p2)
@@ -214,12 +185,24 @@ theorem klein_inequality_2x2
     (hqsum : q1 + q2 = 1) :
     0 ≤ quantum_rel_entropy p1 q1 hp1 hq1 +
         quantum_rel_entropy p2 q2 hp2 hq2 := by
-  linarith [rel_entropy_nonneg p1 q1 hp1 hq1,
-            rel_entropy_nonneg p2 q2 hp2 hq2]
+  unfold quantum_rel_entropy
+  -- Use log(q/p) ≤ q/p - 1, then p*(log p - log q) ≥ p - q
+  have h1 := log_le_sub_one (q1/p1) (div_pos hq1 hp1)
+  have h2 := log_le_sub_one (q2/p2) (div_pos hq2 hp2)
+  rw [Real.log_div hq1.ne' hp1.ne'] at h1
+  rw [Real.log_div hq2.ne' hp2.ne'] at h2
+  have bound1 : p1 - q1 ≤ p1 * (Real.log p1 - Real.log q1) := by
+    have hmul := mul_le_mul_of_nonneg_left h1 hp1.le
+    have hcancel : p1 * (q1 / p1) = q1 := mul_div_cancel₀ q1 hp1.ne'
+    rw [mul_sub, hcancel] at hmul; linarith
+  have bound2 : p2 - q2 ≤ p2 * (Real.log p2 - Real.log q2) := by
+    have hmul := mul_le_mul_of_nonneg_left h2 hp2.le
+    have hcancel : p2 * (q2 / p2) = q2 := mul_div_cancel₀ q2 hp2.ne'
+    rw [mul_sub, hcancel] at hmul; linarith
+  linarith
 
 -- ============================================================
 -- SECTION 6: STRONG SUBADDITIVITY
--- S(ABC) + S(B) ≤ S(AB) + S(BC)
 -- ============================================================
 
 def strong_subadditivity_holds
@@ -228,23 +211,17 @@ def strong_subadditivity_holds
 
 theorem SSA_implies_conditional_MI_nonneg
     (S_ABC S_B S_AB S_BC : ℝ)
-    (h : strong_subadditivity_holds
-           S_ABC S_B S_AB S_BC) :
+    (h : strong_subadditivity_holds S_ABC S_B S_AB S_BC) :
     0 ≤ S_AB + S_BC - S_ABC - S_B := by
   unfold strong_subadditivity_holds at h; linarith
 
--- Monotonicity of relative entropy
--- S(ρ_A||σ_A) ≤ S(ρ_AB||σ_AB)
 theorem monotonicity_rel_entropy
-    (S_full S_reduced : ℝ)
-    (h : S_reduced ≤ S_full) :
+    (S_full S_reduced : ℝ) (h : S_reduced ≤ S_full) :
     S_reduced ≤ S_full := h
 
--- Conditional entropy: H(A|B) = H(AB) - H(B)
 noncomputable def conditional_entropy
     (H_AB H_B : ℝ) : ℝ := H_AB - H_B
 
--- Quantum conditional entropy can be negative
 theorem quantum_cond_entropy_can_be_neg :
     ∃ H_AB H_B : ℝ, conditional_entropy H_AB H_B < 0 :=
   ⟨0, 1, by unfold conditional_entropy; linarith⟩
@@ -253,7 +230,6 @@ theorem quantum_cond_entropy_can_be_neg :
 -- SECTION 7: ENTANGLEMENT MEASURES
 -- ============================================================
 
--- Entanglement entropy for pure state |ψ⟩_AB
 noncomputable def entanglement_entropy
     (lambda : ℝ) : ℝ :=
   vN_entropy_binary lambda
@@ -271,7 +247,6 @@ theorem max_entanglement_at_half :
     entanglement_entropy (1/2) = Real.log 2 :=
   vN_entropy_max_mixed
 
--- Concurrence for 2-qubit states
 noncomputable def concurrence
     (lambda_max lambda_min : ℝ) : ℝ :=
   max 0 (lambda_max - lambda_min)
@@ -288,10 +263,9 @@ theorem concurrence_zero_separable
   unfold concurrence
   exact max_eq_left (by linarith)
 
--- Entanglement of formation
-noncomputable def EoF
-    (concur : ℝ) : ℝ :=
-  vN_entropy_binary ((1 + Real.sqrt (1 - concur ^ 2)) / 2)
+noncomputable def EoF (concur : ℝ) : ℝ :=
+  vN_entropy_binary
+    ((1 + Real.sqrt (1 - concur ^ 2)) / 2)
 
 theorem EoF_zero_at_zero_concurrence :
     EoF 0 = vN_entropy_binary (1/2) := by
@@ -301,23 +275,19 @@ theorem EoF_zero_at_zero_concurrence :
 -- SECTION 8: QUANTUM ERROR CHANNELS
 -- ============================================================
 
--- Depolarizing channel: ρ → (1-p)ρ + p I/2
 noncomputable def depolarizing_output
     (rho_diag p : ℝ) : ℝ :=
   (1 - p) * rho_diag + p / 2
 
 theorem depolarizing_in_unit_interval
-    (rho : ℝ) (p : ℝ)
+    (rho p : ℝ)
     (hrho0 : 0 ≤ rho) (hrho1 : rho ≤ 1)
     (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
     0 ≤ depolarizing_output rho p ∧
     depolarizing_output rho p ≤ 1 := by
   unfold depolarizing_output
-  constructor
-  · nlinarith
-  · nlinarith
+  constructor <;> nlinarith
 
--- Amplitude damping: |1⟩ → |0⟩ with probability γ
 noncomputable def amplitude_damping
     (rho11 gamma : ℝ) : ℝ :=
   (1 - gamma) * rho11
@@ -334,7 +304,6 @@ theorem amplitude_damping_decreases
     amplitude_damping rho11 gamma < rho11 := by
   unfold amplitude_damping; nlinarith
 
--- Phase damping: off-diagonal elements decay
 noncomputable def phase_damping
     (rho01 gamma : ℝ) : ℝ :=
   Real.sqrt (1 - gamma) * rho01
@@ -344,12 +313,11 @@ theorem phase_damping_magnitude_decreases
     (h01 : 0 < rho01) (hg : 0 < gamma) (hg1 : gamma < 1) :
     |phase_damping rho01 gamma| < |rho01| := by
   unfold phase_damping
-  rw [abs_mul, abs_of_pos (Real.sqrt_pos_of_pos (by linarith))]
+  rw [abs_mul,
+      abs_of_pos (Real.sqrt_pos_of_pos (by linarith))]
   apply mul_lt_of_lt_one_left (abs_pos.mpr h01.ne')
-  rw [Real.sqrt_lt' (by norm_num)]
-  constructor
-  · exact Real.sqrt_pos_of_pos (by linarith)
-  · nlinarith
+  rw [Real.sqrt_lt_one (by linarith) (by linarith)]
+  exact hg1
 
 -- ============================================================
 -- SECTION 9: AWM QUANTUM INFORMATION BRIDGE
@@ -364,13 +332,11 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain information distribution
 structure DomainInfoState where
   probs   : Domain21 → ℝ
   pos     : ∀ d, 0 < probs d
   sum_one : Finset.univ.sum probs = 1
 
--- Shannon entropy of domain distribution
 noncomputable def domain_entropy
     (dis : DomainInfoState) : ℝ :=
   -Finset.univ.sum (fun d =>
@@ -391,14 +357,55 @@ theorem domain_entropy_nonneg
         (fun d _ => le_of_lt (dis.pos d)) (mem_univ d)
       linarith [dis.sum_one]
 
--- Maximum entropy = log 21
+-- Maximum entropy bound: H ≤ log 21
+-- Proved via log x ≤ x - 1 (i.e., KL ≥ 0 argument)
 theorem domain_max_entropy_bound
     (dis : DomainInfoState) :
     domain_entropy dis ≤ Real.log 21 := by
   unfold domain_entropy
-  sorry -- Requires Jensen's inequality; acknowledged
+  have hcard : (Finset.univ (α := Domain21)).card = 21 := by
+    simp [Finset.card_univ]; native_decide
+  -- For each d: p_d * log(21 * p_d) ≤ 21 * p_d - 1
+  -- i.e., p_d * log 21 + p_d * log p_d ≤ 21 * p_d - 1
+  -- i.e., p_d * log p_d ≤ 21 * p_d - 1 - p_d * log 21
+  -- i.e., -p_d * log p_d ≥ p_d * log 21 - 21 * p_d + 1
+  -- Summing: domain_entropy ≥ log 21 - 21 + 1... hmm wrong direction
+  -- Correct: use -p log p ≤ p * log 21 + 1/21 - p
+  -- from log(1/(21*p)) ≤ 1/(21*p) - 1
+  have key : ∀ d : Domain21,
+      dis.probs d * (-Real.log (dis.probs d)) ≤
+      dis.probs d * Real.log 21 + 1/21 - dis.probs d := by
+    intro d
+    have hp : 0 < dis.probs d := dis.pos d
+    have h21p : 0 < 21 * dis.probs d := by positivity
+    have hineq := log_le_sub_one (21 * dis.probs d) h21p
+    rw [Real.log_mul (by norm_num : (21:ℝ) ≠ 0) hp.ne'] at hineq
+    nlinarith [Real.log_pos (by norm_num : (1:ℝ) < 21)]
+  have hrw : -Finset.univ.sum (fun d =>
+        dis.probs d * Real.log (dis.probs d)) =
+      Finset.univ.sum (fun d =>
+        dis.probs d * (-Real.log (dis.probs d))) := by
+    rw [← Finset.sum_neg_distrib]
+    congr 1; ext d; ring
+  rw [hrw]
+  calc Finset.univ.sum (fun d =>
+          dis.probs d * (-Real.log (dis.probs d)))
+      ≤ Finset.univ.sum (fun d =>
+          dis.probs d * Real.log 21 + 1/21 -
+          dis.probs d) :=
+        Finset.sum_le_sum (fun d _ => key d)
+    _ = Real.log 21 * Finset.univ.sum dis.probs +
+        1/21 * Finset.univ.card -
+        Finset.univ.sum dis.probs := by
+          simp [Finset.sum_sub_distrib,
+                Finset.sum_add_distrib,
+                ← Finset.mul_sum,
+                Finset.sum_const]
+          ring
+    _ = Real.log 21 := by
+          rw [dis.sum_one, hcard]
+          norm_num
 
--- Mutual information between domain pairs
 noncomputable def domain_mutual_info
     (dis1 dis2 : DomainInfoState)
     (joint_H H1 H2 : ℝ) : ℝ :=
@@ -411,11 +418,48 @@ theorem domain_MI_nonneg
     0 ≤ domain_mutual_info dis1 dis2 joint_H H1 H2 :=
   mutual_info_nonneg H1 H2 joint_H h
 
--- Information closure: system entropy bounded
-theorem info_closure_bounded
-    (dis : DomainInfoState) :
-    0 ≤ domain_entropy dis :=
-  domain_entropy_nonneg dis
+-- KL divergence between domain measures
+noncomputable def domain_KL
+    (dm1 dm2 : DomainInfoState)
+    (h2pos : ∀ d, 0 < dm2.probs d) : ℝ :=
+  Finset.univ.sum (fun d =>
+    dm1.probs d *
+    Real.log (dm1.probs d / dm2.probs d))
+
+-- KL divergence is nonneg: proved via log x ≤ x - 1
+theorem domain_KL_nonneg
+    (dm1 dm2 : DomainInfoState)
+    (h2pos : ∀ d, 0 < dm2.probs d) :
+    0 ≤ domain_KL dm1 dm2 h2pos := by
+  unfold domain_KL
+  -- For each d: p_d * log(p_d/q_d) ≥ p_d - q_d
+  -- (from log(q/p) ≤ q/p - 1)
+  -- Summing: KL ≥ Σ(p_d - q_d) = 1 - 1 = 0
+  have key : ∀ d : Domain21,
+      dm1.probs d - dm2.probs d ≤
+      dm1.probs d *
+        Real.log (dm1.probs d / dm2.probs d) := by
+    intro d
+    have hp := dm1.pos d
+    have hq := h2pos d
+    have hineq := log_le_sub_one
+      (dm2.probs d / dm1.probs d) (div_pos hq hp)
+    rw [Real.log_div hq.ne' hp.ne'] at hineq
+    have hmul := mul_le_mul_of_nonneg_left hineq hp.le
+    have hcancel : dm1.probs d * (dm2.probs d / dm1.probs d) =
+                   dm2.probs d := mul_div_cancel₀ _ hp.ne'
+    rw [mul_sub, hcancel] at hmul
+    rw [← Real.log_div hp.ne' hq.ne']
+    linarith
+  calc (0 : ℝ)
+      = Finset.univ.sum (fun d =>
+          dm1.probs d - dm2.probs d) := by
+          simp [Finset.sum_sub_distrib,
+                dm1.sum_one, dm2.sum_one]
+    _ ≤ Finset.univ.sum (fun d =>
+          dm1.probs d *
+            Real.log (dm1.probs d / dm2.probs d)) :=
+        Finset.sum_le_sum (fun d _ => key d)
 
 -- ============================================================
 -- SYSTEM LOCK
@@ -433,8 +477,12 @@ structure QInfoLock where
                     0 ≤ vN_entropy_binary lambda
   vN_pure       : vN_entropy_binary 0 = 0
   vN_max        : vN_entropy_binary (1/2) = Real.log 2
-  rel_ent_nn    : ∀ (p q : ℝ) (hp : 0 < p) (hq : 0 < q),
-                    0 ≤ quantum_rel_entropy p q hp hq
+  klein_2x2     : ∀ (p1 p2 q1 q2 : ℝ)
+                    (hp1 : 0 < p1) (hp2 : 0 < p2)
+                    (hq1 : 0 < q1) (hq2 : 0 < q2),
+                    p1 + p2 = 1 → q1 + q2 = 1 →
+                    0 ≤ quantum_rel_entropy p1 q1 hp1 hq1 +
+                        quantum_rel_entropy p2 q2 hp2 hq2
   hash_nn       : ∀ (S_rho S_env : ℝ),
                     0 ≤ hashing_bound S_rho S_env
   concur_nn     : ∀ (lmax lmin : ℝ),
@@ -448,6 +496,11 @@ structure QInfoLock where
                     0 ≤ amplitude_damping rho11 gamma
   dom_ent_nn    : ∀ (dis : DomainInfoState),
                     0 ≤ domain_entropy dis
+  dom_ent_bound : ∀ (dis : DomainInfoState),
+                    domain_entropy dis ≤ Real.log 21
+  dom_KL_nn     : ∀ (dm1 dm2 : DomainInfoState)
+                    (h2 : ∀ d, 0 < dm2.probs d),
+                    0 ≤ domain_KL dm1 dm2 h2
 
 def QILock : QInfoLock where
   shannon_nn    := shannon_entropy_nonneg
@@ -455,7 +508,7 @@ def QILock : QInfoLock where
   vN_nn         := vN_entropy_nonneg
   vN_pure       := vN_entropy_pure_state
   vN_max        := vN_entropy_max_mixed
-  rel_ent_nn    := rel_entropy_nonneg
+  klein_2x2     := klein_inequality_2x2
   hash_nn       := hashing_bound_nonneg
   concur_nn     := concurrence_nonneg
   depolarz_nn   := fun rho p hr0 hr1 hp0 hp1 =>
@@ -463,5 +516,7 @@ def QILock : QInfoLock where
                        rho p hr0 hr1 hp0 hp1).1
   amp_damp_nn   := amplitude_damping_nonneg
   dom_ent_nn    := domain_entropy_nonneg
+  dom_ent_bound := domain_max_entropy_bound
+  dom_KL_nn     := domain_KL_nonneg
 
 end QuantumInformation
