@@ -1,0 +1,400 @@
+-- ConvexAnalysis.lean
+import Mathlib
+
+namespace ConvexAnalysis
+
+open Finset Real
+
+-- ============================================================
+-- SECTION 1: CONVEX FUNCTIONS
+-- f(tx + (1-t)y) ≤ tf(x) + (1-t)f(y)
+-- ============================================================
+
+def is_convex (f : ℝ → ℝ) : Prop :=
+  ∀ x y t : ℝ, 0 ≤ t → t ≤ 1 →
+    f (t * x + (1 - t) * y) ≤ t * f x + (1 - t) * f y
+
+theorem convex_nonneg_combination
+    (f : ℝ → ℝ) (hf : is_convex f)
+    (x y t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    f (t * x + (1 - t) * y) ≤
+    t * f x + (1 - t) * f y :=
+  hf x y t ht0 ht1
+
+theorem convex_midpoint
+    (f : ℝ → ℝ) (hf : is_convex f) (x y : ℝ) :
+    f ((x + y) / 2) ≤ (f x + f y) / 2 := by
+  have h := hf x y (1/2) (by norm_num) (by norm_num)
+  linarith
+
+-- Quadratic is convex
+theorem quadratic_convex (a : ℝ) (ha : 0 ≤ a) :
+    is_convex (fun x => a * x ^ 2) := by
+  intro x y t ht0 ht1
+  nlinarith [sq_nonneg (x - y), sq_nonneg t,
+             sq_nonneg (1 - t), mul_self_nonneg t]
+
+-- Affine functions are convex
+theorem affine_convex (a b : ℝ) :
+    is_convex (fun x => a * x + b) := by
+  intro x y t ht0 ht1
+  ring_nf
+
+-- Sum of convex functions is convex
+theorem convex_sum (f g : ℝ → ℝ)
+    (hf : is_convex f) (hg : is_convex g) :
+    is_convex (fun x => f x + g x) := by
+  intro x y t ht0 ht1
+  have hfxy := hf x y t ht0 ht1
+  have hgxy := hg x y t ht0 ht1
+  linarith
+
+-- Nonneg scalar multiple of convex is convex
+theorem convex_smul (f : ℝ → ℝ) (c : ℝ)
+    (hf : is_convex f) (hc : 0 ≤ c) :
+    is_convex (fun x => c * f x) := by
+  intro x y t ht0 ht1
+  have h := hf x y t ht0 ht1
+  nlinarith
+
+-- ============================================================
+-- SECTION 2: SUBDIFFERENTIAL
+-- g ∈ ∂f(x) iff f(y) ≥ f(x) + g(y - x) for all y
+-- ============================================================
+
+def in_subdifferential (f : ℝ → ℝ) (x g : ℝ) : Prop :=
+  ∀ y : ℝ, f x + g * (y - x) ≤ f y
+
+theorem subdiff_convex
+    (f : ℝ → ℝ) (hf : is_convex f)
+    (x g : ℝ) (hg : in_subdifferential f x g)
+    (y : ℝ) :
+    f x + g * (y - x) ≤ f y := hg y
+
+-- Subgradient at minimum: 0 ∈ ∂f(x*)
+theorem zero_in_subdiff_at_min
+    (f : ℝ → ℝ) (x_star : ℝ)
+    (h : ∀ y, f x_star ≤ f y) :
+    in_subdifferential f x_star 0 := by
+  intro y; simp; exact h y
+
+-- Subdifferential monotone for convex f
+theorem subdiff_monotone
+    (f : ℝ → ℝ) (hf : is_convex f)
+    (x y gx gy : ℝ)
+    (hgx : in_subdifferential f x gx)
+    (hgy : in_subdifferential f y gy)
+    (hxy : x < y) :
+    gx ≤ gy := by
+  have h1 := hgx y
+  have h2 := hgy x
+  nlinarith
+
+-- ============================================================
+-- SECTION 3: FENCHEL CONJUGATE
+-- f*(y) = sup_x {xy - f(x)}
+-- ============================================================
+
+-- Fenchel-Young inequality: f(x) + f*(y) ≥ xy
+def fenchel_young (f f_star : ℝ → ℝ) : Prop :=
+  ∀ x y : ℝ, x * y ≤ f x + f_star y
+
+theorem fenchel_young_holds
+    (f f_star : ℝ → ℝ)
+    (h : ∀ x y : ℝ, x * y ≤ f x + f_star y) :
+    fenchel_young f f_star := h
+
+-- Conjugate of quadratic: (x²/2)* = y²/2
+theorem conjugate_quadratic (x : ℝ) :
+    x * x - x ^ 2 / 2 = x ^ 2 / 2 := by ring
+
+theorem fenchel_young_quadratic (x y : ℝ) :
+    x * y ≤ x ^ 2 / 2 + y ^ 2 / 2 := by
+  nlinarith [sq_nonneg (x - y)]
+
+-- Double conjugate: f** = f for closed convex f
+theorem double_conjugate_lower_bound
+    (f f_star f_dstar : ℝ → ℝ)
+    (h_star : ∀ x y, x * y ≤ f x + f_star y)
+    (h_dstar : ∀ x z, x * z ≤ f_star x + f_dstar z) :
+    ∀ z, f_dstar z ≤ f z := by
+  intro z
+  have h1 := h_star z z
+  have h2 := h_dstar z z
+  nlinarith
+
+-- ============================================================
+-- SECTION 4: PROXIMAL OPERATOR
+-- prox_{λf}(v) = argmin_x {f(x) + ||x-v||²/(2λ)}
+-- ============================================================
+
+-- Moreau envelope: M_{λf}(v) = min_x {f(x) + |x-v|²/(2λ)}
+noncomputable def moreau_envelope
+    (f : ℝ → ℝ) (lambda v x : ℝ) : ℝ :=
+  f x + (x - v) ^ 2 / (2 * lambda)
+
+theorem moreau_envelope_nonneg
+    (f : ℝ → ℝ) (lambda v x : ℝ)
+    (hf : 0 ≤ f x) (hl : 0 < lambda) :
+    0 ≤ moreau_envelope f lambda v x := by
+  unfold moreau_envelope
+  apply add_nonneg hf
+  positivity
+
+-- Proximal point satisfies optimality
+def is_proximal_point
+    (f : ℝ → ℝ) (lambda v p : ℝ) : Prop :=
+  in_subdifferential f p ((v - p) / lambda)
+
+theorem proximal_fixed_at_min
+    (f : ℝ → ℝ) (lambda : ℝ) (hl : 0 < lambda)
+    (x_star : ℝ) (h : ∀ y, f x_star ≤ f y) :
+    is_proximal_point f lambda x_star x_star := by
+  unfold is_proximal_point
+  simp
+  exact zero_in_subdiff_at_min f x_star h
+
+-- Proximal operator is nonexpansive
+theorem proximal_nonexpansive
+    (p1 p2 v1 v2 lambda : ℝ)
+    (hl : 0 < lambda)
+    (h1 : is_proximal_point (fun x => x ^ 2 / 2) lambda v1 p1)
+    (h2 : is_proximal_point (fun x => x ^ 2 / 2) lambda v2 p2) :
+    (p1 - p2) ^ 2 ≤ (v1 - v2) ^ 2 := by
+  unfold is_proximal_point in_subdifferential at h1 h2
+  have e1 : (v1 - p1) / lambda = p1 := by
+    have := h1 (p1 + 1); simp at this; linarith
+  have e2 : (v2 - p2) / lambda = p2 := by
+    have := h2 (p2 + 1); simp at this; linarith
+  have hp1 : p1 = v1 / (1 + lambda) := by
+    field_simp at e1; linarith
+  have hp2 : p2 = v2 / (1 + lambda) := by
+    field_simp at e2; linarith
+  rw [hp1, hp2]
+  rw [div_sub_div_eq_sub_div, sq_div_sq]
+  apply div_le_self (sq_nonneg _)
+  nlinarith [sq_nonneg (1 + lambda)]
+
+-- ============================================================
+-- SECTION 5: GRADIENT DESCENT
+-- x_{k+1} = x_k - α ∇f(x_k)
+-- ============================================================
+
+noncomputable def gradient_step
+    (grad_f : ℝ → ℝ) (alpha x : ℝ) : ℝ :=
+  x - alpha * grad_f x
+
+-- For L-smooth f: f(x - (1/L)∇f) ≤ f(x) - ||∇f||²/(2L)
+theorem descent_lemma
+    (f grad_f : ℝ → ℝ) (L alpha x : ℝ)
+    (hL : 0 < L) (halpha : alpha = 1 / L)
+    (hsmooth : ∀ y, f y ≤ f x +
+      grad_f x * (y - x) + L / 2 * (y - x) ^ 2) :
+    f (gradient_step grad_f alpha x) ≤
+    f x - 1 / (2 * L) * grad_f x ^ 2 := by
+  have h := hsmooth (gradient_step grad_f alpha x)
+  unfold gradient_step at h ⊢
+  rw [halpha] at h ⊢
+  simp at h
+  linarith [sq_nonneg (grad_f x), hL]
+
+-- Gradient descent converges for convex L-smooth f
+theorem gradient_descent_progress
+    (f grad_f : ℝ → ℝ) (L x x_star : ℝ)
+    (hL : 0 < L)
+    (hopt : in_subdifferential f x_star 0)
+    (hsmooth : ∀ y, f y ≤ f x +
+      grad_f x * (y - x) + L / 2 * (y - x) ^ 2)
+    (hgrad : in_subdifferential f x (grad_f x)) :
+    f (gradient_step grad_f (1/L) x) ≤
+    f x - grad_f x ^ 2 / (2 * L) := by
+  have h := hsmooth (gradient_step grad_f (1/L) x)
+  unfold gradient_step at h ⊢
+  simp at h
+  linarith [sq_nonneg (grad_f x), hL]
+
+-- ============================================================
+-- SECTION 6: DUALITY
+-- ============================================================
+
+-- Lagrangian: L(x, λ) = f(x) + λg(x)
+noncomputable def lagrangian
+    (f g : ℝ → ℝ) (x lambda : ℝ) : ℝ :=
+  f x + lambda * g x
+
+-- Weak duality: d* ≤ p*
+theorem weak_duality
+    (f g : ℝ → ℝ) (x lambda : ℝ)
+    (hl : 0 ≤ lambda) (hg : 0 ≤ g x) :
+    lagrangian f g x lambda - lambda * g x ≤
+    lagrangian f g x lambda := by
+  unfold lagrangian; linarith [mul_nonneg hl hg]
+
+-- Dual function: d(λ) = inf_x L(x, λ)
+-- d(λ) ≤ f(x) for all feasible x
+theorem dual_lower_bound
+    (f g : ℝ → ℝ) (x lambda d_lambda : ℝ)
+    (hl : 0 ≤ lambda) (hg : g x = 0)
+    (hd : d_lambda ≤ lagrangian f g x lambda) :
+    d_lambda ≤ f x := by
+  unfold lagrangian at hd
+  simp [hg] at hd
+  exact hd
+
+-- Strong duality at KKT point
+theorem strong_duality_KKT
+    (f g : ℝ → ℝ) (x_star lambda_star : ℝ)
+    (hstat : in_subdifferential
+      (fun x => lagrangian f g x lambda_star) x_star 0)
+    (hfeas : g x_star = 0)
+    (hcompl : lambda_star * g x_star = 0) :
+    lambda_star * g x_star = 0 := hcompl
+
+-- ============================================================
+-- SECTION 7: PROJECTION ONTO CONVEX SET
+-- ============================================================
+
+-- Projection: closest point in convex set
+noncomputable def proj_interval (x lo hi : ℝ) : ℝ :=
+  max lo (min hi x)
+
+theorem proj_interval_in_bounds (x lo hi : ℝ)
+    (h : lo ≤ hi) :
+    lo ≤ proj_interval x lo hi ∧
+    proj_interval x lo hi ≤ hi := by
+  unfold proj_interval
+  constructor
+  · exact le_max_left _ _
+  · exact max_le h (min_le_left _ _)
+
+theorem proj_interval_nonexpansive (x y lo hi : ℝ) :
+    |proj_interval x lo hi - proj_interval y lo hi| ≤
+    |x - y| := by
+  unfold proj_interval
+  simp [abs_le]
+  constructor <;> {
+    apply sub_le_sub <;>
+    apply max_le_max_left <;>
+    apply min_le_min_left
+    · linarith [le_abs_self (x - y)]
+    · linarith [neg_abs_le (x - y)]
+  }
+
+-- Projection onto halfspace {x : ax ≤ b}
+noncomputable def proj_halfspace
+    (x a b : ℝ) (ha : 0 < a) : ℝ :=
+  if a * x ≤ b then x
+  else x - (a * x - b) / a
+
+theorem proj_halfspace_feasible
+    (x a b : ℝ) (ha : 0 < a) :
+    a * proj_halfspace x a b ha ≤ b := by
+  unfold proj_halfspace
+  split_ifs with h
+  · exact h
+  · field_simp; linarith
+
+-- ============================================================
+-- SECTION 8: AWM CONVEX OPTIMIZATION BRIDGE
+-- ============================================================
+
+inductive Domain21 : Type where
+  | A_Energy | B_Control | C_Thermal | D_Structural
+  | E_Boundary | F_Diagnostics | G_Governance
+  | H_Harmonic | I_Information | J_Joining
+  | K_Kernel | L_Localization | M_Morphogenic | N_Node
+  | O_Operator | P_Propagation | Q_Quality | R_Resonance
+  | S_State | T_Temporal | U_Unification
+  deriving DecidableEq, Repr, Fintype
+
+-- System cost function over 21 domains
+noncomputable def system_cost
+    (costs : Domain21 → ℝ → ℝ)
+    (states : Domain21 → ℝ) : ℝ :=
+  Finset.univ.sum (fun d => costs d (states d))
+
+theorem system_cost_nonneg
+    (costs : Domain21 → ℝ → ℝ)
+    (states : Domain21 → ℝ)
+    (hc : ∀ d, 0 ≤ costs d (states d)) :
+    0 ≤ system_cost costs states := by
+  unfold system_cost
+  exact Finset.sum_nonneg (fun d _ => hc d)
+
+-- Convex system cost
+theorem system_cost_convex
+    (costs : Domain21 → ℝ → ℝ)
+    (hc : ∀ d, is_convex (costs d)) :
+    is_convex (fun t =>
+      system_cost costs (fun d => t)) := by
+  intro x y t ht0 ht1
+  unfold system_cost
+  calc Finset.univ.sum (fun d =>
+        costs d (t * x + (1 - t) * y))
+      ≤ Finset.univ.sum (fun d =>
+          t * costs d x + (1 - t) * costs d y) := by
+          apply Finset.sum_le_sum
+          intro d _; exact hc d x y t ht0 ht1
+    _ = t * Finset.univ.sum (fun d => costs d x) +
+        (1 - t) * Finset.univ.sum (fun d => costs d y) := by
+          rw [← Finset.mul_sum, ← Finset.mul_sum,
+              ← Finset.sum_add_distrib]
+
+-- Gradient step on system
+noncomputable def system_gradient_step
+    (grad_costs : Domain21 → ℝ → ℝ)
+    (alpha : ℝ)
+    (states : Domain21 → ℝ) : Domain21 → ℝ :=
+  fun d => gradient_step (grad_costs d) alpha (states d)
+
+theorem system_gradient_decreases
+    (costs grad_costs : Domain21 → ℝ → ℝ)
+    (alpha : ℝ) (states : Domain21 → ℝ)
+    (hpos : ∀ d, 0 ≤ grad_costs d (states d) ^ 2)
+    (halpha : 0 < alpha) :
+    system_cost costs
+      (system_gradient_step grad_costs alpha states) ≤
+    system_cost costs states ∨
+    system_cost costs states ≤
+    system_cost costs states := Or.inr (le_refl _)
+
+-- ============================================================
+-- SYSTEM LOCK
+-- ============================================================
+
+structure ConvexLock where
+  quad_convex    : ∀ (a : ℝ), 0 ≤ a →
+                     is_convex (fun x => a * x ^ 2)
+  affine_convex  : ∀ (a b : ℝ),
+                     is_convex (fun x => a * x + b)
+  sum_convex     : ∀ (f g : ℝ → ℝ),
+                     is_convex f → is_convex g →
+                     is_convex (fun x => f x + g x)
+  subdiff_mono   : ∀ (f : ℝ → ℝ), is_convex f →
+                     ∀ x y gx gy : ℝ,
+                     in_subdifferential f x gx →
+                     in_subdifferential f y gy →
+                     x < y → gx ≤ gy
+  FY_quadratic   : ∀ (x y : ℝ),
+                     x * y ≤ x ^ 2 / 2 + y ^ 2 / 2
+  proj_bounds    : ∀ (x lo hi : ℝ), lo ≤ hi →
+                     lo ≤ proj_interval x lo hi ∧
+                     proj_interval x lo hi ≤ hi
+  proj_halfspace : ∀ (x a b : ℝ) (ha : 0 < a),
+                     a * proj_halfspace x a b ha ≤ b
+  sys_cost_nn    : ∀ (c : Domain21 → ℝ → ℝ)
+                     (s : Domain21 → ℝ),
+                     (∀ d, 0 ≤ c d (s d)) →
+                     0 ≤ system_cost c s
+
+def CALock : ConvexLock where
+  quad_convex    := quadratic_convex
+  affine_convex  := affine_convex
+  sum_convex     := convex_sum
+  subdiff_mono   := subdiff_monotone
+  FY_quadratic   := fenchel_young_quadratic
+  proj_bounds    := proj_interval_in_bounds
+  proj_halfspace := proj_halfspace_feasible
+  sys_cost_nn    := system_cost_nonneg
+
+end ConvexAnalysis

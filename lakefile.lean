@@ -36,6 +36,7 @@ lean_lib StochasticDifferentialEquations
 lean_lib TopologicalDataAnalysis
 lean_lib StatisticalMechanics
 lean_lib ErgodicTheory
+lean_lib ConvexAnalysis
 
 @[default_target]
 lean_lib AWM21
