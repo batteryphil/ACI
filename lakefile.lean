@@ -51,6 +51,7 @@ lean_lib FunctionalAnalysis
 lean_lib DifferentialGeometry
 lean_lib AlgebraicTopology
 lean_lib MeasureTheory
+lean_lib AbstractAlgebra
 
 
 @[default_target]
