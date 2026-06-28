@@ -50,6 +50,7 @@ lean_lib PhaseTransitions
 lean_lib FunctionalAnalysis
 lean_lib DifferentialGeometry
 lean_lib AlgebraicTopology
+lean_lib MeasureTheory
 
 
 @[default_target]
