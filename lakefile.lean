@@ -33,6 +33,8 @@ lean_lib InformationGeometry
 lean_lib NumberTheoryCore
 lean_lib OptimalControl
 lean_lib StochasticDifferentialEquations
+lean_lib TopologicalDataAnalysis
+lean_lib StatisticalMechanics
 
 @[default_target]
 lean_lib AWM21
