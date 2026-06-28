@@ -47,6 +47,7 @@ lean_lib CompressedSensing
 lean_lib GameTheory
 lean_lib QuantumErrorCorrection
 lean_lib PhaseTransitions
+lean_lib FunctionalAnalysis
 
 
 @[default_target]
