@@ -3,236 +3,485 @@ import Mathlib
 
 namespace NumberTheoryCore
 
-open Finset Nat
+open Finset Real
 
 -- ============================================================
 -- SECTION 1: PRIME ARCHITECTURE
--- Core primes of the ACI system
+-- Core primes: 7, 11, 13, 23, 53, 137
 -- ============================================================
 
-theorem prime_7  : Nat.Prime 7  := by decide
-theorem prime_11 : Nat.Prime 11 := by decide
-theorem prime_13 : Nat.Prime 13 := by decide
-theorem prime_23 : Nat.Prime 23 := by decide
-theorem prime_53 : Nat.Prime 53 := by decide
-theorem prime_137 : Nat.Prime 137 := by decide
+def core_primes : Finset ℕ := {7, 11, 13, 23, 53, 137}
 
--- Structural prime identities
-theorem seven_times_eleven : 7 * 11 = 77     := by decide
-theorem three_times_seven  : 3 * 7 = 21      := by decide
-theorem AWM_product        : 7 * 14 = 98     := by decide
-theorem apex_sections      : 77 + 23 + 6 = 106 := by decide
-theorem century_seal       : 77 + 23 = 100   := by decide
-theorem apex_106_factored  : 106 = 2 * 53    := by decide
+theorem seven_prime : Nat.Prime 7 := by decide
+theorem eleven_prime : Nat.Prime 11 := by decide
+theorem thirteen_prime : Nat.Prime 13 := by decide
+theorem twenty_three_prime : Nat.Prime 23 := by decide
+theorem fifty_three_prime : Nat.Prime 53 := by decide
+theorem one_thirty_seven_prime : Nat.Prime 137 := by decide
 
--- Prime quadruple: the four sovereign primes
-theorem sovereign_prime_quadruple :
-    Nat.Prime 7 ∧ Nat.Prime 11 ∧ Nat.Prime 23 ∧ Nat.Prime 137 :=
-  ⟨prime_7, prime_11, prime_23, prime_137⟩
+theorem all_core_primes_prime :
+    ∀ p ∈ core_primes, Nat.Prime p := by
+  intro p hp
+  fin_cases hp <;> decide
 
--- 137 ≡ 7 + 130 = 7 + 11·something? No. 137 = 100 + 37 = century + 37
-theorem century_plus_37 : 100 + 37 = 137 := by decide
+theorem core_primes_card :
+    core_primes.card = 6 := by
+  unfold core_primes; decide
 
--- Primality chain: each is prime
-theorem seven_eleven_product_not_prime :
-    ¬ Nat.Prime (7 * 11) := by decide
+-- Product of first two core primes
+theorem seven_times_eleven :
+    7 * 11 = 77 := by norm_num
 
--- The 21-domain prime decomposition
-theorem twenty_one_as_product : 21 = 3 * 7 := by decide
-theorem twenty_one_tier_structure : 3 * 7 = 7 * 3 := by decide
+-- Sum of core primes
+theorem core_prime_sum :
+    core_primes.sum id = 244 := by
+  unfold core_primes; decide
+
+-- All core primes are odd
+theorem core_primes_odd :
+    ∀ p ∈ core_primes, p % 2 = 1 := by
+  intro p hp
+  fin_cases hp <;> decide
 
 -- ============================================================
 -- SECTION 2: FIBONACCI SEQUENCE
--- F(0)=0, F(1)=1, F(n+2)=F(n)+F(n+1)
+-- F(0)=0, F(1)=1, F(n+2)=F(n+1)+F(n)
 -- ============================================================
 
 def fib : ℕ → ℕ
-  | 0     => 0
-  | 1     => 1
-  | n + 2 => fib n + fib (n + 1)
+  | 0 => 0
+  | 1 => 1
+  | (n+2) => fib (n+1) + fib n
 
-@[simp] theorem fib_zero : fib 0 = 0 := rfl
-@[simp] theorem fib_one  : fib 1 = 1 := rfl
+theorem fib_zero : fib 0 = 0 := rfl
+theorem fib_one : fib 1 = 1 := rfl
+theorem fib_two : fib 2 = 1 := rfl
+theorem fib_three : fib 3 = 2 := rfl
+theorem fib_four : fib 4 = 3 := rfl
+theorem fib_five : fib 5 = 5 := rfl
+theorem fib_six : fib 6 = 8 := rfl
+theorem fib_seven : fib 7 = 13 := rfl
 
-theorem fib_rec (n : ℕ) : fib (n + 2) = fib n + fib (n + 1) := rfl
+theorem fib_add (n : ℕ) :
+    fib (n + 2) = fib (n + 1) + fib n := rfl
 
--- Key values
-theorem fib_7  : fib 7 = 13  := by decide
-theorem fib_8  : fib 8 = 21  := by decide
-theorem fib_9  : fib 9 = 34  := by decide
-theorem fib_10 : fib 10 = 55 := by decide
-theorem fib_11 : fib 11 = 89 := by decide
-theorem fib_12 : fib 12 = 144 := by decide
-
--- Connection to 21 domains: fib(8) = 21
-theorem fibonacci_21_identity : fib 8 = 21 := fib_8
-
--- Fibonacci positivity for n ≥ 1
-theorem fib_pos : ∀ n : ℕ, 0 < fib (n + 1) := by
-  intro n
+theorem fib_pos (n : ℕ) (hn : 0 < n) :
+    0 < fib n := by
   induction n with
-  | zero => decide
+  | zero => omega
   | succ n ih =>
-    rw [fib_rec]
-    linarith [Nat.zero_le (fib n)]
+    cases n with
+    | zero => simp [fib]
+    | succ m =>
+      simp [fib]
+      exact Nat.add_pos_right _ (ih (by omega))
 
--- Fibonacci strictly monotone for n ≥ 1
-theorem fib_lt_succ : ∀ n : ℕ, fib (n + 1) < fib (n + 2) := by
-  intro n
-  rw [fib_rec]
-  linarith [Nat.zero_le (fib n), fib_pos n]
-
--- Cassini identity: fib(n-1)*fib(n+1) - fib(n)² = (-1)^n
-theorem cassini_identity (n : ℕ) :
-    fib n * fib (n + 2) + 1 = fib (n + 1) ^ 2 + 1 ∨
-    fib (n + 1) ^ 2 = fib n * fib (n + 2) + 1 ∨
-    True := Or.inr (Or.inr trivial)
-
--- Fibonacci GCD property: gcd(fib m, fib n) = fib(gcd m n)
--- Formal version: fib(m) divides fib(m*k)
-theorem fib_dvd_fib_mul (m k : ℕ) : fib m ∣ fib (m * k) := by
-  induction k with
+theorem fib_monotone (n : ℕ) :
+    fib n ≤ fib (n + 1) := by
+  induction n with
   | zero => simp [fib]
-  | succ k ih =>
-    rw [Nat.mul_succ]
-    sorry -- Requires Fibonacci identity; acknowledged
+  | succ n ih =>
+    cases n with
+    | zero => simp [fib]
+    | succ m =>
+      simp [fib]
+      linarith [fib_pos (m + 1) (by omega)]
+
+theorem fib_strict_mono (n : ℕ) (hn : 1 < n) :
+    fib n < fib (n + 1) := by
+  cases n with
+  | zero => omega
+  | succ n =>
+    cases n with
+    | zero => omega
+    | succ m =>
+      simp [fib]
+      exact fib_pos (m + 1) (by omega)
+
+-- Fibonacci numbers grow
+theorem fib_ge_n_div_two (n : ℕ) (hn : 2 ≤ n) :
+    n / 2 ≤ fib n := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    cases n with
+    | zero => omega
+    | succ m =>
+      cases m with
+      | zero => simp [fib]
+      | succ k =>
+        simp [fib]
+        have hk2 : 2 ≤ k + 2 := by omega
+        have hk1 : 2 ≤ k + 1 + 1 := by omega
+        have ih2 := ih hk1
+        linarith [fib_monotone (k + 1)]
 
 -- ============================================================
 -- SECTION 3: GOLDEN RATIO ARITHMETIC
--- Ω = (1 + √5)/2, Ω² = Ω + 1
+-- φ = (1 + √5) / 2
 -- ============================================================
 
--- Integer Fibonacci recurrence is Binet's formula integer part
--- F(n) = (Ω^n - Ψ^n)/√5
+noncomputable def phi : ℝ :=
+  (1 + Real.sqrt 5) / 2
 
--- The ACI golden ratio powers (integer form via Fibonacci)
--- Ω^n = F(n)·Ω + F(n-1)
+theorem phi_pos : 0 < phi := by
+  unfold phi
+  apply div_pos
+  · linarith [Real.sqrt_pos_of_pos (show (0:ℝ) < 5 by norm_num)]
+  · norm_num
 
--- First 7 powers: Ω^k = F(k)·Ω + F(k-1)
--- n=1: Ω¹ = 1·Ω + 0  (F(1)=1, F(0)=0)
--- n=7: Ω⁷ = 13·Ω + 8  (F(7)=13, F(6)=8)
+theorem phi_gt_one : 1 < phi := by
+  unfold phi
+  rw [lt_div_iff (by norm_num : (0:ℝ) < 2)]
+  linarith [Real.sqrt_pos_of_pos (show (0:ℝ) < 5 by norm_num)]
 
-theorem fibonacci_crown_identity :
-    fib 7 = 13 ∧ fib 6 = 8 ∧ fib 7 * 1 + fib 6 = 21 := by decide
+theorem phi_sq : phi ^ 2 = phi + 1 := by
+  unfold phi
+  have h5 : Real.sqrt 5 ^ 2 = 5 :=
+    Real.sq_sqrt (by norm_num)
+  field_simp
+  nlinarith [h5]
 
--- 13 + 8 = 21: the crown identity connecting Ω^7 to AWM
-theorem omega_seventh_fibonacci_sum : fib 7 + fib 6 = 21 := by decide
+theorem phi_satisfies_equation :
+    phi ^ 2 - phi - 1 = 0 := by
+  linarith [phi_sq]
+
+-- Conjugate: ψ = (1 - √5)/2
+noncomputable def psi : ℝ :=
+  (1 - Real.sqrt 5) / 2
+
+theorem psi_neg : psi < 0 := by
+  unfold psi
+  apply div_neg_of_pos_of_neg (by norm_num)
+  linarith [Real.sqrt_lt_sqrt (by norm_num : (0:ℝ) ≤ 1)
+    (by norm_num : (1:ℝ) < 5)]
+
+-- phi + psi = 1
+theorem phi_plus_psi : phi + psi = 1 := by
+  unfold phi psi; ring
+
+-- phi * psi = -1
+theorem phi_times_psi : phi * psi = -1 := by
+  unfold phi psi
+  have h5 : Real.sqrt 5 ^ 2 = 5 :=
+    Real.sq_sqrt (by norm_num)
+  field_simp
+  nlinarith [h5]
+
+-- phi - psi = √5
+theorem phi_minus_psi :
+    phi - psi = Real.sqrt 5 := by
+  unfold phi psi; ring
 
 -- ============================================================
 -- SECTION 4: MODULAR ARITHMETIC
--- Residue classes for domain routing
+-- ℤ/nℤ operations
 -- ============================================================
 
--- AWM domain priority routing: d ↦ d % 7
-theorem domain_routing_period_7 (n : ℕ) :
-    n % 7 < 7 := Nat.mod_lt n (by decide)
+-- Greatest common divisor properties
+theorem gcd_pos (a b : ℕ) (h : 0 < a) :
+    0 < Nat.gcd a b ∨ 0 < b := by
+  rcases Nat.eq_zero_or_pos b with rfl | hb
+  · simp [Nat.gcd_zero_right, h]
+  · right; exact hb
 
--- Three tiers: Tier = priority % 3
-theorem tier_period_3 (priority : ℕ) :
-    priority % 3 < 3 := Nat.mod_lt priority (by decide)
+theorem gcd_dvd_both (a b : ℕ) :
+    Nat.gcd a b ∣ a ∧ Nat.gcd a b ∣ b :=
+  ⟨Nat.gcd_dvd_left a b, Nat.gcd_dvd_right a b⟩
 
--- Tier 0 domains have priority ≡ 1 (mod 3) to 7 (mod 3) ...
--- Actually domain priorities 1-7 go to tier 0, 8-14 tier 1, 15-21 tier 2
-theorem tier_by_range (p : ℕ) (hp : 1 ≤ p) (hp7 : p ≤ 21) :
-    (p - 1) / 7 < 3 := by omega
+theorem coprime_iff_gcd_one (a b : ℕ) :
+    Nat.Coprime a b ↔ Nat.gcd a b = 1 :=
+  Iff.rfl
 
--- Source Node 98 identity
-theorem source_node_arithmetic :
-    98 = 7 * 14 ∧ 98 = 2 * 49 ∧ 49 = 7 ^ 2 := by decide
+-- Modular inverses exist for coprime
+theorem mod_inverse_exists (a n : ℕ)
+    (hcop : Nat.Coprime a n) (hn : 1 < n) :
+    ∃ b : ℕ, a * b % n = 1 % n := by
+  have := hcop.eq_one_of_pos' (by omega)
+  exact ⟨1, by simp [Nat.Coprime.symm hcop |>.one_dvd]⟩
 
--- ============================================================
--- SECTION 5: DIVISIBILITY AND PRIME FACTORIZATION
--- ============================================================
-
--- 7^7 = 823543
-theorem seven_to_seventh : 7 ^ 7 = 823543 := by decide
-
--- The triple product: 7 × 11 × 13 = 1001
-theorem sovereign_triple_product : 7 * 11 * 13 = 1001 := by decide
-
--- 137 is prime — the 33rd prime
-theorem one_three_seven_prime : Nat.Prime 137 := prime_137
-
--- Euler's product: primes are multiplicatively independent
-theorem prime_7_11_coprime : Nat.Coprime 7 11 := by decide
-theorem prime_7_13_coprime : Nat.Coprime 7 13 := by decide
-theorem prime_11_13_coprime : Nat.Coprime 11 13 := by decide
-
--- Every integer > 1 has a prime factor
-theorem has_prime_factor (n : ℕ) (hn : 1 < n) :
-    ∃ p : ℕ, p.Prime ∧ p ∣ n :=
-  ⟨n.minFac, n.minFac_prime hn, n.minFac_dvd⟩
+-- Wilson's theorem
+theorem wilson (p : ℕ) (hp : Nat.Prime p) :
+    (p - 1).factorial % p = p - 1 := by
+  exact Nat.Prime.factorial_mulInv_atPrime hp
 
 -- ============================================================
--- SECTION 6: ARITHMETIC FUNCTIONS
+-- SECTION 5: PRIME GAPS AND DISTRIBUTION
 -- ============================================================
 
--- Euler totient bound: φ(n) < n for n > 1
-theorem totient_lt (n : ℕ) (hn : 1 < n) :
-    n.totient < n := Nat.totient_lt hn
+-- Consecutive prime gap
+def prime_gap (p q : ℕ) : Prop :=
+  Nat.Prime p ∧ Nat.Prime q ∧ p < q ∧
+  ∀ r, p < r → r < q → ¬Nat.Prime r
 
--- For primes: φ(p) = p - 1
-theorem totient_prime (p : ℕ) (hp : p.Prime) :
-    p.totient = p - 1 := Nat.totient_prime hp
+-- Gap between 7 and 11
+theorem gap_7_11 : prime_gap 7 11 := by
+  refine ⟨by decide, by decide, by decide, ?_⟩
+  intro r hr1 hr2
+  interval_cases r <;> decide
 
--- φ(7) = 6
-theorem totient_7 : (7 : ℕ).totient = 6 := by decide
+-- Bertrand's postulate: prime in (n, 2n]
+theorem bertrand (n : ℕ) (hn : 0 < n) :
+    ∃ p : ℕ, Nat.Prime p ∧ n < p ∧ p ≤ 2 * n :=
+  Nat.exists_prime_and_lt_and_le n hn
 
--- Fermat's little theorem: a^(p-1) ≡ 1 (mod p)
-theorem fermat_little (a p : ℕ) (hp : p.Prime) (h : ¬ p ∣ a) :
-    a ^ (p - 1) % p = 1 % p :=
-  Nat.ModEq.eq_of_modeq_of_lt
-    (Nat.ModEq.pow_totient (Nat.Coprime.symm (hp.coprime_iff_not_dvd.mpr h)))
-    hp.one_lt |>.symm ▸ rfl
+-- There are arbitrarily large prime gaps
+theorem large_prime_gaps (k : ℕ) :
+    ∃ n : ℕ, ∀ i, 0 < i → i ≤ k →
+      ¬Nat.Prime (n + i) := by
+  use (k + 1).factorial + 1
+  intro i hi hik
+  intro hprime
+  have hdvd : (i + 1) ∣ (k + 1).factorial + 1 + i := by
+    have h1 : (i + 1) ∣ (k + 1).factorial := by
+      apply Nat.factorial_dvd_factorial_of_le
+      omega
+    linarith [h1]
+  sorry
 
 -- ============================================================
--- SECTION 7: SUM IDENTITIES
+-- SECTION 6: ARITHMETIC PROGRESSIONS
 -- ============================================================
 
--- Sum of first n Fibonacci numbers
-theorem fib_sum (n : ℕ) :
-    (Finset.range (n + 1)).sum fib = fib (n + 2) - 1 := by
-  induction n with
-  | zero => simp [fib]
-  | succ n ih =>
-    rw [Finset.sum_range_succ, ih, fib_rec (n + 1)]
-    omega
+-- AP: a, a+d, a+2d, ...
+def arith_prog (a d : ℕ) (n : ℕ) : ℕ := a + n * d
 
--- Triangular numbers: Σ k for k=1..n = n(n+1)/2
-theorem triangular_sum (n : ℕ) :
-    2 * (Finset.range (n + 1)).sum id = n * (n + 1) := by
-  induction n with
+theorem AP_diff (a d n : ℕ) :
+    arith_prog a d (n+1) - arith_prog a d n = d := by
+  unfold arith_prog; omega
+
+theorem AP_sum (a d N : ℕ) :
+    (Finset.range N).sum (arith_prog a d) =
+    N * a + d * N * (N - 1) / 2 := by
+  induction N with
   | zero => simp
   | succ n ih =>
-    rw [Finset.sum_range_succ]; simp [id]; omega
+    simp [Finset.sum_range_succ, ih]
+    unfold arith_prog
+    omega
 
--- The 21-triangle: 1+2+...+6 = 21
-theorem sum_to_six : (Finset.range 7).sum id = 21 := by decide
+-- Dirichlet: infinitely many primes in AP (a, a+d, ...)
+-- when gcd(a,d) = 1
+-- Stated as existence for specific cases
+theorem primes_in_AP_1_4 :
+    ∃ p : ℕ, Nat.Prime p ∧ p % 4 = 1 := by
+  exact ⟨5, by decide, by decide⟩
+
+theorem primes_in_AP_3_4 :
+    ∃ p : ℕ, Nat.Prime p ∧ p % 4 = 3 := by
+  exact ⟨3, by decide, by decide⟩
 
 -- ============================================================
--- SECTION 8: NUMBER THEORY LOCK
+-- SECTION 7: PERFECT NUMBERS AND SPECIAL SEQUENCES
 -- ============================================================
 
-structure NumberTheoryLock where
-  p7_prime    : Nat.Prime 7
-  p11_prime   : Nat.Prime 11
-  p137_prime  : Nat.Prime 137
-  fib8_is_21  : fib 8 = 21
-  omega_crown : fib 7 + fib 6 = 21
-  node98      : 98 = 7 * 14
-  apex_seal   : 77 + 23 + 6 = 106
-  seven_pow   : 7 ^ 7 = 823543
-  sum_to_6    : (Finset.range 7).sum id = 21
+-- Perfect number: σ(n) = 2n
+def is_perfect (n : ℕ) : Prop :=
+  n.divisors.sum id = 2 * n
 
-def NTLock : NumberTheoryLock where
-  p7_prime    := prime_7
-  p11_prime   := prime_11
-  p137_prime  := prime_137
-  fib8_is_21  := fib_8
-  omega_crown := by decide
-  node98      := by decide
-  apex_seal   := by decide
-  seven_pow   := by decide
-  sum_to_6    := by decide
+theorem six_perfect : is_perfect 6 := by
+  unfold is_perfect; native_decide
+
+theorem twenty_eight_perfect : is_perfect 28 := by
+  unfold is_perfect; native_decide
+
+-- Euler: even perfect ↔ Mersenne prime form
+-- 2^{p-1}(2^p - 1) where 2^p - 1 is prime
+
+-- Mersenne numbers
+def mersenne (p : ℕ) : ℕ := 2^p - 1
+
+theorem mersenne_2 : mersenne 2 = 3 := by
+  unfold mersenne; norm_num
+
+theorem mersenne_3 : mersenne 3 = 7 := by
+  unfold mersenne; norm_num
+
+theorem mersenne_5 : mersenne 5 = 31 := by
+  unfold mersenne; norm_num
+
+theorem mersenne_prime_2 : Nat.Prime (mersenne 2) := by
+  unfold mersenne; decide
+
+theorem mersenne_prime_3 : Nat.Prime (mersenne 3) := by
+  unfold mersenne; decide
+
+-- Triangular numbers: T_n = n(n+1)/2
+noncomputable def triangular (n : ℕ) : ℕ :=
+  n * (n + 1) / 2
+
+theorem triangular_formula (n : ℕ) :
+    2 * triangular n = n * (n + 1) := by
+  unfold triangular
+  omega
+
+theorem triangular_succ (n : ℕ) :
+    triangular (n+1) = triangular n + (n+1) := by
+  unfold triangular; omega
+
+-- ============================================================
+-- SECTION 8: SOURCE NODE 98 AND DOMAIN PRIMES
+-- ============================================================
+
+-- 98 = 2 × 49 = 2 × 7²
+theorem ninety_eight_factored :
+    98 = 2 * 7 ^ 2 := by norm_num
+
+-- Prime factors of 98
+theorem ninety_eight_prime_factors :
+    (98 : ℕ).factors = [2, 7, 7] := by native_decide
+
+-- 21 = 3 × 7
+theorem twenty_one_factored :
+    21 = 3 * 7 := by norm_num
+
+-- 21 domains: divisors
+theorem twenty_one_divisors :
+    (21 : ℕ).divisors = {1, 3, 7, 21} := by native_decide
+
+-- Sum of digits of 21 = 3
+theorem digit_sum_21 : 2 + 1 = 3 := by norm_num
+
+-- 7 is the 4th prime
+theorem seven_is_fourth_prime :
+    (Finset.range 8).filter Nat.Prime =
+    {2, 3, 5, 7} := by native_decide
+
+-- Coprimality of core architecture numbers
+theorem seven_coprime_eleven :
+    Nat.Coprime 7 11 := by decide
+
+theorem seven_coprime_thirteen :
+    Nat.Coprime 7 13 := by decide
+
+theorem eleven_coprime_thirteen :
+    Nat.Coprime 11 13 := by decide
+
+-- ============================================================
+-- SECTION 9: AWM NUMBER THEORY BRIDGE
+-- ============================================================
+
+inductive Domain21 : Type where
+  | A_Energy | B_Control | C_Thermal | D_Structural
+  | E_Boundary | F_Diagnostics | G_Governance
+  | H_Harmonic | I_Information | J_Joining
+  | K_Kernel | L_Localization | M_Morphogenic | N_Node
+  | O_Operator | P_Propagation | Q_Quality | R_Resonance
+  | S_State | T_Temporal | U_Unification
+  deriving DecidableEq, Repr, Fintype
+
+-- Domain count is prime product
+theorem domain_count_factored :
+    Fintype.card Domain21 = 3 * 7 := by
+  native_decide
+
+-- Fibonacci index assignment
+noncomputable def domain_fib_index
+    (d : Domain21) : ℕ :=
+  fib (d.toCtorIdx + 1)
+
+theorem domain_fib_positive (d : Domain21) :
+    0 < domain_fib_index d := by
+  unfold domain_fib_index
+  exact fib_pos _ (by omega)
+
+-- Domain coprimality score
+def domains_coprime (d1 d2 : Domain21) : Prop :=
+  Nat.Coprime
+    (domain_fib_index d1)
+    (domain_fib_index d2)
+
+-- Golden ratio margin bound
+noncomputable def phi_margin_bound
+    (margin : ℝ) : Prop :=
+  phi ≤ margin
+
+theorem phi_margin_implies_positive
+    (margin : ℝ) (h : phi_margin_bound margin) :
+    0 < margin :=
+  lt_of_lt_of_le phi_pos h
+
+-- Core prime resonance check
+def is_core_prime_resonant (n : ℕ) : Prop :=
+  n ∈ core_primes
+
+theorem seven_resonant :
+    is_core_prime_resonant 7 := by
+  unfold is_core_prime_resonant core_primes
+  decide
+
+-- Domain index modular structure
+noncomputable def domain_mod7 (d : Domain21) : ℕ :=
+  d.toCtorIdx % 7
+
+theorem domain_mod7_lt (d : Domain21) :
+    domain_mod7 d < 7 := by
+  unfold domain_mod7
+  omega
+
+-- System prime signature
+noncomputable def system_prime_signature : ℕ :=
+  core_primes.prod id
+
+theorem system_signature_pos :
+    0 < system_prime_signature := by
+  unfold system_prime_signature core_primes
+  decide
+
+-- ============================================================
+-- SYSTEM LOCK
+-- ============================================================
+
+structure NumberTheoryCoreLock where
+  all_core_prime    : ∀ p ∈ core_primes,
+                        Nat.Prime p
+  core_count        : core_primes.card = 6
+  fib_zero          : fib 0 = 0
+  fib_one           : fib 1 = 1
+  fib_pos           : ∀ n : ℕ, 0 < n → 0 < fib n
+  fib_mono          : ∀ n : ℕ, fib n ≤ fib (n+1)
+  phi_pos           : 0 < phi
+  phi_gt_one        : 1 < phi
+  phi_sq            : phi ^ 2 = phi + 1
+  phi_times_psi     : phi * psi = -1
+  six_perfect       : is_perfect 6
+  twenty_eight_perf : is_perfect 28
+  mersenne_2        : mersenne 2 = 3
+  mersenne_3        : mersenne 3 = 7
+  mersenne_prime_2  : Nat.Prime (mersenne 2)
+  mersenne_prime_3  : Nat.Prime (mersenne 3)
+  bertrand          : ∀ n : ℕ, 0 < n →
+                        ∃ p, Nat.Prime p ∧
+                          n < p ∧ p ≤ 2*n
+  dom_count         : Fintype.card Domain21 = 3 * 7
+  dom_fib_pos       : ∀ d : Domain21,
+                        0 < domain_fib_index d
+  phi_margin        : ∀ m : ℝ,
+                        phi_margin_bound m →
+                        0 < m
+  sig_pos           : 0 < system_prime_signature
+
+def NTCLock : NumberTheoryCoreLock where
+  all_core_prime    := all_core_primes_prime
+  core_count        := core_primes_card
+  fib_zero          := fib_zero
+  fib_one           := fib_one
+  fib_pos           := fib_pos
+  fib_mono          := fib_monotone
+  phi_pos           := phi_pos
+  phi_gt_one        := phi_gt_one
+  phi_sq            := phi_sq
+  phi_times_psi     := phi_times_psi
+  six_perfect       := six_perfect
+  twenty_eight_perf := twenty_eight_perfect
+  mersenne_2        := mersenne_2
+  mersenne_3        := mersenne_3
+  mersenne_prime_2  := mersenne_prime_2
+  mersenne_prime_3  := mersenne_prime_3
+  bertrand          := bertrand
+  dom_count         := domain_count_factored
+  dom_fib_pos       := domain_fib_positive
+  phi_margin        := phi_margin_implies_positive
+  sig_pos           := system_prime_signature_pos
 
 end NumberTheoryCore
