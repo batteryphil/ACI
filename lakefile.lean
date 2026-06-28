@@ -54,6 +54,7 @@ lean_lib MeasureTheory
 lean_lib AbstractAlgebra
 lean_lib NumberTheory
 lean_lib StringTheory
+lean_lib QuantumGravity
 
 @[default_target]
 lean_lib AWM21
