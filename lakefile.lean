@@ -32,6 +32,7 @@ lean_lib PrimeMasterEngine
 lean_lib InformationGeometry
 lean_lib NumberTheoryCore
 lean_lib OptimalControl
+lean_lib StochasticDifferentialEquations
 
 @[default_target]
 lean_lib AWM21
