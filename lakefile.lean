@@ -42,6 +42,7 @@ lean_lib OptimalTransport
 lean_lib RenormalizationGroup
 lean_lib ConformalFieldTheory
 lean_lib QuantumInformation
+lean_lib WaveletAnalysis
 
 @[default_target]
 lean_lib AWM21
