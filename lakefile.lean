@@ -67,6 +67,7 @@ lean_lib SetTheory
 lean_lib CategoryTheoryAdvanced
 lean_lib TopologyAdvanced
 lean_lib LinearAlgebra
+lean_lib ProbabilityTheory
 
 @[default_target]
 lean_lib AWM21
