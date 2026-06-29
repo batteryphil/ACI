@@ -76,6 +76,7 @@ lean_lib InformationTheoryAdvanced
 lean_lib OperatorTheory
 lean_lib CodingTheory
 lean_lib CryptographyTheory
+lean_lib FluidDynamics
 
 @[default_target]
 lean_lib AWM21
