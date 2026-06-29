@@ -92,6 +92,7 @@ lean_lib SignalProcessing
 lean_lib ControlTheoryAdvanced
 lean_lib ComputationalComplexity
 lean_lib FormalLanguageTheory
+lean_lib OptimizationTheory
 
 @[default_target]
 lean_lib AWM21
