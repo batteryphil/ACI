@@ -59,6 +59,7 @@ lean_lib HomologicalAlgebra
 lean_lib RepresentationTheory
 lean_lib DynamicalSystems
 lean_lib Combinatorics
+lean_lib ComplexAnalysis
 
 @[default_target]
 lean_lib AWM21
