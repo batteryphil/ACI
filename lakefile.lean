@@ -89,6 +89,7 @@ lean_lib AcousticsWaves
 lean_lib AtomicMolecularPhysics
 lean_lib FunctionalEquations
 lean_lib SignalProcessing
+lean_lib ControlTheoryAdvanced
 
 @[default_target]
 lean_lib AWM21
