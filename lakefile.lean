@@ -82,6 +82,7 @@ lean_lib GeneralRelativity
 lean_lib QuantumFieldTheory
 lean_lib NuclearPhysics
 lean_lib BioinformaticsTheory
+lean_lib CondensedMatterPhysics
 
 @[default_target]
 lean_lib AWM21
