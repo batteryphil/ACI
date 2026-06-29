@@ -58,6 +58,7 @@ lean_lib QuantumGravity
 lean_lib HomologicalAlgebra
 lean_lib RepresentationTheory
 lean_lib DynamicalSystems
+lean_lib Combinatorics
 
 @[default_target]
 lean_lib AWM21
