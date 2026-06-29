@@ -60,6 +60,7 @@ lean_lib RepresentationTheory
 lean_lib DynamicalSystems
 lean_lib Combinatorics
 lean_lib ComplexAnalysis
+lean_lib LieTheory
 
 @[default_target]
 lean_lib AWM21
