@@ -57,6 +57,7 @@ lean_lib StringTheory
 lean_lib QuantumGravity
 lean_lib HomologicalAlgebra
 lean_lib RepresentationTheory
+lean_lib DynamicalSystems
 
 @[default_target]
 lean_lib AWM21
