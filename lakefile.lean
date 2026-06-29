@@ -90,6 +90,7 @@ lean_lib AtomicMolecularPhysics
 lean_lib FunctionalEquations
 lean_lib SignalProcessing
 lean_lib ControlTheoryAdvanced
+lean_lib ComputationalComplexity
 
 @[default_target]
 lean_lib AWM21
