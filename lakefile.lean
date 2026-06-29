@@ -87,6 +87,7 @@ lean_lib PlasmaPhysics
 lean_lib Optics
 lean_lib AcousticsWaves
 lean_lib AtomicMolecularPhysics
+lean_lib FunctionalEquations
 
 @[default_target]
 lean_lib AWM21
