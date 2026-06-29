@@ -62,6 +62,7 @@ lean_lib Combinatorics
 lean_lib ComplexAnalysis
 lean_lib LieTheory
 lean_lib AlgebraicGeometry
+lean_lib LogicModelTheory
 
 @[default_target]
 lean_lib AWM21
