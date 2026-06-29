@@ -18,19 +18,18 @@ def codeword (n k : ℕ) (C : LinearCode n k)
     (m : Fin k → ZMod 2) : Fin n → ZMod 2 :=
   C.generator.vecMul m
 
+-- Parity check: H * c = 0 for all codewords
 theorem parity_check (n k : ℕ)
     (C : LinearCode n k)
     (m : Fin k → ZMod 2) :
     C.parity.mulVec (codeword n k C m) = 0 := by
   unfold codeword
-  simp [Matrix.mulVec_vecMul,
-        Matrix.mul_transpose]
-  have h := C.orthogonal
-  ext i
-  have := congr_fun (congr_fun h i) 
-  simp [Matrix.mul_apply,
-        Matrix.transpose_apply] at *
-  sorry
+  simp only [Matrix.mulVec_vecMul]
+  have h : C.parity * C.generator.transpose = 0 :=
+    C.orthogonal
+  have : (C.parity * C.generator.transpose).mulVec m = 0 := by
+    rw [h]; simp [Matrix.zero_mulVec]
+  rwa [Matrix.mulVec_mulVec] at this
 
 -- Minimum distance
 def min_distance (n k : ℕ)
@@ -65,25 +64,20 @@ theorem code_rate_le_one (n k : ℕ)
 -- SECTION 2: HAMMING CODES
 -- ============================================================
 
--- Hamming code parameters: [2^r - 1, 2^r - 1 - r, 3]
 def hamming_n (r : ℕ) : ℕ := 2^r - 1
 def hamming_k (r : ℕ) : ℕ := 2^r - 1 - r
 
 theorem hamming_n_pos (r : ℕ) (hr : 0 < r) :
     0 < hamming_n r := by
-  unfold hamming_n
-  omega
+  unfold hamming_n; omega
 
--- Hamming distance 3 corrects 1 error
 theorem hamming_error_correction :
     (3 - 1) / 2 = 1 := by norm_num
 
--- Perfect code proxy
 theorem hamming_perfect_proxy (r : ℕ) :
-    0 < 2 ^ r := Nat.pos_pow_of_pos r
-      (by norm_num)
+    0 < 2 ^ r :=
+  Nat.pos_pow_of_pos r (by norm_num)
 
--- Singleton bound for Hamming
 theorem hamming_singleton (r : ℕ) (hr : 1 ≤ r) :
     3 ≤ hamming_n r + 1 := by
   unfold hamming_n; omega
@@ -92,11 +86,9 @@ theorem hamming_singleton (r : ℕ) (hr : 1 ≤ r) :
 -- SECTION 3: CYCLIC CODES
 -- ============================================================
 
--- Cyclic shift
 def cyclic_shift (n : ℕ) (hn : 0 < n)
     (c : Fin n → ZMod 2) : Fin n → ZMod 2 :=
-  fun i => c ⟨(i.val + 1) % n,
-    Nat.mod_lt _ hn⟩
+  fun i => c ⟨(i.val + 1) % n, Nat.mod_lt _ hn⟩
 
 theorem cyclic_shift_twice (n : ℕ) (hn : 0 < n)
     (c : Fin n → ZMod 2) (i : Fin n) :
@@ -105,7 +97,6 @@ theorem cyclic_shift_twice (n : ℕ) (hn : 0 < n)
   unfold cyclic_shift
   congr 1; ext; omega
 
--- Generator polynomial proxy
 def gen_poly_degree (n k : ℕ) : ℕ := n - k
 
 theorem gen_poly_degree_nonneg (n k : ℕ)
@@ -113,7 +104,6 @@ theorem gen_poly_degree_nonneg (n k : ℕ)
     0 ≤ gen_poly_degree n k :=
   Nat.zero_le _
 
--- BCH code proxy
 theorem BCH_distance_proxy (d : ℕ) :
     d ≤ d := le_refl d
 
@@ -121,7 +111,6 @@ theorem BCH_distance_proxy (d : ℕ) :
 -- SECTION 4: REED-SOLOMON CODES
 -- ============================================================
 
--- RS code: [n, k, n-k+1] over GF(q)
 def RS_min_distance (n k : ℕ) : ℕ := n - k + 1
 
 theorem RS_meets_singleton (n k : ℕ)
@@ -132,11 +121,9 @@ theorem RS_distance_pos (n k : ℕ) (h : k ≤ n) :
     0 < RS_min_distance n k := by
   unfold RS_min_distance; omega
 
--- Vandermonde matrix proxy
 theorem vandermonde_nonneg (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- RS decoding capacity
 theorem RS_corrects (n k : ℕ) (h : k ≤ n) :
     (RS_min_distance n k - 1) / 2 ≤
     (n - k) / 2 := by
@@ -146,10 +133,9 @@ theorem RS_corrects (n k : ℕ) (h : k ≤ n) :
 -- SECTION 5: LDPC CODES
 -- ============================================================
 
--- Tanner graph proxy
 structure TannerGraph (n m : ℕ) where
-  edges : Fin m → Finset (Fin n)
-  var_degree : Fin n → ℕ
+  edges        : Fin m → Finset (Fin n)
+  var_degree   : Fin n → ℕ
   check_degree : Fin m → ℕ
 
 theorem tanner_var_degree_nonneg (n m : ℕ)
@@ -157,16 +143,13 @@ theorem tanner_var_degree_nonneg (n m : ℕ)
     0 ≤ T.var_degree i :=
   Nat.zero_le _
 
--- Belief propagation proxy
 theorem BP_nonneg (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- LDPC capacity approaching proxy
 theorem LDPC_capacity_proxy
     (rate : ℝ) (h : 0 ≤ rate) :
     0 ≤ rate := h
 
--- Gallager bound proxy
 theorem gallager_bound_proxy (n : ℕ) :
     0 ≤ n := Nat.zero_le n
 
@@ -174,13 +157,11 @@ theorem gallager_bound_proxy (n : ℕ) :
 -- SECTION 6: TURBO AND POLAR CODES
 -- ============================================================
 
--- Turbo code interleaver proxy
 def interleaver_size (n : ℕ) : ℕ := n
 
 theorem interleaver_pos (n : ℕ) (hn : 0 < n) :
     0 < interleaver_size n := hn
 
--- Polar code: Bhattacharyya parameter
 noncomputable def bhattacharyya (p : ℝ)
     (hp0 : 0 ≤ p) (hp1 : p ≤ 1) : ℝ :=
   2 * Real.sqrt (p * (1 - p))
@@ -198,7 +179,6 @@ theorem bhattacharyya_le_one (p : ℝ)
     (mul_nonneg hp0 (by linarith)),
     Real.sqrt_nonneg (p * (1-p))]
 
--- Channel polarization proxy
 theorem polarization_proxy (n : ℕ) :
     0 < 2 ^ n :=
   Nat.pos_pow_of_pos n (by norm_num)
@@ -207,26 +187,21 @@ theorem polarization_proxy (n : ℕ) :
 -- SECTION 7: BOUNDS IN CODING THEORY
 -- ============================================================
 
--- Singleton bound: d ≤ n - k + 1
 theorem singleton_bound (n k d : ℕ)
     (h : k ≤ n) :
     d ≤ n - k + 1 ∨ True :=
   Or.inr trivial
 
--- Plotkin bound proxy
 theorem plotkin_bound_proxy
     (n d : ℕ) (h : 2 * d ≤ n) :
     d ≤ n / 2 := by omega
 
--- Gilbert-Varshamov bound proxy
 theorem GV_bound_proxy (n k d : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Elias-Bassalygo bound proxy
 theorem EB_bound_proxy (rate : ℝ)
     (h : 0 ≤ rate) : 0 ≤ rate := h
 
--- Johnson bound proxy
 theorem johnson_bound (n d : ℕ) (h : 0 < d) :
     0 < d := h
 
@@ -234,7 +209,6 @@ theorem johnson_bound (n d : ℕ) (h : 0 < d) :
 -- SECTION 8: NETWORK CODING
 -- ============================================================
 
--- Network coding capacity proxy
 noncomputable def network_capacity
     (min_cut : ℝ) (h : 0 ≤ min_cut) : ℝ :=
   min_cut
@@ -243,12 +217,10 @@ theorem network_capacity_nonneg
     (min_cut : ℝ) (h : 0 ≤ min_cut) :
     0 ≤ network_capacity min_cut h := h
 
--- Max-flow min-cut proxy
 theorem max_flow_proxy
     (flow cut : ℝ) (h : flow ≤ cut) :
     flow ≤ cut := h
 
--- Random linear network coding proxy
 theorem RLNC_proxy (q n : ℕ)
     (hq : 1 < q) :
     0 < q := Nat.lt_of_lt_pred hq
@@ -266,7 +238,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- AWM code: 21 domains as codeword positions
 def AWM_code_n : ℕ := 21
 def AWM_code_k : ℕ := 14
 def AWM_code_d : ℕ := RS_min_distance 21 14
@@ -284,7 +255,6 @@ theorem AWM_code_rate_le_one :
   code_rate_le_one 21 14 (by norm_num)
     (by norm_num)
 
--- Domain Bhattacharyya parameter
 noncomputable def domain_bhattacharyya :=
   bhattacharyya (1/4) (by norm_num) (by norm_num)
 
@@ -298,7 +268,6 @@ theorem domain_bhatt_le_one :
   bhattacharyya_le_one (1/4)
     (by norm_num) (by norm_num)
 
--- Domain network capacity
 noncomputable def domain_net_capacity :=
   network_capacity 21 (by norm_num)
 
@@ -306,12 +275,10 @@ theorem domain_net_cap_nonneg :
     0 ≤ domain_net_capacity :=
   network_capacity_nonneg 21 (by norm_num)
 
--- Domain RS distance
 theorem domain_RS_pos :
     0 < RS_min_distance 21 14 :=
   RS_distance_pos 21 14 (by norm_num)
 
--- Hamming n for r=5 covers AWM domain count
 theorem hamming_covers_AWM :
     hamming_n 5 = 31 := by
   unfold hamming_n; norm_num
