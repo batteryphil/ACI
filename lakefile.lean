@@ -79,6 +79,7 @@ lean_lib CryptographyTheory
 lean_lib FluidDynamics
 lean_lib Thermodynamics
 lean_lib GeneralRelativity
+lean_lib QuantumFieldTheory
 
 @[default_target]
 lean_lib AWM21
