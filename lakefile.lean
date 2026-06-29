@@ -93,6 +93,7 @@ lean_lib ControlTheoryAdvanced
 lean_lib ComputationalComplexity
 lean_lib FormalLanguageTheory
 lean_lib OptimizationTheory
+lean_lib VariationalCalculus
 
 @[default_target]
 lean_lib AWM21
