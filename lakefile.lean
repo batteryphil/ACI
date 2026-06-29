@@ -68,6 +68,7 @@ lean_lib CategoryTheoryAdvanced
 lean_lib TopologyAdvanced
 lean_lib LinearAlgebra
 lean_lib ProbabilityTheory
+lean_lib HarmonicAnalysis
 
 @[default_target]
 lean_lib AWM21
