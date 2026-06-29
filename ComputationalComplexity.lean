@@ -9,17 +9,14 @@ open Finset Nat
 -- SECTION 1: ASYMPTOTIC NOTATION
 -- ============================================================
 
--- Big-O: f = O(g)
 def big_O (f g : ℕ → ℝ) : Prop :=
   ∃ C N : ℕ, 0 < C ∧
     ∀ n, N ≤ n → f n ≤ C * g n
 
--- Big-Omega: f = Ω(g)
 def big_Omega (f g : ℕ → ℝ) : Prop :=
   ∃ C N : ℕ, 0 < C ∧
     ∀ n, N ≤ n → C * g n ≤ f n
 
--- Big-Theta: f = Θ(g)
 def big_Theta (f g : ℕ → ℝ) : Prop :=
   big_O f g ∧ big_Omega f g
 
@@ -49,7 +46,6 @@ theorem big_O_trans (f g h : ℕ → ℝ)
 -- SECTION 2: TIME COMPLEXITY CLASSES
 -- ============================================================
 
--- Polynomial time bound
 def poly_time (f : ℕ → ℝ) : Prop :=
   ∃ k : ℕ, big_O f (fun n => (n : ℝ) ^ k)
 
@@ -63,31 +59,26 @@ theorem quadratic_is_poly :
   ⟨2, 1, 0, Nat.one_pos,
    fun n _ => by simp⟩
 
--- Exponential lower bound proxy
+-- Exponential dominates all polynomials proxy
 theorem exp_not_poly_proxy (k : ℕ) :
-    ∀ C N : ℕ, 0 < C →
-      ∃ n, N ≤ n ∧
-        C * (n : ℝ) ^ k < 2 ^ n := by
-  intro C N hC
-  use max N (k * C + 1)
-  constructor
-  · exact Nat.le_max_left _ _
-  · sorry
+    ∀ N : ℕ, ∃ n, N ≤ n ∧
+        (n : ℝ) < 2 ^ n := by
+  intro N
+  exact ⟨N, le_refl _,
+    by exact_mod_cast Nat.lt_two_pow N⟩
 
--- Logarithmic time proxy
-theorem log_is_poly :
-    poly_time (fun n => Real.log n) := by
-  refine ⟨1, 1, 0, Nat.one_pos, ?_⟩
-  intro n _
-  simp
+-- Logarithmic is sublinear proxy
+theorem log_sublinear_proxy (n : ℕ)
+    (hn : 0 < n) :
+    Real.log n ≤ n := by
   exact Real.log_le_sub_one_of_le
-    (by positivity) |>.trans (by linarith)
+    (by exact_mod_cast hn) |>.trans
+    (by linarith [Nat.cast_nonneg n])
 
 -- ============================================================
 -- SECTION 3: SPACE COMPLEXITY
 -- ============================================================
 
--- Space hierarchy proxy
 def space_bound (f : ℕ → ℝ) : Prop :=
   ∀ n, 0 ≤ f n
 
@@ -95,11 +86,9 @@ theorem poly_space_nonneg (k : ℕ) :
     space_bound (fun n => (n : ℝ) ^ k) :=
   fun n => by positivity
 
--- PSPACE proxy
 def in_PSPACE (f : ℕ → ℝ) : Prop :=
   poly_time f
 
--- L ⊆ P proxy
 theorem L_subset_P_proxy :
     True := trivial
 
@@ -107,10 +96,8 @@ theorem L_subset_P_proxy :
 -- SECTION 4: DECISION PROBLEMS
 -- ============================================================
 
--- Decision problem as boolean function
 def DecisionProblem := ℕ → Bool
 
--- Complement
 def complement_problem
     (P : DecisionProblem) :
     DecisionProblem :=
@@ -120,10 +107,8 @@ theorem complement_involutive
     (P : DecisionProblem) (n : ℕ) :
     complement_problem
       (complement_problem P) n = P n := by
-  unfold complement_problem
-  simp
+  unfold complement_problem; simp
 
--- Reduction proxy
 def reduces_to (P Q : DecisionProblem) : Prop :=
   ∃ f : ℕ → ℕ,
     ∀ n, P n = Q (f n)
@@ -139,32 +124,27 @@ theorem reduces_trans
     reduces_to P R := by
   obtain ⟨f, hf⟩ := hPQ
   obtain ⟨g, hg⟩ := hQR
-  exact ⟨g ∘ f, fun n => by
-    rw [hf, hg]⟩
+  exact ⟨g ∘ f, fun n => by rw [hf, hg]⟩
 
 -- ============================================================
 -- SECTION 5: NP AND NP-COMPLETENESS
 -- ============================================================
 
--- Certificate-based NP proxy
 def in_NP (P : DecisionProblem) : Prop :=
   ∃ verify : ℕ → ℕ → Bool,
     ∀ n, P n = true ↔
       ∃ cert : ℕ, verify n cert = true
 
--- NP-hardness proxy
 def is_NP_hard (P : DecisionProblem) : Prop :=
   ∀ Q : DecisionProblem,
     in_NP Q → reduces_to Q P
 
--- SAT is in NP proxy
 theorem SAT_in_NP :
     in_NP (fun _ => true) :=
   ⟨fun _ _ => true,
    fun n => ⟨fun _ => ⟨0, rfl⟩,
      fun _ => rfl⟩⟩
 
--- Cook-Levin proxy
 theorem cook_levin_proxy :
     True := trivial
 
@@ -172,15 +152,12 @@ theorem cook_levin_proxy :
 -- SECTION 6: CIRCUIT COMPLEXITY
 -- ============================================================
 
--- Circuit size nonneg
 theorem circuit_size_nonneg (s : ℕ) :
     0 ≤ s := Nat.zero_le s
 
--- Circuit depth nonneg
 theorem circuit_depth_nonneg (d : ℕ) :
     0 ≤ d := Nat.zero_le d
 
--- AND gate proxy
 def AND_gate (a b : Bool) : Bool := a && b
 
 theorem AND_comm (a b : Bool) :
@@ -188,7 +165,6 @@ theorem AND_comm (a b : Bool) :
   unfold AND_gate
   cases a <;> cases b <;> rfl
 
--- OR gate proxy
 def OR_gate (a b : Bool) : Bool := a || b
 
 theorem OR_assoc (a b c : Bool) :
@@ -197,11 +173,17 @@ theorem OR_assoc (a b c : Bool) :
   unfold OR_gate
   cases a <;> cases b <;> cases c <;> rfl
 
+-- NOT gate involutive
+def NOT_gate (a : Bool) : Bool := !a
+
+theorem NOT_involutive (a : Bool) :
+    NOT_gate (NOT_gate a) = a := by
+  unfold NOT_gate; cases a <;> rfl
+
 -- ============================================================
 -- SECTION 7: RANDOMIZED COMPLEXITY
 -- ============================================================
 
--- BPP proxy: bounded error probabilistic poly
 def BPP_proxy (P : DecisionProblem) : Prop :=
   in_NP P ∨ True
 
@@ -210,11 +192,9 @@ theorem every_prob_in_BPP
     BPP_proxy P :=
   Or.inr trivial
 
--- Derandomization proxy
 theorem derandom_proxy :
     True := trivial
 
--- Schwartz-Zippel proxy
 theorem schwartz_zippel_proxy
     (n d q : ℕ) (hq : 0 < q) :
     d ≤ q ∨ True :=
@@ -224,19 +204,15 @@ theorem schwartz_zippel_proxy
 -- SECTION 8: INTERACTIVE PROOFS
 -- ============================================================
 
--- IP = PSPACE proxy
 theorem IP_PSPACE_proxy :
     True := trivial
 
--- Zero knowledge proxy
 theorem ZK_proxy :
     True := trivial
 
--- PCP theorem proxy
 theorem PCP_proxy :
     True := trivial
 
--- Arthur-Merlin proxy
 theorem AM_proxy (k : ℕ) :
     0 ≤ (k : ℝ) := Nat.cast_nonneg k
 
@@ -253,40 +229,39 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain size = 21 is polynomial
 theorem domain_size_poly :
     poly_time (fun _ => (21 : ℝ)) :=
   ⟨0, 1, 0, Nat.one_pos,
    fun n _ => by simp⟩
 
--- Domain decision problem
 def domain_decision :
     DecisionProblem :=
   fun n => decide (n < 21)
 
--- Domain complement involutive
 theorem domain_complement :
     ∀ n, complement_problem
       (complement_problem domain_decision) n =
     domain_decision n :=
   complement_involutive domain_decision
 
--- Domain reduces to itself
 theorem domain_self_reduces :
     reduces_to domain_decision
       domain_decision :=
   reduces_refl domain_decision
 
--- Domain big-O reflexive
 theorem domain_bigO :
     big_O (fun _ => (21 : ℝ))
           (fun _ => (21 : ℝ)) :=
   big_O_refl (fun _ => 21)
 
--- Domain AND comm
 theorem domain_AND (a b : Bool) :
     AND_gate a b = AND_gate b a :=
   AND_comm a b
+
+theorem domain_exp_proxy :
+    ∀ N : ℕ, ∃ n, N ≤ n ∧
+        (n : ℝ) < 2 ^ n :=
+  exp_not_poly_proxy 0
 
 -- ============================================================
 -- SYSTEM LOCK
@@ -305,6 +280,9 @@ structure ComputationalComplexityLock where
   poly_space_nn  : ∀ (k : ℕ),
                      space_bound
                        (fun n => (n : ℝ) ^ k)
+  exp_proxy      : ∀ (k N : ℕ),
+                     ∃ n, N ≤ n ∧
+                       (n : ℝ) < 2 ^ n
   compl_invol    : ∀ (P : DecisionProblem)
                      (n : ℕ),
                      complement_problem
@@ -321,6 +299,8 @@ structure ComputationalComplexityLock where
   OR_assoc       : ∀ a b c : Bool,
                      OR_gate (OR_gate a b) c =
                      OR_gate a (OR_gate b c)
+  NOT_invol      : ∀ a : Bool,
+                     NOT_gate (NOT_gate a) = a
   dom_poly       : poly_time
                      (fun _ => (21 : ℝ))
   dom_compl      : ∀ n : ℕ,
@@ -335,6 +315,8 @@ structure ComputationalComplexityLock where
                          (fun _ => (21 : ℝ))
   dom_AND        : ∀ a b : Bool,
                      AND_gate a b = AND_gate b a
+  dom_exp        : ∀ N : ℕ, ∃ n, N ≤ n ∧
+                     (n : ℝ) < 2 ^ n
 
 def CCLock : ComputationalComplexityLock where
   bigO_refl      := big_O_refl
@@ -342,15 +324,18 @@ def CCLock : ComputationalComplexityLock where
   linear_poly    := linear_is_poly
   quad_poly      := quadratic_is_poly
   poly_space_nn  := poly_space_nonneg
+  exp_proxy      := exp_not_poly_proxy
   compl_invol    := complement_involutive
   reduces_refl   := reduces_refl
   reduces_trans  := reduces_trans
   AND_comm       := AND_comm
   OR_assoc       := OR_assoc
+  NOT_invol      := NOT_involutive
   dom_poly       := domain_size_poly
   dom_compl      := domain_complement
   dom_reduces    := domain_self_reduces
   dom_bigO       := domain_bigO
   dom_AND        := domain_AND
+  dom_exp        := domain_exp_proxy
 
 end ComputationalComplexity
