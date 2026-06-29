@@ -96,6 +96,7 @@ lean_lib OptimizationTheory
 lean_lib VariationalCalculus
 lean_lib IntegralEquations
 lean_lib MathematicalBiology
+lean_lib MathematicalChemistry
 
 @[default_target]
 lean_lib AWM21
