@@ -63,6 +63,7 @@ lean_lib ComplexAnalysis
 lean_lib LieTheory
 lean_lib AlgebraicGeometry
 lean_lib LogicModelTheory
+lean_lib SetTheory
 
 @[default_target]
 lean_lib AWM21
