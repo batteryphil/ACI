@@ -72,6 +72,7 @@ lean_lib HarmonicAnalysis
 lean_lib NumericalAnalysis
 lean_lib PartialDifferentialEquations
 lean_lib GraphTheory
+lean_lib InformationTheoryAdvanced
 
 @[default_target]
 lean_lib AWM21
