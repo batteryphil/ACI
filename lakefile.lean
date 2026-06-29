@@ -85,6 +85,7 @@ lean_lib BioinformaticsTheory
 lean_lib CondensedMatterPhysics
 lean_lib PlasmaPhysics
 lean_lib Optics
+lean_lib AcousticsWaves
 
 @[default_target]
 lean_lib AWM21
