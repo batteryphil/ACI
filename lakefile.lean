@@ -55,6 +55,7 @@ lean_lib AbstractAlgebra
 lean_lib NumberTheory
 lean_lib StringTheory
 lean_lib QuantumGravity
+lean_lib HomologicalAlgebra
 
 @[default_target]
 lean_lib AWM21
