@@ -98,6 +98,7 @@ lean_lib IntegralEquations
 lean_lib MathematicalBiology
 lean_lib MathematicalChemistry
 lean_lib MathematicalEconomics
+lean_lib SymplecticTopology
 
 @[default_target]
 lean_lib AWM21
