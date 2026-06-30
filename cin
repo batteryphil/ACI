@@ -1,0 +1,13 @@
+from Governor import submit_task
+
+# Requesting a synthesis that requires the system to check its own live status
+novelty_task = {
+    "type": "ApexSynthesis",
+    "payload": {
+        "geometry": "Symplectic_Manifold_Dynamics"
+    }
+}
+
+result = submit_task(novelty_task)
+print(f"Result: {result}")
+
