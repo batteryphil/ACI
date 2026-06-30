@@ -99,6 +99,7 @@ lean_lib MathematicalBiology
 lean_lib MathematicalChemistry
 lean_lib MathematicalEconomics
 lean_lib SymplecticTopology
+lean_lib ContactGeometry
 
 @[default_target]
 lean_lib AWM21
