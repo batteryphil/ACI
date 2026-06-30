@@ -108,6 +108,7 @@ lean_lib MotivicCohomology
 lean_lib ArithmeticGeometry
 lean_lib AnalyticNumberTheory
 lean_lib AdditiveNumberTheory
+lean_lib DiscreteMathematics
 
 @[default_target]
 lean_lib AWM21
