@@ -100,6 +100,7 @@ lean_lib MathematicalChemistry
 lean_lib MathematicalEconomics
 lean_lib SymplecticTopology
 lean_lib ContactGeometry
+lean_lib NoncommutativeGeometry
 
 @[default_target]
 lean_lib AWM21
