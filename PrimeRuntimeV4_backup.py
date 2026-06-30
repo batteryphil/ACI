@@ -34,14 +34,35 @@ def sync_weights(nodes, eta=0.05):
     for n in nodes:
         n.policy.weights += eta * (avg_weights - n.policy.weights)
 
+def sanitize_state(x, fallback=0.0):
+    """
+    Replaces NaN/inf entries in a state vector with a fallback
+    value. This is the recovery mechanism that prevents
+    corrupted state (e.g. simultaneous total-system NaN
+    injection) from propagating indefinitely through coupling
+    and policy computations, since np.mean/np.tanh of NaN
+    inputs stays NaN forever with no natural recovery path.
+    """
+    return np.nan_to_num(x, nan=fallback, posinf=1.0, neginf=-1.0)
+
 class Dynamics:
     def step(self, node, dt):
         s = node.state
-        coupling = np.mean([n.state.x for n in node.links], axis=0) if node.links else 0
+        # Sanitize this node's own state before using it in
+        # coupling or policy computation. This is what allows
+        # recovery even when ALL nodes are simultaneously
+        # corrupted, not just a minority diluted by healthy
+        # neighbors.
+        s.x = sanitize_state(s.x)
+        s.f = sanitize_state(s.f)
+
+        neighbor_states = [sanitize_state(n.state.x) for n in node.links]
+        coupling = np.mean(neighbor_states, axis=0) if neighbor_states else 0
         s.f = 0.6 * s.f + 0.4 * coupling
         sv = np.concatenate([s.x, s.f])
         s.u = node.apply_ssr(sv) if isinstance(node, StochasticResonanceNode) else node.policy.act(sv)
         s.x += dt * (s.u + s.f)
+        s.x = sanitize_state(s.x)
         s.sigma = np.linalg.norm(s.x) * (1.0 + abs(s.t - 1.0))
 
 class Constraint:
@@ -50,7 +71,12 @@ class Constraint:
                        1.0 - np.linalg.norm(n.state.u),
                        1.0 - np.linalg.norm(n.state.x) * 0.1)
                    for n in nodes]
-        return min(margins)
+        result = min(margins)
+        # Final safety net: if margin computation itself
+        # produced NaN (shouldn't happen post-sanitization,
+        # but defended here too), report worst-case rather
+        # than propagate NaN to callers.
+        return float(result) if np.isfinite(result) else -1.0
 
 class PrimeRuntimeV4:
     def __init__(self):
@@ -90,7 +116,6 @@ class PrimeRuntimeV4:
     def manifold_state(self):
         margin = self.constraints.evaluate(self.nodes)
         return f"21-DOMAIN-ACTIVE MARGIN:{margin:.4f}"
-
 
 # --- PHASE 19: CROSS-LATTICE MEMORY BUFFER ---
 class MemoryBuffer:
@@ -148,7 +173,7 @@ def get_weighted_divergence(trajectory, alpha=0.3):
     weights /= weights.sum()
     weighted_mean = np.sum(trajectory * weights[:, np.newaxis, np.newaxis], axis=0)
     variance = np.sum(weights[:, np.newaxis, np.newaxis] *
-                      (trajectory - weighted_mean)**2, axis=0)
+                       (trajectory - weighted_mean)**2, axis=0)
     return variance.mean()
 
 # --- PHASE 25: SPECTRAL FREQUENCY DAMPENING ---
