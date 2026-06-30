@@ -38,21 +38,14 @@ def sanitize_state(x, fallback=0.0):
     """
     Replaces NaN/inf entries in a state vector with a fallback
     value. This is the recovery mechanism that prevents
-    corrupted state (e.g. simultaneous total-system NaN
-    injection) from propagating indefinitely through coupling
-    and policy computations, since np.mean/np.tanh of NaN
-    inputs stays NaN forever with no natural recovery path.
+    corrupted state from propagating indefinitely through
+    coupling and policy computations.
     """
     return np.nan_to_num(x, nan=fallback, posinf=1.0, neginf=-1.0)
 
 class Dynamics:
     def step(self, node, dt):
         s = node.state
-        # Sanitize this node's own state before using it in
-        # coupling or policy computation. This is what allows
-        # recovery even when ALL nodes are simultaneously
-        # corrupted, not just a minority diluted by healthy
-        # neighbors.
         s.x = sanitize_state(s.x)
         s.f = sanitize_state(s.f)
 
@@ -72,19 +65,29 @@ class Constraint:
                        1.0 - np.linalg.norm(n.state.x) * 0.1)
                    for n in nodes]
         result = min(margins)
-        # Final safety net: if margin computation itself
-        # produced NaN (shouldn't happen post-sanitization,
-        # but defended here too), report worst-case rather
-        # than propagate NaN to callers.
         return float(result) if np.isfinite(result) else -1.0
 
 class PrimeRuntimeV4:
-    def __init__(self):
+    def __init__(self, entropy_target=1.0, pole_margin=0.99):
+        """
+        entropy_target and pole_margin are now real, persistent
+        configuration parameters set once at construction time,
+        rather than being silently re-defaulted inside step().
+        This makes them genuinely testable — Phase 25 found
+        that the previous design re-instantiated EntropyEngine
+        with target_entropy=1.0 every single step, making any
+        externally-passed target value a no-op. That bug is
+        fixed here.
+        """
         self.nodes = [StochasticResonanceNode(i) for i in range(21)]
         for i, n in enumerate(self.nodes):
             n.links = [self.nodes[(i+1)%21], self.nodes[(i-1)%21]]
-        self.dynamics, self.constraints = Dynamics(), Constraint()
+        self.dynamics = Dynamics()
+        self.constraints = Constraint()
         self.step_count = 0
+        self.entropy_target = entropy_target
+        self.pole_margin = pole_margin
+        self.entropy_engine = EntropyEngine(target_entropy=self.entropy_target)
 
     def step(self, dt):
         for n in self.nodes:
@@ -92,13 +95,12 @@ class PrimeRuntimeV4:
         if self.step_count % 10 == 0:
             sync_weights(self.nodes)
         registry_buffer.push([n.state.x for n in self.nodes])
-        entropy_engine = EntropyEngine()
         div = get_filtered_divergence(registry_buffer.sample_trajectory())
-        entropy_engine.apply_normalization(self.nodes, registry_buffer.sample_trajectory())
+        self.entropy_engine.apply_normalization(self.nodes, registry_buffer.sample_trajectory())
         apply_temporal_gating(self.step_count, self.nodes, div)
         self.step_count += 1
         dt = get_adaptive_dt(0.05, div)
-        apply_pole_stabilization(self.nodes)
+        apply_pole_stabilization(self.nodes, margin=self.pole_margin)
         return self.constraints.evaluate(self.nodes)
 
     def run(self, steps=200, dt=0.05):
@@ -211,7 +213,6 @@ def apply_quantum_causal_flux(nodes, causal_tensor, coupling_strength=0.001):
             flux_correction = causal_tensor @ n.state.x[:2]
             n.state.B_x += coupling_strength * flux_correction[0]
             n.state.B_y += coupling_strength * flux_correction[1]
-            # Enforce divB = 0 bound proven in PhysicsCore.lean
             B_norm = np.sqrt(n.state.B_x**2 + n.state.B_y**2)
             if B_norm > 1.0:
                 n.state.B_x /= B_norm
