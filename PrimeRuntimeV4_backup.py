@@ -67,17 +67,44 @@ class Constraint:
         result = min(margins)
         return float(result) if np.isfinite(result) else -1.0
 
+POLE_MARGIN_MAX = 5.0
+POLE_MARGIN_MIN = 0.01
+
+def effective_pole_margin(base_margin, nodes):
+    """
+    Tightens the effective pole_margin when average noise
+    level across nodes is elevated. Phase 26 found that under
+    high noise (noise_level=2.0, 200x normal) combined with
+    other stressors, margin could approach the instability
+    threshold (0.0406, vs the runtime's own 0.05 line) even
+    though the configured pole_margin was a reasonable 0.5.
+    The root cause: the clamp itself was static, not
+    accounting for how much more volatile state becomes
+    under high noise. This scales the effective clamp down
+    proportionally to noise level, since u = apply_ssr(...)
+    is the term most directly inflated by noise, and margin
+    penalizes norm(u) directly.
+    """
+    if not nodes:
+        return base_margin
+    mean_noise = float(np.mean([
+        getattr(n, "noise_level", 0.01) for n in nodes]))
+    # noise_level=0.01 (normal) -> no tightening
+    # noise_level=2.0 (200x normal, as in worst-case testing)
+    # -> meaningful tightening, never below POLE_MARGIN_MIN
+    tightening = 1.0 / (1.0 + mean_noise)
+    tightened = base_margin * max(tightening, 0.3)
+    return float(np.clip(
+        tightened, POLE_MARGIN_MIN, POLE_MARGIN_MAX))
+
 class PrimeRuntimeV4:
     def __init__(self, entropy_target=1.0, pole_margin=0.99):
         """
-        entropy_target and pole_margin are now real, persistent
-        configuration parameters set once at construction time,
-        rather than being silently re-defaulted inside step().
-        This makes them genuinely testable — Phase 25 found
-        that the previous design re-instantiated EntropyEngine
-        with target_entropy=1.0 every single step, making any
-        externally-passed target value a no-op. That bug is
-        fixed here.
+        entropy_target and pole_margin are real, persistent
+        configuration parameters. pole_margin is clamped to a
+        safe operating range at construction time, and is
+        further tightened dynamically during step() based on
+        current noise levels via effective_pole_margin().
         """
         self.nodes = [StochasticResonanceNode(i) for i in range(21)]
         for i, n in enumerate(self.nodes):
@@ -86,7 +113,10 @@ class PrimeRuntimeV4:
         self.constraints = Constraint()
         self.step_count = 0
         self.entropy_target = entropy_target
-        self.pole_margin = pole_margin
+        self.pole_margin = float(np.clip(
+            pole_margin, POLE_MARGIN_MIN, POLE_MARGIN_MAX))
+        self.pole_margin_was_clamped = (
+            self.pole_margin != pole_margin)
         self.entropy_engine = EntropyEngine(target_entropy=self.entropy_target)
 
     def step(self, dt):
@@ -100,7 +130,8 @@ class PrimeRuntimeV4:
         apply_temporal_gating(self.step_count, self.nodes, div)
         self.step_count += 1
         dt = get_adaptive_dt(0.05, div)
-        apply_pole_stabilization(self.nodes, margin=self.pole_margin)
+        live_margin = effective_pole_margin(self.pole_margin, self.nodes)
+        apply_pole_stabilization(self.nodes, margin=live_margin)
         return self.constraints.evaluate(self.nodes)
 
     def run(self, steps=200, dt=0.05):
