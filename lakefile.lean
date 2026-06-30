@@ -101,6 +101,7 @@ lean_lib MathematicalEconomics
 lean_lib SymplecticTopology
 lean_lib ContactGeometry
 lean_lib NoncommutativeGeometry
+lean_lib OrderTheory
 
 @[default_target]
 lean_lib AWM21
