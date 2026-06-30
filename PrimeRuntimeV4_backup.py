@@ -1,10 +1,6 @@
 import numpy as np
 import random
 
-# ============================================================
-# ENERGY DOMAIN
-# ============================================================
-
 DOMAIN_NAMES = [
     "A_Energy", "B_Control", "C_Thermal", "D_Structural",
     "E_Boundary", "F_Diagnostics", "G_Governance",
@@ -17,10 +13,6 @@ DOMAIN_NAMES = [
 
 def domain_priority(domain_index):
     return domain_index + 1
-
-# ============================================================
-# SOVEREIGN HAMILTONIAN
-# ============================================================
 
 def T_kinetic(p, m):
     return float(np.sum(p ** 2 / (2 * m)))
@@ -35,10 +27,6 @@ def H_OPT7(p, m, k, y_actual, y_spine, W, A, dl):
     return (T_kinetic(p, m) + V_potential(k, y_actual, y_spine) +
             G_governance(W, A, dl))
 
-# ============================================================
-# ENERGY TRIAD
-# ============================================================
-
 class EnergyTriad:
     def __init__(self, energy=0.0, thermal=0.0, structural=0.0):
         self.energy = max(0.0, energy)
@@ -48,10 +36,6 @@ class EnergyTriad:
     @property
     def total(self):
         return self.energy + self.thermal + self.structural
-
-# ============================================================
-# MC2 ENGINE
-# ============================================================
 
 MC2_U_MAX = 0.95
 MC2_LOCAL_RETAIN = 0.8
@@ -73,10 +57,6 @@ def mc2_displacement(F, m_eff, dt):
 def mc2_coupling_strength(m_origin, m_target):
     return 1.0 / (m_origin + m_target)
 
-# ============================================================
-# ANTARES CATEGORY
-# ============================================================
-
 class IntegrityTracker:
     def __init__(self):
         self.integrity_ever_broken = False
@@ -89,10 +69,6 @@ class IntegrityTracker:
             self.integrity_ever_broken = True
         return valid
 
-# ============================================================
-# LAWSON FUSION CRITERION
-# ============================================================
-
 LAWSON_BOUND = 1e21
 
 def lawson_triple_product(n_density, T_temp, tau_confinement):
@@ -102,32 +78,16 @@ def lawson_satisfied(n_density, T_temp, tau_confinement):
     return lawson_triple_product(
         n_density, T_temp, tau_confinement) >= LAWSON_BOUND
 
-# ============================================================
-# ALFVÉN VELOCITY
-# ============================================================
-
 def alfven_velocity(B_field, mu_zero, rho):
     denom = np.sqrt(max(mu_zero * rho, 1e-12))
     return float(B_field / denom)
-
-# ============================================================
-# FRAME DRAGGING
-# ============================================================
 
 def frame_dragging(warping_scalar):
     w = max(0.0, warping_scalar)
     return float(1.0 / (1.0 + 0.1 * w))
 
-# ============================================================
-# MHD DIVB-FREE INVARIANT
-# ============================================================
-
 def divB_residual(dBx_dx, dBy_dy):
     return float(dBx_dx + dBy_dy)
-
-# ============================================================
-# N7SPINE — 14-domain margin bottleneck and gate decision
-# ============================================================
 
 def n7_M_N7(margin_values):
     return float(min(margin_values)) if margin_values else 0.0
@@ -143,10 +103,6 @@ def n7_gate_decision(margin_values, floor):
         return ("Sealed", None)
     return ("Vetoed", n7_bottleneck_index(margin_values))
 
-# ============================================================
-# MANIFOLD21 — symplectic form, Poisson bracket, Lyapunov
-# ============================================================
-
 def manifold21_omega(q1, p1, q2, p2):
     return float(np.sum(q1 * p2 - p1 * q2))
 
@@ -157,36 +113,11 @@ def manifold21_lyapunov(q, p, q_eq, p_eq):
     return float(0.5 * (np.sum((q - q_eq) ** 2) +
                          np.sum((p - p_eq) ** 2)))
 
-# ============================================================
-# MORUZINLAW — chamber validity and composition
-# ============================================================
-
 def moruzin_chamber_valid(delta, m_eff):
     return abs(delta) <= m_eff
 
 def moruzin_chamber_compose(d1, m1, d2, m2):
     return (d1 + d2, m1 + m2)
-
-# ============================================================
-# QUANTUM CORE FAMILY (QuantumCore, Optimus7Quantum, Matrix7,
-# Optimus7) — a genuine, small (2x2 real) density matrix per
-# node satisfying Hermitian, trace=1, positive-semidefinite,
-# faithfully instancing the proven Lean properties rather than
-# a literal infinite-dimensional port.
-#
-# NOTE on tolerance: quantum_trace_one originally used tol=1e-9,
-# which is tighter than the floating-point accumulation that
-# naturally occurs from repeated normalization and rotation-
-# matrix multiplication over many steps. Direct measurement at
-# step 50 showed trace=0.9999999989687168, a deviation of
-# ~1.03e-9 — just barely exceeding the old 1e-9 tolerance
-# despite being a real, harmless floating-point artifact, not
-# a violation of the proven property (eigenvalues were
-# correctly nonneg, Hermitian held exactly). Tolerance widened
-# to 1e-6, which comfortably covers this drift while still
-# being far tighter than would be needed to miss a genuine
-# violation of trace=1.
-# ============================================================
 
 def quantum_density_matrix(x_state):
     a, b = x_state[0], x_state[1]
@@ -213,44 +144,32 @@ def quantum_unitary_evolve(rho, theta):
 def quantum_trace_preserved(rho_before, rho_after, tol=1e-6):
     return bool(abs(np.trace(rho_before) - np.trace(rho_after)) < tol)
 
-# ============================================================
-# CORE RUNTIME STRUCTURES
-# ============================================================
-
 class State:
     def __init__(self):
         self.x, self.u, self.f = np.zeros(3), np.zeros(3), np.zeros(3)
         self.t, self.sigma, self.beta = 1.0, 1.0, 0.0
         self.B_x, self.B_y = 0.0, 0.0
-
         self.p = np.zeros(3)
         self.y_spine = None
-
         self.load = 0.0
         self.triad = EnergyTriad()
-
         self.fusion_density = 1e19
         self.fusion_temp = 1.0
         self.fusion_confinement = 1.0
-
         self.alfven_v = 0.0
         self.divB_resid = 0.0
         self.prev_B_x, self.prev_B_y = 0.0, 0.0
-
         self.frame_drag_factor = 1.0
-
         self.n7_gate_status = "Sealed"
         self.n7_veto_reason = None
-
         self.lyapunov_V = 0.0
         self.omega_self_check = 0.0
-
         self.chamber_valid = True
-
         self.rho = np.array([[0.5, 0.0], [0.0, 0.5]])
         self.rho_hermitian = True
         self.rho_trace_one = True
         self.rho_positive = True
+        self.local_margin = 1.0
 
 class Policy:
     def __init__(self):
@@ -264,22 +183,17 @@ class Node:
         self.domain_index = nid % 21
         self.domain_name = DOMAIN_NAMES[self.domain_index]
         self.priority = domain_priority(self.domain_index)
-
         self.state = State()
         self.links = []
         self.policy = Policy()
-
         self.mass = 1.0
         self.spring_k = 0.1
         self.gov_weight = 0.05
-
         self.O_strength = 1.0
         self.Gamma_gain = 1.0
         self.Omega_burden = 1.0
-
         self.mu_zero = 1.0
         self.rho_density = 1.0
-
         self.m_eff_chamber = 1.0
 
 NOISE_LEVEL_MAX = 1.0
@@ -308,11 +222,25 @@ class StochasticResonanceNode(Node):
             0, self.noise_level, state_vec.shape)
         return self.policy.act(state_vec + noise)
 
-def sync_weights(nodes, eta=0.05):
+def sync_weights_unweighted(nodes, eta=0.05):
     all_weights = np.array([n.policy.weights for n in nodes])
     avg_weights = np.mean(all_weights, axis=0)
     for n in nodes:
         n.policy.weights += eta * (avg_weights - n.policy.weights)
+
+def sync_weights(nodes, eta=0.05):
+    margins = np.array([n.state.local_margin for n in nodes])
+    shifted = margins - np.max(margins)
+    fitness = np.exp(shifted)
+    fitness_sum = fitness.sum()
+    if fitness_sum < 1e-12:
+        weights_soft = np.full(len(nodes), 1.0 / len(nodes))
+    else:
+        weights_soft = fitness / fitness_sum
+    all_weights = np.array([n.policy.weights for n in nodes])
+    fitness_avg = np.tensordot(weights_soft, all_weights, axes=(0, 0))
+    for n in nodes:
+        n.policy.weights += eta * (fitness_avg - n.policy.weights)
 
 def sanitize_state(x, fallback=0.0):
     return np.nan_to_num(x, nan=fallback, posinf=1.0, neginf=-1.0)
@@ -326,18 +254,6 @@ def clamp_u(u, max_norm=U_NORM_MAX):
     return u
 
 class Dynamics:
-    """
-    Step function incorporates fourteen physics/formal
-    structures from the core Lean modules:
-      1. SovereignHamiltonian   8. Frame dragging
-      2. MC2Engine              9. MHD divB-free invariant
-      3. EnergyTriad           10. N7Spine gate/bottleneck
-      4. EnergyDomain          11. Manifold21 symplectic/Lyapunov
-      5. AntaresCategory       12. MoruzinLaw chamber validity
-      6. Lawson criterion   13-14. Quantum density matrix family
-      7. Alfvén velocity        (QuantumCore/Optimus7Quantum/
-                                 Matrix7/Optimus7)
-    """
     def step(self, node, dt):
         s = node.state
         s.x = sanitize_state(s.x)
@@ -404,6 +320,8 @@ class Dynamics:
         s.n7_veto_reason = (
             ["sigma_term", "u_term", "x_term"][veto_idx]
             if veto_idx is not None else None)
+
+        s.local_margin = float(min(sub_margins))
 
         s.omega_self_check = manifold21_omega(s.x, s.p, s.x, s.p)
         s.lyapunov_V = manifold21_lyapunov(
@@ -488,21 +406,17 @@ class PrimeRuntimeV4:
         self.constraints = Constraint()
         self.integrity = IntegrityTracker()
         self.step_count = 0
-
         self.registry_buffer = MemoryBuffer(capacity=50)
         self.divergence_filter = DivergenceFilter()
-
         self.pole_margin = float(np.clip(
             pole_margin, POLE_MARGIN_MIN, POLE_MARGIN_MAX))
         self.pole_margin_was_clamped = (
             self.pole_margin != pole_margin)
-
         self.entropy_target = float(np.clip(
             entropy_target,
             ENTROPY_TARGET_MIN, ENTROPY_TARGET_MAX))
         self.entropy_target_was_clamped = (
             self.entropy_target != entropy_target)
-
         self.entropy_engine = EntropyEngine(
             target_entropy=self.entropy_target)
 
