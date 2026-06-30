@@ -106,6 +106,7 @@ lean_lib UniversalAlgebra
 lean_lib TropicalGeometry
 lean_lib MotivicCohomology
 lean_lib ArithmeticGeometry
+lean_lib AnalyticNumberTheory
 
 @[default_target]
 lean_lib AWM21
