@@ -103,6 +103,7 @@ lean_lib ContactGeometry
 lean_lib NoncommutativeGeometry
 lean_lib OrderTheory
 lean_lib UniversalAlgebra
+lean_lib TropicalGeometry
 
 @[default_target]
 lean_lib AWM21
