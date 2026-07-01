@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Install elan
         run: |
@@ -25,5 +27,12 @@ jobs:
       - name: Get Mathlib cache
         run: lake exe cache get
 
-      - name: Build all
-        run: lake build ACIManifold
+      - name: Build changed Lean files
+        run: |
+          CHANGED=$(git diff --name-only HEAD^ HEAD -- '*.lean' | sed 's/\.lean$//')
+          if [ -z "$CHANGED" ]; then
+            echo "No .lean files changed in this push."
+          else
+            echo "Building: $CHANGED"
+            lake build $CHANGED
+          fi
