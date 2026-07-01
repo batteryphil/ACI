@@ -138,15 +138,20 @@ theorem gate_seal_margins (p : Proposal) (floor : ℝ)
   rw [gate_sealed_iff] at h
   exact all_margins_pos p.margins floor h
 
+/-- Rewritten via contradiction to avoid a split_ifs branch-order
+    mismatch under Lean 4.31 that produced an unsolved-goals error. -/
 theorem gate_veto_bottleneck (p : Proposal) (floor : ℝ)
     (h : N7_gate p floor = GateDecision.Vetoed (bottleneck p.margins)) :
     p.margins.m (bottleneck p.margins) ≤ floor := by
-  unfold N7_gate at h
-  split_ifs at h with hf
-  · exact absurd h (by simp)
-  · push_neg at hf
-    rw [bottleneck_achieves_min]
-    exact hf
+  by_contra hcon
+  push_neg at hcon
+  have hseal : N7_gate p floor = GateDecision.Sealed := by
+    unfold N7_gate
+    rw [if_pos]
+    calc floor < p.margins.m (bottleneck p.margins) := hcon
+      _ = M_N7 p.margins := bottleneck_achieves_min p.margins
+  rw [hseal] at h
+  exact absurd h (by simp)
 
 theorem gate_exclusive (p : Proposal) (floor : ℝ) :
     N7_gate p floor = GateDecision.Sealed ∨
@@ -159,6 +164,10 @@ theorem gate_exclusive (p : Proposal) (floor : ℝ) :
 def non_oscillatory (states : List SpineState) : Prop :=
   List.Pairwise (fun a b => a.level < b.level) states
 
+/-- Rewritten so `hb` is bound fresh inside each induction case
+    instead of curried before `induction b`, which had caused the
+    induction to corrupt its own scoping (the previous version's
+    `omega` failure traced back to this, not a math error). -/
 theorem admissible_chain_non_oscillatory
     (states : List SpineState)
     (h : ∀ i : Fin (states.length - 1),
@@ -174,13 +183,14 @@ theorem admissible_chain_non_oscillatory
     intro k hk
     have hstep := h ⟨k, hk⟩
     simpa [admissible] using hstep.symm
-  have mono : ∀ a b : ℕ, a < b → (hb : b < states.length) →
+  have mono : ∀ a b : ℕ, a < b → ∀ hb : b < states.length,
       (states.get ⟨a, by omega⟩).level <
       (states.get ⟨b, hb⟩).level := by
-    intro a b hab hb
+    intro a b
     induction b with
-    | zero => omega
+    | zero => intro hab; omega
     | succ n ih =>
+      intro hab hb
       rcases Nat.lt_succ_iff_lt_or_eq.mp hab with h1 | h1
       · have hn : n < states.length := by omega
         have hprev := ih h1 hn
