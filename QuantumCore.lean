@@ -9,11 +9,6 @@ import Mathlib.LinearAlgebra.Matrix.Trace
 import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.Tactic
 
-/-!
-# QUANTUMCORE: ACI SOVEREIGN QUANTUM OPERATOR ENGINE
-## Density Operators, Measurement, Unitary Evolution, Entanglement
--/
-
 open Complex
 
 namespace QuantumCore
@@ -21,7 +16,6 @@ namespace QuantumCore
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
   [FiniteDimensional ℂ H] [CompleteSpace H] [Nontrivial H]
 
--- TIER 1: THE SOVEREIGN DENSITY OPERATOR
 structure DensityOperator where
   op      : H →L[ℂ] H
   h_sa    : ContinuousLinearMap.adjoint op = op
@@ -39,12 +33,12 @@ theorem sa_real_diagonal (A : H →L[ℂ] H)
     rwa [hA] at h
   have step2 : inner (𝕜 := ℂ) (A v) v = starRingEnd ℂ (inner (𝕜 := ℂ) v (A v)) :=
     (inner_conj_symm (A v) v).symm
-  have key : inner (𝕜 := ℂ) v (A v) = starRingEnd ℂ (inner (𝕜 := ℂ) v (A v)) := by
-    rw [← step1, step2]
+  have key : inner (𝕜 := ℂ) v (A v) = starRingEnd ℂ (inner (𝕜 := ℂ) v (A v)) :=
+    step1.symm.trans step2
   have him := congrArg Complex.im key
-  simpa using him
+  rw [Complex.conj_im] at him
+  linarith
 
--- TIER 2: SELF-ADJOINT OPERATOR ALGEBRA
 theorem sa_real_linear (A B : H →L[ℂ] H) (α β : ℝ)
     (hA : ContinuousLinearMap.adjoint A = A) (hB : ContinuousLinearMap.adjoint B = B) :
     ContinuousLinearMap.adjoint ((α : ℂ) • A + (β : ℂ) • B) = (α : ℂ) • A + (β : ℂ) • B := by
@@ -61,7 +55,7 @@ theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = 
   set b := stdOrthonormalBasis ℂ H with hb
   set M := LinearMap.toMatrix b.toBasis b.toBasis A.toLinearMap with hM
   have hadj : LinearMap.adjoint A.toLinearMap = A.toLinearMap := by
-    rw [← ContinuousLinearMap.adjoint_toLinearMap, hA]
+    rw [ContinuousLinearMap.adjoint_toLinearMap, hA]
   have hMsa : M.conjTranspose = M := by
     have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadj
     rwa [LinearMap.toMatrix_adjoint b b A.toLinearMap] at h
@@ -69,11 +63,13 @@ theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = 
     LinearMap.trace_eq_matrix_trace ℂ b.toBasis A.toLinearMap
   have hct : M.conjTranspose.trace = star M.trace := Matrix.trace_conjTranspose M
   rw [hMsa] at hct
+  have hct' : M.trace = starRingEnd ℂ M.trace := by rw [hct, starRingEnd_apply]
   have key : LinearMap.trace ℂ H A.toLinearMap
-      = star (LinearMap.trace ℂ H A.toLinearMap) := by
-    rw [htrace]; exact hct
+      = starRingEnd ℂ (LinearMap.trace ℂ H A.toLinearMap) := by
+    rw [htrace]; exact hct'
   have him := congrArg Complex.im key
-  simpa using him
+  rw [Complex.conj_im] at him
+  linarith
 
 theorem sa_product_trace_real (A B : H →L[ℂ] H)
     (hA : ContinuousLinearMap.adjoint A = A) (hB : ContinuousLinearMap.adjoint B = B) :
@@ -82,9 +78,9 @@ theorem sa_product_trace_real (A B : H →L[ℂ] H)
   set MA := LinearMap.toMatrix b.toBasis b.toBasis A.toLinearMap with hMA
   set MB := LinearMap.toMatrix b.toBasis b.toBasis B.toLinearMap with hMB
   have hadjA : LinearMap.adjoint A.toLinearMap = A.toLinearMap := by
-    rw [← ContinuousLinearMap.adjoint_toLinearMap, hA]
+    rw [ContinuousLinearMap.adjoint_toLinearMap, hA]
   have hadjB : LinearMap.adjoint B.toLinearMap = B.toLinearMap := by
-    rw [← ContinuousLinearMap.adjoint_toLinearMap, hB]
+    rw [ContinuousLinearMap.adjoint_toLinearMap, hB]
   have hMAsa : MA.conjTranspose = MA := by
     have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadjA
     rwa [LinearMap.toMatrix_adjoint b b A.toLinearMap] at h
@@ -98,13 +94,15 @@ theorem sa_product_trace_real (A B : H →L[ℂ] H)
   have hct : (MA * MB).conjTranspose.trace = star (MA * MB).trace :=
     Matrix.trace_conjTranspose (MA * MB)
   rw [Matrix.conjTranspose_mul, hMAsa, hMBsa, Matrix.trace_mul_comm MB MA] at hct
+  have hct' : (MA * MB).trace = starRingEnd ℂ (MA * MB).trace := by
+    rw [hct, starRingEnd_apply]
   have key : LinearMap.trace ℂ H (A.comp B).toLinearMap
-      = star (LinearMap.trace ℂ H (A.comp B).toLinearMap) := by
-    rw [htrace]; exact hct
+      = starRingEnd ℂ (LinearMap.trace ℂ H (A.comp B).toLinearMap) := by
+    rw [htrace]; exact hct'
   have him := congrArg Complex.im key
-  simpa using him
+  rw [Complex.conj_im] at him
+  linarith
 
--- TIER 3: PROJECTIVE MEASUREMENT THEORY
 structure Projector where
   op   : H →L[ℂ] H
   h_sa : ContinuousLinearMap.adjoint op = op
@@ -142,7 +140,6 @@ theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
   simp only [ContinuousLinearMap.coe_comp]
   exact (LinearMap.trace_mul_comm ℂ ρ.op.toLinearMap P.op.toLinearMap).symm
 
--- TIER 4: POST-MEASUREMENT STATE TRANSITION
 noncomputable def post_meas_op (ρ : DensityOperator) (P : Projector)
     (h_prob : 0 < meas_prob ρ P) : H →L[ℂ] H :=
   (1 / (meas_prob ρ P : ℂ)) • (P.op.comp (ρ.op.comp P.op))
@@ -169,7 +166,6 @@ theorem post_meas_pos (ρ : DensityOperator) (P : Projector) (h_prob : 0 < meas_
     rw [step]
     exact ρ.h_pos (P.op v)
 
--- TIER 5: UNITARY EVOLUTION
 structure UnitaryOp where
   op    : H →L[ℂ] H
   h_adj : (ContinuousLinearMap.adjoint op).comp op = ContinuousLinearMap.id ℂ H
@@ -191,7 +187,7 @@ theorem unitary_trace_invariant (U : UnitaryOp) (A : H →L[ℂ] H) :
       (ContinuousLinearMap.comp_assoc _ _ _).symm]
   simp only [ContinuousLinearMap.coe_comp]
   rw [LinearMap.trace_mul_comm]
-  simp only [← ContinuousLinearMap.coe_comp, ← ContinuousLinearMap.comp_assoc, U.h_inv]
+  simp only [← ContinuousLinearMap.coe_comp, ← ContinuousLinearMap.comp_assoc, U.h_adj]
   simp
 
 theorem unitary_preserves_sa (U : UnitaryOp) (A : H →L[ℂ] H)
@@ -202,7 +198,6 @@ theorem unitary_preserves_sa (U : UnitaryOp) (A : H →L[ℂ] H)
   rw [ContinuousLinearMap.adjoint_comp, ContinuousLinearMap.adjoint_comp,
       ContinuousLinearMap.adjoint_adjoint, hA, ContinuousLinearMap.comp_assoc]
 
--- TIER 6: ENTANGLEMENT STRUCTURE
 def is_pure_state (ρ : DensityOperator) : Prop :=
   ∃ ψ : H, ‖ψ‖ = 1 ∧ ∀ v : H, ρ.op v = inner (𝕜 := ℂ) ψ v • ψ
 
@@ -214,7 +209,6 @@ theorem pure_state_idempotent (ρ : DensityOperator) (hpure : is_pure_state ρ) 
         rw [inner_self_eq_norm_sq_to_K]; simp [hψ_norm]]
   simp
 
--- TIER 7: SOVEREIGN QUANTUM AUDIT SEAL
 structure QuantumAuditVector where
   density_op_axioms      : Bool
   sa_composition_sealed  : Bool
