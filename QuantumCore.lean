@@ -7,12 +7,8 @@ import Mathlib.Data.Complex.Basic
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Tactic
 
-/-!
-# QUANTUMCORE: ACI SOVEREIGN QUANTUM OPERATOR ENGINE
-## Final Hardened Build: Density Operators, Measurement, Unitary Evolution
--/
-
 open Complex
+open ContinuousLinearMap
 
 namespace QuantumCore
 
@@ -24,10 +20,7 @@ structure DensityOperator where
   op      : H →L[ℂ] H
   h_sa    : adjoint op = op
   h_pos   : ∀ v : H, 0 ≤ (inner (𝕜 := ℂ) v (op v)).re
-  h_trace : (LinearMap.trace ℂ H op.toLinearMap).re = 1
-
-theorem density_trace_one (ρ : DensityOperator) :
-    (LinearMap.trace ℂ H ρ.op.toLinearMap).re = 1 := ρ.h_trace
+  h_trace : (LinearMap.trace ℂ H (op.toLinearMap)).re = 1
 
 -- TIER 2: SELF-ADJOINT OPERATOR ALGEBRA
 theorem sa_real_linear (A B : H →L[ℂ] H) (α β : ℝ)
