@@ -18,15 +18,16 @@ open Matrix Finset TopologicalSpace
 /-!
 # ACI SOVEREIGN MANIFOLD: ABSOLUTE MATHEMATICAL ARCHITECTURE
 ## Volume I: Constrained Dynamical Manifolds and Quotient Flow Invariance
-
-This file formalizes the complete mathematical foundation of the
-ACI Intelligence system — from conservation geometry through
-operator spectral theory to the master decoupling theorem.
 -/
 
 namespace ACI_Sovereign
 
-variable {n : ℕ} (hn : 0 < n)
+/-- FIXED: `n` is now EXPLICIT, not implicit. The previous
+    `variable {n : ℕ}` caused every explicit call like `P n v`
+    to be misinterpreted as passing `n` into P's real first
+    parameter — the root cause of nearly every error in the
+    prior compile log. -/
+variable (n : ℕ) (hn : 0 < n)
 
 /-!
 ═══════════════════════════════════════════════════════════
@@ -34,26 +35,18 @@ variable {n : ℕ} (hn : 0 < n)
 ═══════════════════════════════════════════════════════════
 -/
 
-/-- The canonical ones covector: the sum functional on domain states -/
 def ones : Fin n → ℝ := fun _ => 1
 
 abbrev StateSpace (n : ℕ) := EuclideanSpace ℝ (Fin n)
 
-/-- Conservation Manifold: the hyperplane of states with fixed total mass c.
-    All valid ACI domain distributions live on this manifold. Named
-    `ConservationSet` rather than `Sigma` to avoid shadowing Lean's
-    built-in dependent-pair `Sigma` type, which was the actual cause
-    of prior "does not have the necessary form" compile errors. -/
 def ConservationSet (c : ℝ) : Set (Fin n → ℝ) :=
   { D | ∑ i, D i = c }
 
+include hn in
 theorem conservationSet_nonempty (c : ℝ) : (ConservationSet n c).Nonempty := by
   use fun i => if i = ⟨0, hn⟩ then c else 0
   simp [ConservationSet, sum_ite_eq']
 
-/-- Renamed the affine-combination parameter from `λ` (a reserved
-    lambda-syntax keyword in Lean 4, which caused a real syntax
-    error) to `t`. -/
 theorem conservationSet_affine_closed (c : ℝ) (D₁ D₂ : Fin n → ℝ)
     (h₁ : D₁ ∈ ConservationSet n c) (h₂ : D₂ ∈ ConservationSet n c) (t : ℝ) :
     (fun i => t * D₁ i + (1 - t) * D₂ i) ∈ ConservationSet n c := by
@@ -67,9 +60,6 @@ theorem conservationSet_affine_closed (c : ℝ) (D₁ D₂ : Fin n → ℝ)
 ═══════════════════════════════════════════════════════════
 -/
 
-/-- V₀: The tangent space of the conservation manifold — all
-    perturbation vectors preserving the sum. Kernel of the ones
-    covector. -/
 def V0 : Submodule ℝ (Fin n → ℝ) where
   carrier   := { v | ∑ i, v i = 0 }
   add_mem'  := by intro a b ha hb; simp [sum_add_distrib, ha, hb]
@@ -85,36 +75,32 @@ theorem V0_preserves_conservationSet (c : ℝ) (D : Fin n → ℝ)
   rw [sum_add_distrib, ← mul_sum, hv, hD]
   ring
 
-/-- The sum functional, as an explicit linear map, used to derive
-    V0's codimension via the rank-nullity theorem rather than an
-    orthogonal-complement lemma whose exact name/signature I could
-    not confirm without the compiler. -/
 def sumFunctional : (Fin n → ℝ) →ₗ[ℝ] ℝ where
   toFun := fun v => ∑ i, v i
   map_add' := by intro a b; simp [sum_add_distrib]
   map_smul' := by intro c a; simp [mul_sum]
 
 theorem sumFunctional_ker_eq_V0 :
-    LinearMap.ker (sumFunctional (n := n)) = V0 n := by
+    LinearMap.ker (sumFunctional n) = V0 n := by
   ext v
   simp [sumFunctional, V0]
 
+include hn in
 theorem sumFunctional_surjective :
-    Function.Surjective (sumFunctional (n := n)) := by
+    Function.Surjective (sumFunctional n) := by
   intro c
   refine ⟨fun i => if i = ⟨0, hn⟩ then c else 0, ?_⟩
   simp [sumFunctional, sum_ite_eq']
 
-/-- V₀ has codimension exactly 1 in ℝⁿ, via rank-nullity on the
-    (surjective) sum functional. -/
+include hn in
 theorem V0_codim_one :
     Module.finrank ℝ (V0 n) + 1 = n := by
-  have hker : Module.finrank ℝ (LinearMap.ker (sumFunctional (n := n)))
+  have hker : Module.finrank ℝ (LinearMap.ker (sumFunctional n))
       = Module.finrank ℝ (V0 n) := by rw [sumFunctional_ker_eq_V0]
-  have hrange : Module.finrank ℝ (LinearMap.range (sumFunctional (n := n))) = 1 := by
-    rw [LinearMap.range_eq_top.mpr (sumFunctional_surjective n)]
+  have hrange : Module.finrank ℝ (LinearMap.range (sumFunctional n)) = 1 := by
+    rw [LinearMap.range_eq_top.mpr (sumFunctional_surjective n hn)]
     simp
-  have hrn := LinearMap.finrank_range_add_finrank_ker (sumFunctional (n := n))
+  have hrn := LinearMap.finrank_range_add_finrank_ker (sumFunctional n)
   rw [hrange, hker] at hrn
   simpa using hrn
 
@@ -124,7 +110,6 @@ theorem V0_codim_one :
 ═══════════════════════════════════════════════════════════
 -/
 
-/-- The ACI mean-subtraction projector: removes the uniform component. -/
 noncomputable def P (v : Fin n → ℝ) : Fin n → ℝ :=
   fun i => v i - (∑ j, v j) / n
 
@@ -133,8 +118,7 @@ noncomputable def P_linear : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) where
   map_add'  := by intro a b; ext i; simp [P, add_div, sum_add_distrib]; ring
   map_smul' := by intro c a; ext i; simp [P, mul_sum, mul_div_assoc]; ring
 
-/-- CORE LEMMA: the annihilation property — 1ᵀP = 0ᵀ. Requires
-    `n ≠ 0` (from `hn`) to justify dividing by n. -/
+include hn in
 theorem ones_annihilates_P (v : Fin n → ℝ) :
     ∑ i, P n v i = 0 := by
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
@@ -142,9 +126,9 @@ theorem ones_annihilates_P (v : Fin n → ℝ) :
   rw [sum_sub_distrib, sum_const, card_univ, Fintype.card_fin]
   field_simp
 
+include hn in
 theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
   ext i
-  have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   simp only [P, ones_annihilates_P n hn v]
   ring
 
@@ -159,15 +143,18 @@ theorem P_self_adjoint (u v : Fin n → ℝ) :
   ring_nf
   rw [mul_sum, mul_sum]
 
+include hn in
 theorem P_range_eq_V0 (v : Fin n → ℝ) : P n v ∈ V0 n :=
   ones_annihilates_P n hn v
 
+include hn in
 theorem P_fixes_V0 (v : Fin n → ℝ) (hv : v ∈ V0 n) : P n v = v := by
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   have hvsum : ∑ i, v i = 0 := hv
   ext i
   simp [P, hvsum]
 
+include hn in
 theorem P_annihilates_uniform (c : ℝ) :
     P n (fun _ => c) = fun _ => 0 := by
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
@@ -182,21 +169,13 @@ theorem P_annihilates_uniform (c : ℝ) :
 ═══════════════════════════════════════════════════════════
 -/
 
-/-- The full Jacobian of the ACI flow at equilibrium:
-    J = W - β · D* · 1ᵀ, i.e. v ↦ W(v) - β·(∑v)·D*.
-    Rewritten from the original (which was not valid linear-map
-    syntax) as an explicit composition: `sumFunctional` maps v to
-    its total, `toSpanSingleton` scales D* by that total. -/
 noncomputable def J_full
     (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ))
     (D_star : Fin n → ℝ) (β : ℝ) :
     (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) :=
-  W - β • (LinearMap.toSpanSingleton ℝ (Fin n → ℝ) D_star ∘ₗ sumFunctional (n := n))
+  W - β • (LinearMap.toSpanSingleton ℝ (Fin n → ℝ) D_star ∘ₗ sumFunctional n)
 
-/-- THE SOVEREIGN DECOUPLING THEOREM: the projected Jacobian
-    J_red = P·J·P = P·W·P. The rank-1 term β·D*·1ᵀ has zero
-    projection onto V₀, so the spectrum of J_red depends ONLY
-    on W, not on β or D*. -/
+include hn in
 theorem J_red_decoupling
     (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ))
     (D_star : Fin n → ℝ) (β : ℝ) (v : Fin n → ℝ) :
@@ -206,9 +185,7 @@ theorem J_red_decoupling
   rw [ones_annihilates_P n hn v]
   simp
 
-/-- COROLLARY: the spectrum of J_red is β-invariant — the
-    eigenstructure on V₀ is unchanged regardless of feedback gain
-    or target vector. -/
+include hn in
 theorem spectrum_beta_invariant
     (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ))
     (D_star₁ D_star₂ : Fin n → ℝ) (β₁ β₂ : ℝ) (v : Fin n → ℝ) :
@@ -222,8 +199,6 @@ theorem spectrum_beta_invariant
 ═══════════════════════════════════════════════════════════
 -/
 
-/-- A Lyapunov function candidate for ACI flow stability:
-    V(D) = ½ · ‖D - D*‖² (squared distance to equilibrium) -/
 noncomputable def lyapunov_candidate (D_star : Fin n → ℝ) (D : Fin n → ℝ) : ℝ :=
   (1 / 2) * ∑ i, (D i - D_star i) ^ 2
 
@@ -242,8 +217,6 @@ theorem lyapunov_zero_iff (D_star D : Fin n → ℝ) :
     rcases h with h1 | h2
     · norm_num at h1
     · ext i
-      have hnn : 0 ≤ ∑ i, (D i - D_star i) ^ 2 :=
-        sum_nonneg (fun i _ => sq_nonneg _)
       have hz : ∑ i, (D i - D_star i) ^ 2 = 0 := h2
       have hi := (sum_eq_zero_iff_of_nonneg
         (fun i _ => sq_nonneg (D i - D_star i))).mp hz i (mem_univ i)
@@ -260,6 +233,7 @@ theorem lyapunov_zero_iff (D_star D : Fin n → ℝ) :
 def V0_stable (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) : Prop :=
   ∀ v, v ∈ V0 n → W v ∈ V0 n
 
+include hn in
 theorem PWP_is_V0_stable (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) :
     V0_stable n (P_linear n ∘ₗ W ∘ₗ P_linear n) := by
   intro v _
