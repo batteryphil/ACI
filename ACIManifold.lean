@@ -22,9 +22,6 @@ open Matrix Finset TopologicalSpace
 
 namespace ACI_Sovereign
 
--- n and hn made explicit (not `variable {n}`); a doc-comment `/-- -/`
--- previously placed directly above this line caused a real parse
--- error, since doc-comments only attach to theorem/def, not `variable`.
 variable (n : ℕ) (hn : 0 < n)
 
 /-!
@@ -68,6 +65,7 @@ def V0 : Submodule ℝ (Fin n → ℝ) where
     have ha' : ∑ i, a i = 0 := ha
     have hb' : ∑ i, b i = 0 := hb
     rw [sum_add_distrib, ha', hb']
+    ring
   zero_mem' := by show ∑ _i : Fin n, (0:ℝ) = 0; simp
   smul_mem' := by
     intro c a ha
@@ -107,6 +105,10 @@ theorem sumFunctional_surjective :
   refine ⟨fun i => if i = ⟨0, hn⟩ then c else 0, ?_⟩
   simp [sumFunctional, sum_ite_eq']
 
+/-- Requires `Module.finrank ℝ (Fin n → ℝ) = n` explicitly — the
+    rank-nullity lemma alone gives `finrank(range) + finrank(ker)
+    = finrank(domain)`, and `finrank(domain)` doesn't automatically
+    simplify to `n` without this fact stated. -/
 include hn in
 theorem V0_codim_one :
     Module.finrank ℝ (V0 n) + 1 = n := by
@@ -115,8 +117,10 @@ theorem V0_codim_one :
   have hrange : Module.finrank ℝ (LinearMap.range (sumFunctional n)) = 1 := by
     rw [LinearMap.range_eq_top.mpr (sumFunctional_surjective n hn)]
     simp
+  have hspace : Module.finrank ℝ (Fin n → ℝ) = n := by
+    simp [Module.finrank_pi]
   have hrn := LinearMap.finrank_range_add_finrank_ker (sumFunctional n)
-  rw [hrange, hker] at hrn
+  rw [hrange, hker, hspace] at hrn
   omega
 
 /-!
@@ -131,7 +135,12 @@ noncomputable def P (v : Fin n → ℝ) : Fin n → ℝ :=
 noncomputable def P_linear : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) where
   toFun     := P n
   map_add'  := by intro a b; ext i; simp [P, add_div, sum_add_distrib]; ring
-  map_smul' := by intro c a; ext i; simp [P, mul_sum, mul_div_assoc]; ring
+  map_smul' := by
+    intro c a
+    ext i
+    show c * a i - (∑ x, c * a x) / n = c * (a i - (∑ x, a x) / n)
+    rw [← mul_sum]
+    ring
 
 include hn in
 theorem ones_annihilates_P (v : Fin n → ℝ) :
@@ -140,6 +149,7 @@ theorem ones_annihilates_P (v : Fin n → ℝ) :
   unfold P
   rw [sum_sub_distrib, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
+  ring
 
 include hn in
 theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
@@ -149,14 +159,17 @@ theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
   rw [hz]
   ring
 
+/-- Best current attempt; this is the one theorem in this file I
+    could not fully verify without live compiler feedback — the
+    nested-sum manipulation may need one more real iteration. -/
 theorem P_self_adjoint (u v : Fin n → ℝ) :
     ∑ i, P n u i * v i = ∑ i, u i * P n v i := by
   unfold P
-  simp only [sub_mul, mul_sub, sum_sub_distrib, sum_mul, mul_sum, sum_div]
-  ring
+  simp only [sub_mul, mul_sub, sum_sub_distrib, sum_mul, mul_sum, sum_div, mul_div_assoc]
+  rw [mul_comm (∑ j, u j) (∑ i, v i)]
 
-include hn in
-theorem P_range_eq_V0 (v : Fin n → ℝ) : P n v ∈ V0 n :=
+omit hn in
+theorem P_range_eq_V0 (v : Fin n → ℝ) (hn : 0 < n) : P n v ∈ V0 n :=
   ones_annihilates_P n hn v
 
 include hn in
@@ -175,6 +188,7 @@ theorem P_annihilates_uniform (c : ℝ) :
   show c - (∑ _j : Fin n, c) / n = 0
   rw [sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
+  ring
 
 /-!
 ═══════════════════════════════════════════════════════════
@@ -251,7 +265,7 @@ include hn in
 theorem PWP_is_V0_stable (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) :
     V0_stable n (P_linear n ∘ₗ W ∘ₗ P_linear n) := by
   intro v _
-  exact P_range_eq_V0 n hn _
+  exact P_range_eq_V0 n v hn
 
 def V0_neg_def (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) : Prop :=
   ∀ v, v ∈ V0 n → v ≠ 0 → ∑ i, v i * W v i < 0
