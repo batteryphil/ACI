@@ -25,5 +25,5 @@ jobs:
       - name: Get Mathlib cache
         run: lake exe cache get
 
-- name: Build all
+      - name: Build all
         run: lake build $(grep '^lean_lib' lakefile.lean | awk '{print $2}')
