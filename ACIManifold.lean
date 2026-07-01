@@ -148,6 +148,7 @@ theorem ones_annihilates_P (v : Fin n → ℝ) :
   unfold P
   rw [sum_sub_distrib, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
+  ring
 
 include hn in
 theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
@@ -157,10 +158,6 @@ theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
   rw [hz]
   ring
 
--- Rebuilt using simp_rw with ONLY a pointwise ring-provable
--- identity (no sums inside `step`), avoiding the earlier broad
--- `simp` call whose multiple sum-manipulation lemmas produced an
--- unwanted double-sum expansion that `ring` couldn't close.
 theorem P_self_adjoint (u v : Fin n → ℝ) :
     ∑ i, P n u i * v i = ∑ i, u i * P n v i := by
   have hL : ∑ i, P n u i * v i
@@ -203,6 +200,7 @@ theorem P_annihilates_uniform (c : ℝ) :
   show c - (∑ _j : Fin n, c) / n = 0
   rw [sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
+  ring
 
 /-!
 ═══════════════════════════════════════════════════════════
@@ -313,4 +311,3 @@ def ACI_v1_audit : ACI_AuditVector := {
 }
 
 end ACI_Sovereign
-
