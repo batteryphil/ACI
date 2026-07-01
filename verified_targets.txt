@@ -1,0 +1,14 @@
+ACI_Governance
+AM10
+AWM21
+AntaresCategory
+BioinformaticsTheory
+FSI
+MC2Engine
+Manifold21
+MoruzinLaw
+PhysicsCore
+PrimeMasterEngine
+SovereignHamiltonian
+SpineLanguage
+VerifyState
