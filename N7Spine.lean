@@ -138,8 +138,6 @@ theorem gate_seal_margins (p : Proposal) (floor : ℝ)
   rw [gate_sealed_iff] at h
   exact all_margins_pos p.margins floor h
 
-/-- Rewritten via contradiction to avoid a split_ifs branch-order
-    mismatch under Lean 4.31 that produced an unsolved-goals error. -/
 theorem gate_veto_bottleneck (p : Proposal) (floor : ℝ)
     (h : N7_gate p floor = GateDecision.Vetoed (bottleneck p.margins)) :
     p.margins.m (bottleneck p.margins) ≤ floor := by
@@ -164,10 +162,36 @@ theorem gate_exclusive (p : Proposal) (floor : ℝ) :
 def non_oscillatory (states : List SpineState) : Prop :=
   List.Pairwise (fun a b => a.level < b.level) states
 
-/-- Rewritten so `hb` is bound fresh inside each induction case
-    instead of curried before `induction b`, which had caused the
-    induction to corrupt its own scoping (the previous version's
-    `omega` failure traced back to this, not a math error). -/
+/-- Standalone lemma, deliberately extracted OUTSIDE
+    admissible_chain_non_oscillatory's proof (rather than as an
+    inline `have`), so its induction has no access to the outer
+    theorem's `i`, `j`, `hij` variables. The previous inline version
+    let those leak into omega's context and broke its search. -/
+theorem spine_level_strict_mono
+    (states : List SpineState)
+    (h : ∀ i : Fin (states.length - 1),
+      admissible (states.get ⟨i.val, by omega⟩)
+                 (states.get ⟨i.val + 1, by omega⟩))
+    (a b : ℕ) (hab : a < b) (hb : b < states.length) :
+    (states.get ⟨a, by omega⟩).level <
+    (states.get ⟨b, hb⟩).level := by
+  induction b with
+  | zero => omega
+  | succ n ih =>
+    have step : n < states.length - 1 → (states.get ⟨n, by omega⟩).level + 1 =
+        (states.get ⟨n + 1, by omega⟩).level := by
+      intro hk
+      have hstep := h ⟨n, hk⟩
+      simpa [admissible] using hstep.symm
+    rcases Nat.lt_succ_iff_lt_or_eq.mp hab with h1 | h1
+    · have hn : n < states.length := by omega
+      have hprev := ih h1 hn
+      have hstepv := step (by omega)
+      omega
+    · subst h1
+      have hstepv := step (by omega)
+      omega
+
 theorem admissible_chain_non_oscillatory
     (states : List SpineState)
     (h : ∀ i : Fin (states.length - 1),
@@ -177,29 +201,7 @@ theorem admissible_chain_non_oscillatory
   unfold non_oscillatory
   apply List.pairwise_iff_get.mpr
   intro i j hij
-  have step : ∀ k : ℕ, ∀ hk : k < states.length - 1,
-      (states.get ⟨k, by omega⟩).level + 1 =
-      (states.get ⟨k + 1, by omega⟩).level := by
-    intro k hk
-    have hstep := h ⟨k, hk⟩
-    simpa [admissible] using hstep.symm
-  have mono : ∀ a b : ℕ, a < b → ∀ hb : b < states.length,
-      (states.get ⟨a, by omega⟩).level <
-      (states.get ⟨b, hb⟩).level := by
-    intro a b
-    induction b with
-    | zero => intro hab; omega
-    | succ n ih =>
-      intro hab hb
-      rcases Nat.lt_succ_iff_lt_or_eq.mp hab with h1 | h1
-      · have hn : n < states.length := by omega
-        have hprev := ih h1 hn
-        have hstep := step n (by omega)
-        omega
-      · subst h1
-        have hstep := step a (by omega)
-        omega
-  exact mono i.val j.val hij j.isLt
+  exact spine_level_strict_mono states h i.val j.val hij j.isLt
 
 def project_margins (mv : MarginVector)
     (decay : Domain14 → ℝ)
