@@ -105,10 +105,9 @@ theorem sumFunctional_surjective :
   refine ⟨fun i => if i = ⟨0, hn⟩ then c else 0, ?_⟩
   simp [sumFunctional, sum_ite_eq']
 
-/-- Requires `Module.finrank ℝ (Fin n → ℝ) = n` explicitly — the
-    rank-nullity lemma alone gives `finrank(range) + finrank(ker)
-    = finrank(domain)`, and `finrank(domain)` doesn't automatically
-    simplify to `n` without this fact stated. -/
+-- Requires Module.finrank R (Fin n -> R) = n explicitly, since
+-- rank-nullity alone gives finrank(range)+finrank(ker)=finrank(domain)
+-- and finrank(domain) doesn't auto-simplify to n without this fact.
 include hn in
 theorem V0_codim_one :
     Module.finrank ℝ (V0 n) + 1 = n := by
@@ -118,7 +117,7 @@ theorem V0_codim_one :
     rw [LinearMap.range_eq_top.mpr (sumFunctional_surjective n hn)]
     simp
   have hspace : Module.finrank ℝ (Fin n → ℝ) = n := by
-    simp [Module.finrank_pi]
+    simp
   have hrn := LinearMap.finrank_range_add_finrank_ker (sumFunctional n)
   rw [hrange, hker, hspace] at hrn
   omega
@@ -149,7 +148,6 @@ theorem ones_annihilates_P (v : Fin n → ℝ) :
   unfold P
   rw [sum_sub_distrib, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
-  ring
 
 include hn in
 theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
@@ -159,20 +157,37 @@ theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
   rw [hz]
   ring
 
-/-- Best current attempt; this is the one theorem in this file I
-    could not fully verify without live compiler feedback — the
-    nested-sum manipulation may need one more real iteration. -/
+-- Rebuilt using simp_rw with ONLY a pointwise ring-provable
+-- identity (no sums inside `step`), avoiding the earlier broad
+-- `simp` call whose multiple sum-manipulation lemmas produced an
+-- unwanted double-sum expansion that `ring` couldn't close.
 theorem P_self_adjoint (u v : Fin n → ℝ) :
     ∑ i, P n u i * v i = ∑ i, u i * P n v i := by
-  unfold P
-  simp only [sub_mul, mul_sub, sum_sub_distrib, sum_mul, mul_sum, sum_div, mul_div_assoc]
-  rw [mul_comm (∑ j, u j) (∑ i, v i)]
-
-omit hn in
-theorem P_range_eq_V0 (v : Fin n → ℝ) (hn : 0 < n) : P n v ∈ V0 n :=
-  ones_annihilates_P n hn v
+  have hL : ∑ i, P n u i * v i
+      = (∑ i, u i * v i) - (∑ j, u j) * (∑ i, v i) / n := by
+    unfold P
+    have step : ∀ i, (u i - (∑ j, u j) / n) * v i
+        = u i * v i - (∑ j, u j) / n * v i := by
+      intro i; ring
+    simp_rw [step]
+    rw [sum_sub_distrib, ← mul_sum]
+    ring
+  have hR : ∑ i, u i * P n v i
+      = (∑ i, u i * v i) - (∑ j, v j) * (∑ i, u i) / n := by
+    unfold P
+    have step : ∀ i, u i * (v i - (∑ j, v j) / n)
+        = u i * v i - (∑ j, v j) / n * u i := by
+      intro i; ring
+    simp_rw [step]
+    rw [sum_sub_distrib, ← mul_sum]
+    ring
+  rw [hL, hR, mul_comm (∑ j, u j) (∑ i, v i)]
 
 include hn in
+theorem P_range_eq_V0 (v : Fin n → ℝ) : P n v ∈ V0 n :=
+  ones_annihilates_P n hn v
+
+omit hn in
 theorem P_fixes_V0 (v : Fin n → ℝ) (hv : v ∈ V0 n) : P n v = v := by
   have hv' : ∑ i, v i = 0 := (mem_V0_iff n v).mp hv
   ext i
@@ -188,7 +203,6 @@ theorem P_annihilates_uniform (c : ℝ) :
   show c - (∑ _j : Fin n, c) / n = 0
   rw [sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
-  ring
 
 /-!
 ═══════════════════════════════════════════════════════════
@@ -265,7 +279,10 @@ include hn in
 theorem PWP_is_V0_stable (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) :
     V0_stable n (P_linear n ∘ₗ W ∘ₗ P_linear n) := by
   intro v _
-  exact P_range_eq_V0 n v hn
+  show P_linear n (W (P_linear n v)) ∈ V0 n
+  have heq : P_linear n (W (P_linear n v)) = P n (W (P n v)) := rfl
+  rw [heq]
+  exact P_range_eq_V0 n hn (W (P n v))
 
 def V0_neg_def (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) : Prop :=
   ∀ v, v ∈ V0 n → v ≠ 0 → ∑ i, v i * W v i < 0
@@ -296,3 +313,4 @@ def ACI_v1_audit : ACI_AuditVector := {
 }
 
 end ACI_Sovereign
+
