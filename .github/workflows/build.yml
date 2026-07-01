@@ -25,5 +25,5 @@ jobs:
       - name: Get Mathlib cache
         run: lake exe cache get
 
-- name: Build all
+      - name: Build all
         run: lake build $(cat verified_targets.txt)
