@@ -1,4 +1,3 @@
-
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.InnerProductSpace.Adjoint
@@ -6,15 +5,10 @@ import Mathlib.Data.Complex.Basic
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Tactic
 
-/-!
-# QUANTUMCORE: ACI SOVEREIGN QUANTUM OPERATOR ENGINE
-## PRODUCTION BUILD: STAGE 4 (Kernel-Verified)
--/
-
 open Complex
-
 namespace QuantumCore
 
+-- Enforce global constraints on H to ensure stability for all definitions
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
   [FiniteDimensional ℂ H] [CompleteSpace H] [Nontrivial H]
 
@@ -33,6 +27,7 @@ structure DensityOperator where
 theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = A) :
     (LinearMap.trace ℂ H (A : H →ₗ[ℂ] H)).im = 0 := by
   have h := LinearMap.trace_conj ℂ H (A : H →ₗ[ℂ] H)
+  -- The core fix: ensure the coercion is explicit
   rw [← ContinuousLinearMap.coe_toLinearMap_adjoint, hA] at h
   exact Complex.im_eq_zero_of_conj_eq h
 
@@ -65,8 +60,10 @@ structure UnitaryOp where
 theorem unitary_trace_invariant (U : UnitaryOp) (A : H →L[ℂ] H) :
     LinearMap.trace ℂ H ((U.op.comp (A.comp (ContinuousLinearMap.adjoint U.op))) : H →ₗ[ℂ] H)
     = LinearMap.trace ℂ H (A : H →ₗ[ℂ] H) := by
-  simp only [LinearMap.trace_mul_comm, ContinuousLinearMap.comp_assoc, U.h_inv, ContinuousLinearMap.id_comp]
-  simp
+  -- Replacing the previous 'simp' which failed with an explicit tactic block
+  rw [LinearMap.trace_mul_comm]
+  congr 1
+  simp [ContinuousLinearMap.comp_assoc, U.h_inv]
 
 -- =============================================================================
 -- TIER 6: PURE STATE IDEMPOTENCE
@@ -77,7 +74,8 @@ def is_pure_state (ρ : DensityOperator) : Prop :=
 theorem pure_state_idempotent (ρ : DensityOperator) (hpure : is_pure_state ρ) (v : H) :
     ρ.op (ρ.op v) = ρ.op v := by
   obtain ⟨ψ, hψ_norm, hψ⟩ := hpure
-  simp [hψ, inner_smul_right]
+  rw [hψ]
+  simp [inner_smul_right]
   rw [show inner (𝕜 := ℂ) ψ ψ = (1 : ℂ) from by
         rw [inner_self_eq_norm_sq_to_K]; simp [hψ_norm]]
   simp
