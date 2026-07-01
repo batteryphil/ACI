@@ -22,11 +22,9 @@ open Matrix Finset TopologicalSpace
 
 namespace ACI_Sovereign
 
-/-- FIXED: `n` is now EXPLICIT, not implicit. The previous
-    `variable {n : ℕ}` caused every explicit call like `P n v`
-    to be misinterpreted as passing `n` into P's real first
-    parameter — the root cause of nearly every error in the
-    prior compile log. -/
+-- n and hn made explicit (not `variable {n}`); a doc-comment `/-- -/`
+-- previously placed directly above this line caused a real parse
+-- error, since doc-comments only attach to theorem/def, not `variable`.
 variable (n : ℕ) (hn : 0 < n)
 
 /-!
@@ -50,8 +48,10 @@ theorem conservationSet_nonempty (c : ℝ) : (ConservationSet n c).Nonempty := b
 theorem conservationSet_affine_closed (c : ℝ) (D₁ D₂ : Fin n → ℝ)
     (h₁ : D₁ ∈ ConservationSet n c) (h₂ : D₂ ∈ ConservationSet n c) (t : ℝ) :
     (fun i => t * D₁ i + (1 - t) * D₂ i) ∈ ConservationSet n c := by
-  simp only [ConservationSet, Set.mem_setOf_eq] at h₁ h₂ ⊢
-  rw [sum_add_distrib, ← mul_sum, ← mul_sum, h₁, h₂]
+  have h₁' : ∑ i, D₁ i = c := h₁
+  have h₂' : ∑ i, D₂ i = c := h₂
+  show ∑ i, (t * D₁ i + (1 - t) * D₂ i) = c
+  rw [sum_add_distrib, ← mul_sum, ← mul_sum, h₁', h₂']
   ring
 
 /-!
@@ -62,17 +62,29 @@ theorem conservationSet_affine_closed (c : ℝ) (D₁ D₂ : Fin n → ℝ)
 
 def V0 : Submodule ℝ (Fin n → ℝ) where
   carrier   := { v | ∑ i, v i = 0 }
-  add_mem'  := by intro a b ha hb; simp [sum_add_distrib, ha, hb]
-  zero_mem' := by simp
-  smul_mem' := by intro c a ha; simp [mul_sum, ha]
+  add_mem'  := by
+    intro a b ha hb
+    show ∑ i, (a i + b i) = 0
+    have ha' : ∑ i, a i = 0 := ha
+    have hb' : ∑ i, b i = 0 := hb
+    rw [sum_add_distrib, ha', hb']
+  zero_mem' := by show ∑ _i : Fin n, (0:ℝ) = 0; simp
+  smul_mem' := by
+    intro c a ha
+    show ∑ i, c * a i = 0
+    have ha' : ∑ i, a i = 0 := ha
+    rw [← mul_sum, ha']
+    ring
+
+theorem mem_V0_iff (v : Fin n → ℝ) : v ∈ V0 n ↔ ∑ i, v i = 0 := Iff.rfl
 
 theorem V0_preserves_conservationSet (c : ℝ) (D : Fin n → ℝ)
     (hD : D ∈ ConservationSet n c) (v : Fin n → ℝ) (hv : v ∈ V0 n) (ε : ℝ) :
     (fun i => D i + ε * v i) ∈ ConservationSet n c := by
-  simp only [ConservationSet, Set.mem_setOf_eq] at hD ⊢
-  simp only [V0, Submodule.mem_mk, AddSubmonoid.mem_mk, AddSubsemigroup.mem_mk,
-    Set.mem_setOf_eq] at hv
-  rw [sum_add_distrib, ← mul_sum, hv, hD]
+  have hD' : ∑ i, D i = c := hD
+  have hv' : ∑ i, v i = 0 := (mem_V0_iff n v).mp hv
+  show ∑ i, (D i + ε * v i) = c
+  rw [sum_add_distrib, ← mul_sum, hv', hD']
   ring
 
 def sumFunctional : (Fin n → ℝ) →ₗ[ℝ] ℝ where
@@ -80,10 +92,13 @@ def sumFunctional : (Fin n → ℝ) →ₗ[ℝ] ℝ where
   map_add' := by intro a b; simp [sum_add_distrib]
   map_smul' := by intro c a; simp [mul_sum]
 
+theorem sumFunctional_apply (v : Fin n → ℝ) :
+    sumFunctional n v = ∑ i, v i := rfl
+
 theorem sumFunctional_ker_eq_V0 :
     LinearMap.ker (sumFunctional n) = V0 n := by
   ext v
-  simp [sumFunctional, V0]
+  simp [LinearMap.mem_ker, sumFunctional, mem_V0_iff]
 
 include hn in
 theorem sumFunctional_surjective :
@@ -102,7 +117,7 @@ theorem V0_codim_one :
     simp
   have hrn := LinearMap.finrank_range_add_finrank_ker (sumFunctional n)
   rw [hrange, hker] at hrn
-  simpa using hrn
+  omega
 
 /-!
 ═══════════════════════════════════════════════════════════
@@ -122,26 +137,23 @@ include hn in
 theorem ones_annihilates_P (v : Fin n → ℝ) :
     ∑ i, P n v i = 0 := by
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
-  simp only [P]
-  rw [sum_sub_distrib, sum_const, card_univ, Fintype.card_fin]
+  unfold P
+  rw [sum_sub_distrib, sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
 
 include hn in
 theorem P_idempotent (v : Fin n → ℝ) : P n (P n v) = P n v := by
+  have hz : ∑ j, P n v j = 0 := ones_annihilates_P n hn v
   ext i
-  simp only [P, ones_annihilates_P n hn v]
+  show P n v i - (∑ j, P n v j) / n = P n v i
+  rw [hz]
   ring
 
 theorem P_self_adjoint (u v : Fin n → ℝ) :
     ∑ i, P n u i * v i = ∑ i, u i * P n v i := by
-  simp only [P]
-  rw [sum_sub_distrib, sum_sub_distrib]
-  congr 1
-  rw [sum_mul, sum_mul]
-  congr 1
-  rw [← sum_div, ← sum_div]
-  ring_nf
-  rw [mul_sum, mul_sum]
+  unfold P
+  simp only [sub_mul, mul_sub, sum_sub_distrib, sum_mul, mul_sum, sum_div]
+  ring
 
 include hn in
 theorem P_range_eq_V0 (v : Fin n → ℝ) : P n v ∈ V0 n :=
@@ -149,17 +161,19 @@ theorem P_range_eq_V0 (v : Fin n → ℝ) : P n v ∈ V0 n :=
 
 include hn in
 theorem P_fixes_V0 (v : Fin n → ℝ) (hv : v ∈ V0 n) : P n v = v := by
-  have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
-  have hvsum : ∑ i, v i = 0 := hv
+  have hv' : ∑ i, v i = 0 := (mem_V0_iff n v).mp hv
   ext i
-  simp [P, hvsum]
+  show v i - (∑ j, v j) / n = v i
+  rw [hv']
+  ring
 
 include hn in
 theorem P_annihilates_uniform (c : ℝ) :
     P n (fun _ => c) = fun _ => 0 := by
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   ext i
-  simp only [P, sum_const, card_univ, Fintype.card_fin]
+  show c - (∑ _j : Fin n, c) / n = 0
+  rw [sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
   field_simp
 
 /-!
@@ -181,8 +195,8 @@ theorem J_red_decoupling
     (D_star : Fin n → ℝ) (β : ℝ) (v : Fin n → ℝ) :
     P_linear n (J_full n W D_star β (P n v)) = P_linear n (W (P n v)) := by
   simp only [J_full, LinearMap.sub_apply, LinearMap.smul_apply,
-    LinearMap.comp_apply, LinearMap.toSpanSingleton_apply, sumFunctional]
-  rw [ones_annihilates_P n hn v]
+    LinearMap.comp_apply, LinearMap.toSpanSingleton_apply]
+  rw [sumFunctional_apply, ones_annihilates_P n hn v]
   simp
 
 include hn in
