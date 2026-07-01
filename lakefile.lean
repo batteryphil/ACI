@@ -110,6 +110,7 @@ lean_lib AnalyticNumberTheory
 lean_lib AdditiveNumberTheory
 lean_lib DiscreteMathematics
 lean_lib FSI
+lean_lib Stupid
 
 @[default_target]
 lean_lib AWM21
