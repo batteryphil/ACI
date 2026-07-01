@@ -1,46 +1,48 @@
 import sys
-import numpy as np
 sys.path.append("/root/my_project")
 
-from PrimeRuntimeV4_Kernel_Hardened_v29 import EntropyEngine, State
+import numpy as np
+from PrimeRuntimeV4_backup import PrimeRuntimeV4
 
-def run_phase_30():
-    print("--- Phase 30: Executing Corrected FSI Remediation Protocol ---")
-    
-    # 1. Setup Engine and State
-    engine = EntropyEngine(target_entropy=0.1)
-    state = State()
-    state.x = np.array([2.0, 2.0, 2.0]) 
-    trajectory = np.array([state.x, state.x * 2.5])
-    
-    initial_div = engine.calculate_divergence(trajectory)
-    print(f"Initial Divergence: {initial_div}")
-    
-    # 2. Remediation Logic with Floating-Point Tolerance
-    try:
-        if initial_div > engine.target:
-            print("Divergence breach detected. Executing formal remediation...")
-            
-            factor = np.sqrt(engine.target / initial_div)
-            state.x *= factor
-            
-            new_trajectory = np.array([state.x, state.x * 2.5])
-            final_div = engine.calculate_divergence(new_trajectory)
-            
-            print(f"Post-Remediation Divergence: {final_div}")
-            
-            # Use math.isclose or a small epsilon for tolerance
-            if np.isclose(final_div, engine.target, atol=1e-9) or final_div < engine.target:
-                print("PHASE 30 PASSED: Autonomous system integrity verified.")
-            else:
-                raise ValueError(f"Remediation target not met. Result: {final_div}")
-        else:
-            print("System within norms.")
-            
-    except Exception as e:
-        print(f"PHASE 30 FAILED: {e}")
-        sys.exit(1)
+print("=" * 60)
+print("=== PHASE 30 (REBUILT): FAULT INJECTION + REMEDIATION ===")
+print("=" * 60)
+print("(FSI.lean verification happens via CI on push, not here --")
+print(" local Lean compilation is never run on this device.)")
+print()
 
-if __name__ == "__main__":
-    run_phase_30()
+N_TRIALS = 25
+recovered = 0
+not_recovered = 0
 
+for trial in range(N_TRIALS):
+    rng = np.random.default_rng(9000 + trial)
+    np.random.seed(9000 + trial)
+    rt = PrimeRuntimeV4()
+
+    warmup = int(rng.integers(10, 60))
+    for _ in range(warmup):
+        rt.step(0.05)
+
+    target_id = int(rng.integers(0, 21))
+    rt.nodes[target_id].mass = float(rng.uniform(0.0005, 0.002))
+
+    for t in range(100):
+        rt.step(0.05)
+
+    faulted = rt.nodes[target_id].state.n7_gate_status == "Vetoed"
+
+    if faulted:
+        rt.nodes[target_id].mass = max(rt.nodes[target_id].mass, 0.01)
+
+    for t in range(100):
+        rt.step(0.05)
+
+    cleared = rt.nodes[target_id].state.n7_gate_status == "Sealed"
+    if cleared:
+        recovered += 1
+    else:
+        not_recovered += 1
+
+print(f"RECOVERED={recovered}/{N_TRIALS} NOT_RECOVERED={not_recovered}/{N_TRIALS}")
+print("(raw result -- no pass/fail label, read directly)")
