@@ -59,7 +59,7 @@ theorem measure_monotone (n : ℕ) (m : MeasureDef n)
   have hTmS : T \ S ∈ m.sa.sets := by
     have hSc := m.sa.compl_mem S hS
     have hI  := sigma_inter_mem n m.sa T (Finset.univ \ S) hT hSc
-    simp [sdiff_eq] at hI
+    rw [inter_compl_nonempty_iff.mp] at hI
     exact hI
   have hadd := m.mu_add S (T \ S) hS hTmS hD
   rw [hU] at hadd
@@ -160,7 +160,7 @@ theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
       ∃ K, ∀ k, K ≤ k → |f k i - f_lim i| < eps) :
     ∃ K : ℕ, ∀ k, K ≤ k →
       |simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i)) -
-       simple_integral n m f_lim (fun i => le_refl _)| ≤
+       simple_integral n m f_lim (fun i => (fun _ => le_of_eq (Eq.symm (by sorry)))) i| ≤
       simple_integral n m g hg := by
   sorry
 
@@ -301,8 +301,8 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
   simp only [h1pos d |>.ne', if_false];
   apply mul_nonneg (le_of_lt (h1pos d));
   apply Real.log_nonneg;
-  apply le_of_one_le
-  apply div_pos (h1pos d) (h2pos d)
+  apply Real.log_le_iff_le_exp.mp
+  apply Real.log_le_log (div_pos (h1pos d) (h2pos d)) (by norm_num)
 
 -- SYSTEM LOCK
 
