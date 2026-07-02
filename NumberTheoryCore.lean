@@ -201,7 +201,9 @@ def arith_prog (a d n : ℕ) : ℕ := a + n * d
 
 theorem AP_diff (a d n : ℕ) :
     arith_prog a d (n+1) - arith_prog a d n = d := by
-  unfold arith_prog; omega
+  unfold arith_prog
+  have h : (n+1) * d = n * d + d := by ring
+  omega
 
 theorem triangular_two_dvd (n : ℕ) : 2 ∣ n * (n + 1) := by
   rcases Nat.even_or_odd n with he | ho
@@ -214,11 +216,33 @@ theorem AP_sum (a d N : ℕ) :
   induction N with
   | zero => simp
   | succ n ih =>
-    have h1 : 2 ∣ n * (n + 1) := triangular_two_dvd n
-    simp [Finset.sum_range_succ, ih]
+    have hb1 : 2 ∣ n * (n - 1) := by
+      rcases n with _ | m
+      · simp
+      · have h := triangular_two_dvd m
+        simpa [Nat.succ_sub_one, mul_comm] using h
+    have hb2 : 2 ∣ (n + 1) * n := by
+      have h := triangular_two_dvd n
+      simpa [mul_comm] using h
+    have hd1 : 2 ∣ d * n * (n - 1) := by
+      rw [mul_assoc]; exact hb1.mul_left d
+    have hd2 : 2 ∣ d * (n + 1) * n := by
+      rw [mul_assoc]; exact hb2.mul_left d
+    have e1 : 2 * (d * n * (n - 1) / 2) = d * n * (n - 1) := by
+      rw [mul_comm]; exact Nat.div_mul_cancel hd1
+    have e2 : 2 * (d * (n + 1) * n / 2) = d * (n + 1) * n := by
+      rw [mul_comm]; exact Nat.div_mul_cancel hd2
+    have ealg : d * (n + 1) * n = d * n * (n - 1) + 2 * (n * d) := by
+      rcases n with _ | m
+      · simp
+      · simp only [Nat.succ_sub_one]; ring
+    simp only [Finset.sum_range_succ, ih]
     unfold arith_prog
-    have h2 : d * n * (n - 1 + 1) = d * (n * (n - 1 + 1)) := by ring
-    omega
+    simp only [Nat.add_sub_cancel]
+    have key : 2 * (n * a + d * n * (n - 1) / 2 + (a + n * d)) =
+               2 * ((n + 1) * a + d * (n + 1) * n / 2) := by
+      rw [Nat.mul_add, Nat.mul_add, e1, e2, ealg]; ring
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num) key
 
 theorem primes_in_AP_1_4 :
     ∃ p : ℕ, Nat.Prime p ∧ p % 4 = 1 :=
@@ -264,15 +288,16 @@ noncomputable def triangular (n : ℕ) : ℕ :=
 theorem triangular_formula (n : ℕ) :
     2 * triangular n = n * (n + 1) := by
   unfold triangular
-  have h := triangular_two_dvd n
-  omega
+  rw [mul_comm]
+  exact Nat.div_mul_cancel (triangular_two_dvd n)
 
 theorem triangular_succ (n : ℕ) :
     triangular (n+1) = triangular n + (n+1) := by
-  have h1 := triangular_two_dvd n
-  have h2 := triangular_two_dvd (n+1)
-  unfold triangular at *
-  omega
+  have h1 := triangular_formula n
+  have h2 := triangular_formula (n+1)
+  have key : 2 * triangular (n+1) = 2 * (triangular n + (n+1)) := by
+    rw [h2, Nat.mul_add, h1]; ring
+  exact Nat.eq_of_mul_eq_mul_left (by norm_num) key
 
 -- ============================================================
 -- SECTION 8: SOURCE NODE 98 AND DOMAIN PRIMES
