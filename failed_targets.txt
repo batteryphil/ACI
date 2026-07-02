@@ -1,6 +1,4 @@
 MyProject
-InformationGeometry
-NumberTheoryCore
 StochasticDifferentialEquations
 OptimalControl
 TopologicalDataAnalysis
