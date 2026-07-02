@@ -50,59 +50,6 @@ theorem sa_composition_seal (ρ P : H →L[ℂ] H)
   rw [ContinuousLinearMap.adjoint_comp, ContinuousLinearMap.adjoint_comp, hP, hρ,
       ContinuousLinearMap.comp_assoc]
 
-theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = A) :
-    (LinearMap.trace ℂ H A.toLinearMap).im = 0 := by
-  set b := stdOrthonormalBasis ℂ H with hb
-  set M := LinearMap.toMatrix b.toBasis b.toBasis A.toLinearMap with hM
-  have hadj : LinearMap.adjoint A.toLinearMap = A.toLinearMap := by
-    rw [ContinuousLinearMap.adjoint_toLinearMap, hA]
-  have hMsa : M.conjTranspose = M := by
-    have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadj
-    rwa [LinearMap.toMatrix_adjoint b b A.toLinearMap] at h
-  have htrace : LinearMap.trace ℂ H A.toLinearMap = M.trace :=
-    LinearMap.trace_eq_matrix_trace ℂ b.toBasis A.toLinearMap
-  have hct : M.conjTranspose.trace = star M.trace := Matrix.trace_conjTranspose M
-  rw [hMsa] at hct
-  have hct' : M.trace = starRingEnd ℂ M.trace := hct.trans (starRingEnd_apply M.trace).symm
-  have key : LinearMap.trace ℂ H A.toLinearMap
-      = starRingEnd ℂ (LinearMap.trace ℂ H A.toLinearMap) := by
-    rw [htrace]; exact hct'
-  have him := congrArg Complex.im key
-  rw [Complex.conj_im] at him
-  linarith
-
-theorem sa_product_trace_real (A B : H →L[ℂ] H)
-    (hA : ContinuousLinearMap.adjoint A = A) (hB : ContinuousLinearMap.adjoint B = B) :
-    (LinearMap.trace ℂ H (A.comp B).toLinearMap).im = 0 := by
-  set b := stdOrthonormalBasis ℂ H with hb
-  set MA := LinearMap.toMatrix b.toBasis b.toBasis A.toLinearMap with hMA
-  set MB := LinearMap.toMatrix b.toBasis b.toBasis B.toLinearMap with hMB
-  have hadjA : LinearMap.adjoint A.toLinearMap = A.toLinearMap := by
-    rw [ContinuousLinearMap.adjoint_toLinearMap, hA]
-  have hadjB : LinearMap.adjoint B.toLinearMap = B.toLinearMap := by
-    rw [ContinuousLinearMap.adjoint_toLinearMap, hB]
-  have hMAsa : MA.conjTranspose = MA := by
-    have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadjA
-    rwa [LinearMap.toMatrix_adjoint b b A.toLinearMap] at h
-  have hMBsa : MB.conjTranspose = MB := by
-    have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadjB
-    rwa [LinearMap.toMatrix_adjoint b b B.toLinearMap] at h
-  have hcomp : (A.comp B).toLinearMap = A.toLinearMap.comp B.toLinearMap := rfl
-  have htrace : LinearMap.trace ℂ H (A.comp B).toLinearMap = (MA * MB).trace := by
-    rw [hcomp, LinearMap.trace_eq_matrix_trace ℂ b.toBasis (A.toLinearMap.comp B.toLinearMap),
-        LinearMap.toMatrix_comp b.toBasis b.toBasis b.toBasis]
-  have hct : (MA * MB).conjTranspose.trace = star (MA * MB).trace :=
-    Matrix.trace_conjTranspose (MA * MB)
-  rw [Matrix.conjTranspose_mul, hMAsa, hMBsa, Matrix.trace_mul_comm MB MA] at hct
-  have hct' : (MA * MB).trace = starRingEnd ℂ (MA * MB).trace :=
-    hct.trans (starRingEnd_apply (MA * MB).trace).symm
-  have key : LinearMap.trace ℂ H (A.comp B).toLinearMap
-      = starRingEnd ℂ (LinearMap.trace ℂ H (A.comp B).toLinearMap) := by
-    rw [htrace]; exact hct'
-  have him := congrArg Complex.im key
-  rw [Complex.conj_im] at him
-  linarith
-
 structure Projector where
   op   : H →L[ℂ] H
   h_sa : ContinuousLinearMap.adjoint op = op
@@ -188,15 +135,26 @@ theorem unitary_trace_invariant (U : UnitaryOp) (A : H →L[ℂ] H) :
   have hadj_id : (ContinuousLinearMap.adjoint U.op).toLinearMap.comp U.op.toLinearMap
       = LinearMap.id :=
     congrArg ContinuousLinearMap.toLinearMap U.h_adj
-  rw [hcomp,
-      show U.op.toLinearMap.comp (A.toLinearMap.comp (ContinuousLinearMap.adjoint U.op).toLinearMap)
-        = (U.op.toLinearMap.comp A.toLinearMap).comp (ContinuousLinearMap.adjoint U.op).toLinearMap
-        from (LinearMap.comp_assoc _ _ _).symm,
-      LinearMap.trace_mul_comm,
-      show (ContinuousLinearMap.adjoint U.op).toLinearMap.comp (U.op.toLinearMap.comp A.toLinearMap)
-        = ((ContinuousLinearMap.adjoint U.op).toLinearMap.comp U.op.toLinearMap).comp A.toLinearMap
-        from (LinearMap.comp_assoc _ _ _).symm,
-      hadj_id, LinearMap.id_comp]
+  have step1 : LinearMap.trace ℂ H
+      (U.op.comp (A.comp (ContinuousLinearMap.adjoint U.op))).toLinearMap
+      = LinearMap.trace ℂ H
+          ((U.op.toLinearMap.comp A.toLinearMap).comp
+            (ContinuousLinearMap.adjoint U.op).toLinearMap) := by
+    rw [hcomp, LinearMap.comp_assoc]
+  have step2 : LinearMap.trace ℂ H
+      ((U.op.toLinearMap.comp A.toLinearMap).comp
+        (ContinuousLinearMap.adjoint U.op).toLinearMap)
+      = LinearMap.trace ℂ H
+          ((ContinuousLinearMap.adjoint U.op).toLinearMap.comp
+            (U.op.toLinearMap.comp A.toLinearMap)) :=
+    LinearMap.trace_mul_comm ℂ (U.op.toLinearMap.comp A.toLinearMap)
+      (ContinuousLinearMap.adjoint U.op).toLinearMap
+  have step3 : (ContinuousLinearMap.adjoint U.op).toLinearMap.comp
+      (U.op.toLinearMap.comp A.toLinearMap)
+      = ((ContinuousLinearMap.adjoint U.op).toLinearMap.comp U.op.toLinearMap).comp
+          A.toLinearMap :=
+    (LinearMap.comp_assoc _ _ _).symm
+  rw [step1, step2, step3, hadj_id, LinearMap.id_comp]
 
 theorem unitary_preserves_sa (U : UnitaryOp) (A : H →L[ℂ] H)
     (hA : ContinuousLinearMap.adjoint A = A) :
@@ -216,6 +174,59 @@ theorem pure_state_idempotent (ρ : DensityOperator) (hpure : is_pure_state ρ) 
       show inner (𝕜 := ℂ) ψ ψ = (1 : ℂ) from by
         rw [inner_self_eq_norm_sq_to_K]; simp [hψ_norm]]
   simp
+
+theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = A) :
+    (LinearMap.trace ℂ H A.toLinearMap).im = 0 := by
+  set b := stdOrthonormalBasis ℂ H with hb
+  set M := LinearMap.toMatrix b.toBasis b.toBasis A.toLinearMap with hM
+  have hadj : LinearMap.adjoint A.toLinearMap = A.toLinearMap := by
+    rw [ContinuousLinearMap.adjoint_toLinearMap, hA]
+  have hMsa : M.conjTranspose = M := by
+    have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadj
+    rwa [LinearMap.toMatrix_adjoint b b A.toLinearMap] at h
+  have htrace : LinearMap.trace ℂ H A.toLinearMap = M.trace :=
+    LinearMap.trace_eq_matrix_trace ℂ b.toBasis A.toLinearMap
+  have hct : M.conjTranspose.trace = star M.trace := Matrix.trace_conjTranspose M
+  rw [hMsa] at hct
+  have hct' : M.trace = starRingEnd ℂ M.trace := hct.trans (starRingEnd_apply M.trace).symm
+  have key : LinearMap.trace ℂ H A.toLinearMap
+      = starRingEnd ℂ (LinearMap.trace ℂ H A.toLinearMap) := by
+    rw [htrace]; exact hct'
+  have him := congrArg Complex.im key
+  rw [Complex.conj_im] at him
+  linarith
+
+theorem sa_product_trace_real (A B : H →L[ℂ] H)
+    (hA : ContinuousLinearMap.adjoint A = A) (hB : ContinuousLinearMap.adjoint B = B) :
+    (LinearMap.trace ℂ H (A.comp B).toLinearMap).im = 0 := by
+  set b := stdOrthonormalBasis ℂ H with hb
+  set MA := LinearMap.toMatrix b.toBasis b.toBasis A.toLinearMap with hMA
+  set MB := LinearMap.toMatrix b.toBasis b.toBasis B.toLinearMap with hMB
+  have hadjA : LinearMap.adjoint A.toLinearMap = A.toLinearMap := by
+    rw [ContinuousLinearMap.adjoint_toLinearMap, hA]
+  have hadjB : LinearMap.adjoint B.toLinearMap = B.toLinearMap := by
+    rw [ContinuousLinearMap.adjoint_toLinearMap, hB]
+  have hMAsa : MA.conjTranspose = MA := by
+    have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadjA
+    rwa [LinearMap.toMatrix_adjoint b b A.toLinearMap] at h
+  have hMBsa : MB.conjTranspose = MB := by
+    have h := congrArg (LinearMap.toMatrix b.toBasis b.toBasis) hadjB
+    rwa [LinearMap.toMatrix_adjoint b b B.toLinearMap] at h
+  have hcomp : (A.comp B).toLinearMap = A.toLinearMap.comp B.toLinearMap := rfl
+  have htrace : LinearMap.trace ℂ H (A.comp B).toLinearMap = (MA * MB).trace := by
+    rw [hcomp, LinearMap.trace_eq_matrix_trace ℂ b.toBasis (A.toLinearMap.comp B.toLinearMap),
+        LinearMap.toMatrix_comp b.toBasis b.toBasis b.toBasis]
+  have hct : (MA * MB).conjTranspose.trace = star (MA * MB).trace :=
+    Matrix.trace_conjTranspose (MA * MB)
+  rw [Matrix.conjTranspose_mul, hMAsa, hMBsa, Matrix.trace_mul_comm MB MA] at hct
+  have hct' : (MA * MB).trace = starRingEnd ℂ (MA * MB).trace :=
+    hct.trans (starRingEnd_apply (MA * MB).trace).symm
+  have key : LinearMap.trace ℂ H (A.comp B).toLinearMap
+      = starRingEnd ℂ (LinearMap.trace ℂ H (A.comp B).toLinearMap) := by
+    rw [htrace]; exact hct'
+  have him := congrArg Complex.im key
+  rw [Complex.conj_im] at him
+  linarith
 
 structure QuantumAuditVector where
   density_op_axioms      : Bool
