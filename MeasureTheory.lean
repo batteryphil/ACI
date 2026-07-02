@@ -1,4 +1,9 @@
 import Mathlib
+import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Real.Basic
+import Mathlib.MeasureTheory.Measure.MeasureSpace
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Tactic
 
 namespace MeasureTheory
 
@@ -119,6 +124,8 @@ theorem simple_integral_linear (n : ℕ) (m : Measure n)
     simple_integral n m f hf + c * simple_integral n m g hg := by
   unfold simple_integral
   simp [add_mul, Finset.sum_add_distrib, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
   ring
 
 theorem simple_integral_mono (n : ℕ) (m : Measure n)
@@ -319,6 +326,8 @@ theorem expectation_linear (dm : DomainMeasure) (f g : Domain21 → ℝ) (c : �
     domain_expectation dm f + c * domain_expectation dm g := by
   unfold domain_expectation
   simp [Finset.sum_add_distrib, Finset.mul_sum, mul_add]
+  apply Finset.sum_congr rfl
+  intro d _
   ring
 
 theorem expectation_nonneg (dm : DomainMeasure) (f : Domain21 → ℝ)
@@ -361,33 +370,32 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
   apply Finset.sum_nonneg; intro d _
   simp only [h1pos d |>.ne', if_false]
   apply mul_nonneg (le_of_lt (h1pos d))
-  rw [Real.log_div (h1pos d).ne' (h2pos d).ne']
-  linarith [Real.log_nonneg_of_le_exp_of_nonneg (by linarith) 0
-              (by linarith [Real.add_one_le_exp (-(Real.log (dm1.prob d / dm2.prob d)))])]
+  apply Real.log_nonneg
+  linarith [div_pos (h1pos d) (h2pos d)]
 
 -- SYSTEM LOCK
 
 structure MeasureTheoryLock where
-  sigma_univ    : ∀ (n : ℕ) (sa : SigmaAlgebra n), Finset.univ ∈ sa.sets
-  sigma_inter   : ∀ (n : ℕ) (sa : SigmaAlgebra n) (S T : Finset (Fin n)),
+  sigma_univ    : (n : ℕ) → (sa : SigmaAlgebra n) → Finset.univ ∈ sa.sets
+  sigma_inter   : (n : ℕ) → (sa : SigmaAlgebra n) → (S T : Finset (Fin n)) →
                     S ∈ sa.sets → T ∈ sa.sets → S ∩ T ∈ sa.sets
-  meas_nn       : ∀ (n : ℕ) (m : Measure n) (S : Finset (Fin n)), 0 ≤ m.mu S
-  meas_empty    : ∀ (n : ℕ) (m : Measure n), m.mu ∅ = 0
-  integral_nn   : ∀ (n : ℕ) (m : Measure n) (f : Fin n → ℝ) (hf : ∀ i, 0 ≤ f i),
+  meas_nn       : (n : ℕ) → (m : Measure n) → ∀ S, 0 ≤ m.mu S
+  meas_empty    : (n : ℕ) → (m : Measure n) → m.mu ∅ = 0
+  integral_nn   : (n : ℕ) → (m : Measure n) → (f : Fin n → ℝ) → (hf : ∀ i, 0 ≤ f i) →
                     0 ≤ simple_integral n m f hf
-  integral_mono : ∀ (n : ℕ) (m : Measure n) (f g : Fin n → ℝ)
-                    (hf : ∀ i, 0 ≤ f i) (hg : ∀ i, 0 ≤ g i),
+  integral_mono : (n : ℕ) → (m : Measure n) → (f g : Fin n → ℝ)
+                    (hf : ∀ i, 0 ≤ f i) (hg : ∀ i, 0 ≤ g i) →
                     (∀ i, f i ≤ g i) →
                     simple_integral n m f hf ≤ simple_integral n m g hg
-  fubini        : ∀ (n m : ℕ) (mu : Measure n) (nu : Measure m)
-                    (f : Fin n → Fin m → ℝ) (hf : ∀ i j, 0 ≤ f i j),
+  fubini        : (n m : ℕ) → (mu : Measure n) → (nu : Measure m)
+                    (f : Fin n → Fin m → ℝ) (hf : ∀ i j, 0 ≤ f i j) →
                     Finset.univ.sum (fun i : Fin n =>
                       Finset.univ.sum (fun j : Fin m =>
                         f i j * mu.mu {i} * nu.mu {j})) =
                     Finset.univ.sum (fun j : Fin m =>
                       Finset.univ.sum (fun i : Fin n =>
                         f i j * mu.mu {i} * nu.mu {j}))
-  lp_nn         : ∀ (n : ℕ) (m : Measure n) (f : Fin n → ℝ) (p : ℝ) (hp : 0 < p),
+  lp_nn         : (n : ℕ) → (m : Measure n) → (f : Fin n → ℝ) → (p : ℝ) → (hp : 0 < p) →
                     0 ≤ lp_norm n m f p hp
   dom_prob_le1  : ∀ (dm : DomainMeasure) (d : Domain21), dm.prob d ≤ 1
   expect_linear : ∀ (dm : DomainMeasure) (f g : Domain21 → ℝ) (c : ℝ),
@@ -397,7 +405,7 @@ structure MeasureTheoryLock where
                     (∀ d, 0 ≤ f d) → 0 ≤ domain_expectation dm f
   variance_nn   : ∀ (dm : DomainMeasure) (f : Domain21 → ℝ),
                     0 ≤ domain_variance dm f
-  TV_nn         : ∀ (n : ℕ) (m : Measure n), 0 ≤ total_variation n m
+  TV_nn         : (n : ℕ) → (m : Measure n) → 0 ≤ total_variation n m
   KL_nn         : ∀ (dm1 dm2 : DomainMeasure)
                     (h2 : ∀ d, 0 < dm2.prob d) (h1 : ∀ d, 0 < dm1.prob d),
                     0 ≤ domain_KL dm1 dm2 h2
