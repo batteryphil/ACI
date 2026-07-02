@@ -31,7 +31,11 @@ theorem sigma_inter_mem (n : ℕ) (sa : SigmaAlgebra n)
   have hTc := sa.compl_mem T hT
   have hU  := sa.union_mem _ _ hSc hTc
   have h   := sa.compl_mem _ hU
-  rw [compl_union] at h
+  have heq : Finset.univ \ (Finset.univ \ S ∪ Finset.univ \ T) = S ∩ T := by
+    ext x
+    simp only [Finset.mem_sdiff, Finset.mem_union, Finset.mem_inter, Finset.mem_univ, true_and]
+    tauto
+  rw [heq] at h
   exact h
 
 def discrete_sigma_algebra (n : ℕ) : SigmaAlgebra n where
@@ -62,7 +66,10 @@ theorem measure_monotone (n : ℕ) (m : MeasureDef n)
   have hTmS : T \ S ∈ m.sa.sets := by
     have hSc := m.sa.compl_mem S hS
     have hI  := sigma_inter_mem n m.sa T (Finset.univ \ S) hT hSc
-    rw [sdiff_eq_inter] at hI
+    have heq2 : T \ S = T ∩ (Finset.univ \ S) := by
+      ext x
+      simp only [Finset.mem_sdiff, Finset.mem_inter, Finset.mem_univ, true_and]
+    rw [heq2]
     exact hI
   have hadd := m.mu_add S (T \ S) hS hTmS hD
   rw [hU] at hadd
@@ -121,7 +128,7 @@ theorem monotone_convergence (n : ℕ) (m : MeasureDef n)
     (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i) (hf_mono : ∀ k i, f k i ≤ f (k+1) i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
     Tendsto (fun k => simple_integral n m (f k) (hf_nn k)) atTop
-      (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto' (hf_lim i) (fun k => hf_nn k i)))) := by
+      (𝓝 (simple_integral n m f_lim (fun i => ge_of_tendsto' (hf_lim i) (fun k => hf_nn k i)))) := by
   unfold simple_integral
   apply tendsto_finset_sum
   intro i _
@@ -132,7 +139,7 @@ theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
     Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i))) atTop
       (𝓝 (simple_integral n m f_lim
-        (fun i => le_of_tendsto' (hf_lim i) (fun k => le_trans (abs_nonneg _) (hdom k i))))) := by
+        (fun i => ge_of_tendsto' (hf_lim i) (fun k => le_trans (abs_nonneg _) (hdom k i))))) := by
   unfold simple_integral
   apply tendsto_finset_sum
   intro i _
@@ -184,13 +191,6 @@ structure DomainMeasure where
 noncomputable def domain_KL (dm1 dm2 : DomainMeasure) (h2pos : ∀ d, 0 < dm2.prob d) : ℝ :=
   Finset.univ.sum (fun d => if dm1.prob d = 0 then 0 else dm1.prob d * Real.log (dm1.prob d / dm2.prob d))
 
--- Real Gibbs'-inequality proof: uses log x ≤ x - 1 (derived here from the
--- more certain Real.add_one_le_exp + Real.exp_log rather than betting on an
--- unconfirmed direct lemma name) applied to x = q_d/p_d, summed, then
--- converted via the log-reciprocal identity. The original file's per-term
--- proof attempt was mathematically false in general (verified by
--- counterexample: p=0.1, q=0.9 makes the individual KL term negative) —
--- only the total sum is guaranteed nonnegative, not each term.
 theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
     (h2pos : ∀ d, 0 < dm2.prob d) (h1pos : ∀ d, 0 < dm1.prob d) :
     0 ≤ domain_KL dm1 dm2 h2pos := by
@@ -210,8 +210,10 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
       rw [Real.exp_log hxpos] at hexp
       linarith
     have hmul := mul_le_mul_of_nonneg_left hlog (h1pos d).le
+    have hne : dm1.prob d ≠ 0 := (h1pos d).ne'
     have heq : dm1.prob d * (dm2.prob d / dm1.prob d - 1) = dm2.prob d - dm1.prob d := by
       field_simp
+      ring
     linarith [hmul, heq]
   have hsum : Finset.univ.sum (fun d => dm1.prob d * Real.log (dm2.prob d / dm1.prob d)) ≤
       Finset.univ.sum (fun d => dm2.prob d - dm1.prob d) :=
@@ -222,7 +224,10 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
     rw [← Finset.sum_neg_distrib]
     apply Finset.sum_congr rfl
     intro d _
-    rw [← Real.log_inv, inv_div, mul_neg]
+    have hlogflip : Real.log (dm2.prob d / dm1.prob d) = -Real.log (dm1.prob d / dm2.prob d) := by
+      rw [← inv_div, Real.log_inv]
+    rw [hlogflip]
+    ring
   rw [hflip] at hsum
   linarith [hsum]
 
