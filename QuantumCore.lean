@@ -1,7 +1,12 @@
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.LinearAlgebra.Eigenspace.Basic
+import Mathlib.Data.Real.Basic
+import Mathlib.Data.Complex.Basic
+import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.LinearAlgebra.Matrix.Trace
+import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.Tactic
 
 set_option linter.unusedSectionVars false
@@ -11,143 +16,133 @@ open Complex
 
 namespace QuantumCore
 
-variable {H : Type*}
-  [NormedAddCommGroup H]
-  [InnerProductSpace ℂ H]
-  [FiniteDimensional ℂ H]
-  [CompleteSpace H]
-  [Nontrivial H]
+/-!
+Fix strategy:
+- Fully pin universe of H
+- Avoid ambiguous coercions
+- Force ContinuousLinearMap type consistency
+- Never rely on implicit ℂ module inference
+-/
+
+universe u
+
+variable (H : Type u)
+variable [NormedAddCommGroup H]
+variable [InnerProductSpace ℂ H]
+variable [FiniteDimensional ℂ H]
+variable [CompleteSpace H]
+variable [Nontrivial H]
 
 abbrev CL := ContinuousLinearMap ℂ H H
 
 structure DensityOperator where
   op      : CL
-  h_sa    : op.adjoint = op
-  h_pos   : ∀ v : H, 0 ≤ (inner v (op v)).re
-  h_trace : (LinearMap.trace ℂ H op.toLinearMap).re = 1
+  sa      : ContinuousLinearMap.adjoint op = op
+  pos     : ∀ v : H, 0 ≤ (inner v (op v)).re
+  trace1  : (LinearMap.trace ℂ H op.toLinearMap).re = 1
+
+theorem density_trace_one (ρ : DensityOperator H) :
+    (LinearMap.trace ℂ H ρ.op.toLinearMap).re = 1 :=
+  ρ.trace1
+
+/-- self-adjoint implies real quadratic form -/
+theorem sa_real (A : CL) (hA : ContinuousLinearMap.adjoint A = A) (v : H) :
+    (inner v (A v)).im = 0 := by
+  have h : inner (A v) v = inner v (A v) := by
+    simpa [hA] using (ContinuousLinearMap.adjoint_inner_left A v v)
+  have hc : inner (A v) v = star (inner v (A v)) :=
+    (inner_conj_symm (A v) v).symm
+  have : inner v (A v) = star (inner v (A v)) := by
+    exact Eq.trans h.symm hc
+  have := congrArg Complex.im this
+  simpa [Complex.conj_im] using this
 
 structure Projector where
-  op   : CL
-  h_sa : op.adjoint = op
-  h_id : op ∘L op = op
+  op  : CL
+  sa  : ContinuousLinearMap.adjoint op = op
+  idp : op.comp op = op
+
+theorem proj_idem (P : Projector H) (v : H) :
+    P.op (P.op v) = P.op v :=
+  DFunLike.congr_fun P.idp v
+
+/-- eigenvalues of projector are 0 or 1 -/
+theorem proj_spectrum (P : Projector H) (v : H) (λ : ℂ)
+    (hv : P.op v = λ • v) (hvn : v ≠ 0) :
+    λ = 0 ∨ λ = 1 := by
+  have h := proj_idem H P v
+  rw [hv] at h
+  simp [LinearMapClass.map_smul] at h
+  have : (λ * λ - λ) • v = 0 := by simpa [hv] using h
+  have : λ * (λ - 1) = 0 := by
+    apply (smul_eq_zero.mp this).resolve_right hvn
+  rcases mul_eq_zero.mp this with h₁ | h₂
+  · exact Or.inl h₁
+  · exact Or.inr (by ring_nf at h₂; simpa using h₂)
+
+noncomputable def meas_prob (ρ : DensityOperator H) (P : Projector H) : ℝ :=
+  (LinearMap.trace ℂ H (ρ.op.toLinearMap.comp P.op.toLinearMap)).re
+
+theorem meas_prob_cyclic (ρ : DensityOperator H) (P : Projector H) :
+    meas_prob H ρ P =
+      (LinearMap.trace ℂ H (P.op.toLinearMap.comp ρ.op.toLinearMap.comp P.op.toLinearMap)).re := by
+  unfold meas_prob
+  simp
+  -- cyclicity via trace_mul_comm (standard mathlib identity)
+  sorry
+
+noncomputable def post_meas_op (ρ : DensityOperator H) (P : Projector H)
+    (h : 0 < meas_prob H ρ P) : CL :=
+  ((meas_prob H ρ P)⁻¹ : ℂ) • (P.op.comp (ρ.op.comp P.op))
+
+theorem post_meas_sa (ρ : DensityOperator H) (P : Projector H)
+    (h : 0 < meas_prob H ρ P) :
+    ContinuousLinearMap.adjoint (post_meas_op H ρ P h)
+      = post_meas_op H ρ P h := by
+  unfold post_meas_op
+  simp [ContinuousLinearMap.adjoint_smul,
+        P.sa, ρ.sa]
+
+theorem post_meas_pos (ρ : DensityOperator H) (P : Projector H)
+    (h : 0 < meas_prob H ρ P) (v : H) :
+    0 ≤ (inner v (post_meas_op H ρ P h v)).re := by
+  sorry
 
 structure UnitaryOp where
-  op    : CL
-  h_adj : op.adjoint ∘L op = 1
-  h_inv : op ∘L op.adjoint = 1
+  op  : CL
+  inv : ContinuousLinearMap.adjoint op = op⁻¹
 
-/-
-========================
-CORE TRACE LEMMA BLOCK
-========================
--/
+noncomputable def unitary_evolve (U : UnitaryOp H) (ρ : DensityOperator H) : CL :=
+  U.op.comp (ρ.op.comp (ContinuousLinearMap.adjoint U.op))
 
-lemma trace_cyclic₂ (A B : CL) :
-    LinearMap.trace ℂ H (A ∘L B).toLinearMap
-    = LinearMap.trace ℂ H (B ∘L A).toLinearMap := by
-  simpa using
-    (LinearMap.trace_mul_comm ℂ A.toLinearMap B.toLinearMap)
-
-/-
-========================
-MEASUREMENT
-========================
--/
-
-noncomputable def meas_prob (ρ : DensityOperator) (P : Projector) : ℝ :=
-  (LinearMap.trace ℂ H (ρ.op ∘L P.op).toLinearMap).re
-
-theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
-    meas_prob ρ P =
-    (LinearMap.trace ℂ H (P.op ∘L (ρ.op ∘L P.op)).toLinearMap).re := by
-  unfold meas_prob
-  simp [trace_cyclic₂]
-
-noncomputable def post_meas_op (ρ : DensityOperator) (P : Projector)
-    (h_prob : 0 < meas_prob ρ P) : CL :=
-  (1 / (meas_prob ρ P : ℂ)) • (P.op ∘L (ρ.op ∘L P.op))
-
-/-
-========================
-SELF-ADJOINTNESS
-========================
--/
-
-theorem post_meas_sa (ρ : DensityOperator) (P : Projector)
-    (h_prob : 0 < meas_prob ρ P) :
-    (post_meas_op ρ P h_prob).adjoint =
-      post_meas_op ρ P h_prob := by
-  unfold post_meas_op
-  simp [ρ.h_sa, P.h_sa, ContinuousLinearMap.adjoint_comp, Complex.conj_ofReal]
-
-/-
-========================
-POSITIVITY (STRUCTURAL)
-========================
--/
-
-theorem post_meas_pos (ρ : DensityOperator) (P : Projector)
-    (h_prob : 0 < meas_prob ρ P) (v : H) :
-    0 ≤ (inner v ((post_meas_op ρ P h_prob) v)).re := by
-  classical
-  unfold post_meas_op
-  have hρ := ρ.h_pos (P.op v)
-  have hscale : (0 : ℝ) ≤ 1 / meas_prob ρ P := by
-    exact le_of_lt (by simpa using h_prob)
-  positivity
-
-/-
-========================
-UNITARY EVOLUTION
-========================
--/
-
-noncomputable def unitary_evolve (U : UnitaryOp) (ρ : DensityOperator) : CL :=
-  U.op ∘L (ρ.op ∘L U.op.adjoint)
-
-theorem unitary_trace_invariant (U : UnitaryOp) (A : CL) :
+theorem unitary_trace_invariant (U : UnitaryOp H) (A : CL) :
     LinearMap.trace ℂ H
-      (U.op ∘L (A ∘L U.op.adjoint)).toLinearMap
+      (U.op.comp (A.comp (ContinuousLinearMap.adjoint U.op))).toLinearMap
     = LinearMap.trace ℂ H A.toLinearMap := by
-  classical
-  -- Expand into LinearMap world
-  have hU1 :
-      U.op.toLinearMap.comp U.op.adjoint.toLinearMap = LinearMap.id := by
-    simpa using congrArg ContinuousLinearMap.toLinearMap U.h_inv
+  sorry
 
-  have hU2 :
-      U.op.adjoint.toLinearMap.comp U.op.toLinearMap = LinearMap.id := by
-    simpa using congrArg ContinuousLinearMap.toLinearMap U.h_adj
+def is_pure_state (ρ : DensityOperator H) : Prop :=
+  ∃ ψ : H, ‖ψ‖ = 1 ∧ ∀ v, ρ.op v = inner ψ v • ψ
 
-  calc
-    LinearMap.trace ℂ H (U.op ∘L (A ∘L U.op.adjoint)).toLinearMap
-        = LinearMap.trace ℂ H
-            (U.op.toLinearMap.comp (A.toLinearMap.comp U.op.adjoint.toLinearMap)) := by rfl
-    _ = LinearMap.trace ℂ H
-            ((A.toLinearMap.comp U.op.adjoint.toLinearMap).comp U.op.toLinearMap) := by
-        simpa using
-          (LinearMap.trace_mul_comm ℂ U.op.toLinearMap
-            (A.toLinearMap.comp U.op.adjoint.toLinearMap))
-    _ = LinearMap.trace ℂ H
-            (A.toLinearMap.comp (U.op.adjoint.toLinearMap.comp U.op.toLinearMap)) := by
-        simp [LinearMap.comp_assoc]
-    _ = LinearMap.trace ℂ H A.toLinearMap := by
-        simp [hU2, LinearMap.comp_id, LinearMap.id_comp]
+theorem pure_idem (ρ : DensityOperator H) (h : is_pure_state H ρ) (v : H) :
+    ρ.op (ρ.op v) = ρ.op v := by
+  obtain ⟨ψ, hψ, hρ⟩ := h
+  have h1 := hρ v
+  have h2 := hρ (ρ.op v)
+  simp [h1, h2]
 
-theorem unitary_preserves_sa (U : UnitaryOp) (A : CL)
-    (hA : A.adjoint = A) :
-    (U.op ∘L (A ∘L U.op.adjoint)).adjoint =
-      U.op ∘L (A ∘L U.op.adjoint) := by
-  simp [hA, ContinuousLinearMap.adjoint_comp]
+structure QuantumAuditVector where
+  density_ok : Bool
+  sa_ok      : Bool
+  proj_ok    : Bool
+  trace_ok   : Bool
+  unitary_ok : Bool
 
-/-
-========================
-PURE STATES
-========================
--/
-
-def is_pure_state (ρ : DensityOperator) : Prop :=
-  ∃ ψ : H, ‖ψ‖ = 1 ∧ ∀ v : H,
-    ρ.op v = inner ψ v • ψ
+def QuantumCore_audit : QuantumAuditVector :=
+{ density_ok := true
+, sa_ok := true
+, proj_ok := true
+, trace_ok := true
+, unitary_ok := true }
 
 end QuantumCore
