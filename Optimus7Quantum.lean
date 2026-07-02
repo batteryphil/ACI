@@ -40,7 +40,7 @@ theorem densityOp_convex_trace (ρ₁ ρ₂ : DensityOperator (H := H)) (t : ℝ
       (((t : ℂ) • ρ₁.op + ((1 - t : ℝ) : ℂ) • ρ₂.op).toLinearMap) = 1 := by
   have hcoe : ((t : ℂ) • ρ₁.op + ((1 - t : ℝ) : ℂ) • ρ₂.op).toLinearMap
       = (t : ℂ) • ρ₁.op.toLinearMap + ((1 - t : ℝ) : ℂ) • ρ₂.op.toLinearMap := rfl
-  rw [hcoe, LinearMap.trace_smul, LinearMap.trace_smul, ρ₁.is_trace_one, ρ₂.is_trace_one,
+  rw [hcoe, map_add, map_smul, map_smul, ρ₁.is_trace_one, ρ₂.is_trace_one,
       smul_eq_mul, smul_eq_mul, mul_one, mul_one]
   push_cast
   ring
@@ -84,11 +84,9 @@ theorem unitary_norm_one (U : UnitaryOperator (H := H)) (v : H) :
     simpa using hcomp
   have h := ContinuousLinearMap.adjoint_inner_right U.op v (U.op v)
   rw [hid] at h
-  have h1 : ((‖U.op v‖ ^ 2 : ℝ) : ℂ) = ((‖v‖ ^ 2 : ℝ) : ℂ) := by
-    rw [← inner_self_eq_norm_sq_to_K, ← inner_self_eq_norm_sq_to_K]; exact h.symm
-  have h2 : ‖U.op v‖ ^ 2 = ‖v‖ ^ 2 := by exact_mod_cast h1
-  nlinarith [sq_nonneg (‖U.op v‖ - ‖v‖), sq_nonneg (‖U.op v‖ + ‖v‖),
-    norm_nonneg (U.op v), norm_nonneg v]
+  have hre := congrArg Complex.re h
+  rw [← norm_sq_eq_inner, ← norm_sq_eq_inner] at hre
+  nlinarith [norm_nonneg (U.op v), norm_nonneg v]
 
 def unitaryCompose (U V : UnitaryOperator (H := H)) : UnitaryOperator (H := H) where
   op := U.op.comp V.op
