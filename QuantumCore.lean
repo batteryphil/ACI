@@ -82,10 +82,19 @@ theorem meas_prob_cyclic (ρ : DensityOperator (H := H)) (P : Projector (H := H)
     = (LinearMap.trace ℂ H (P.op.comp (ρ.op.comp P.op)).toLinearMap).re := by
   unfold meas_prob
   congr 1
-  rw [show P.op.comp (ρ.op.comp P.op) = (P.op.comp ρ.op).comp P.op from
-      (ContinuousLinearMap.comp_assoc _ _ _).symm]
-  simp only [ContinuousLinearMap.coe_comp]
-  exact (LinearMap.trace_mul_comm ℂ ρ.op.toLinearMap P.op.toLinearMap).symm
+  have hcomp1 : (ρ.op.comp P.op).toLinearMap = ρ.op.toLinearMap.comp P.op.toLinearMap := rfl
+  have hcomp2 : (P.op.comp (ρ.op.comp P.op)).toLinearMap
+      = P.op.toLinearMap.comp (ρ.op.toLinearMap.comp P.op.toLinearMap) := rfl
+  have hpp : P.op.toLinearMap.comp P.op.toLinearMap = P.op.toLinearMap :=
+    congrArg ContinuousLinearMap.toLinearMap P.h_id
+  rw [hcomp1, hcomp2, LinearMap.comp_assoc,
+      show LinearMap.trace ℂ H ((P.op.toLinearMap.comp ρ.op.toLinearMap).comp P.op.toLinearMap)
+        = LinearMap.trace ℂ H (P.op.toLinearMap.comp (P.op.toLinearMap.comp ρ.op.toLinearMap)) from
+        LinearMap.trace_mul_comm ℂ (P.op.toLinearMap.comp ρ.op.toLinearMap) P.op.toLinearMap,
+      ← LinearMap.comp_assoc, hpp,
+      show LinearMap.trace ℂ H (P.op.toLinearMap.comp ρ.op.toLinearMap)
+        = LinearMap.trace ℂ H (ρ.op.toLinearMap.comp P.op.toLinearMap) from
+        LinearMap.trace_mul_comm ℂ P.op.toLinearMap ρ.op.toLinearMap]
 
 noncomputable def post_meas_op (ρ : DensityOperator (H := H)) (P : Projector (H := H))
     (h_prob : 0 < meas_prob ρ P) : H →L[ℂ] H :=
@@ -177,10 +186,14 @@ def is_pure_state (ρ : DensityOperator (H := H)) : Prop :=
 theorem pure_state_idempotent (ρ : DensityOperator (H := H)) (hpure : is_pure_state ρ) (v : H) :
     ρ.op (ρ.op v) = ρ.op v := by
   obtain ⟨ψ, hψ_norm, hψ⟩ := hpure
-  rw [hψ, ContinuousLinearMap.map_smul, hψ, inner_smul_right,
-      show inner (𝕜 := ℂ) ψ ψ = (1 : ℂ) from by
-        rw [inner_self_eq_norm_sq_to_K]; simp [hψ_norm]]
-  simp
+  have hψψ : inner (𝕜 := ℂ) ψ ψ = (1 : ℂ) := by
+    rw [inner_self_eq_norm_sq_to_K]; simp [hψ_norm]
+  calc ρ.op (ρ.op v) = inner (𝕜 := ℂ) ψ (ρ.op v) • ψ := hψ (ρ.op v)
+    _ = inner (𝕜 := ℂ) ψ (inner (𝕜 := ℂ) ψ v • ψ) • ψ := by rw [hψ v]
+    _ = (inner (𝕜 := ℂ) ψ v * inner (𝕜 := ℂ) ψ ψ) • ψ := by rw [inner_smul_right]
+    _ = (inner (𝕜 := ℂ) ψ v * 1) • ψ := by rw [hψψ]
+    _ = inner (𝕜 := ℂ) ψ v • ψ := by rw [mul_one]
+    _ = ρ.op v := (hψ v).symm
 
 theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = A) :
     (LinearMap.trace ℂ H A.toLinearMap).im = 0 := by
