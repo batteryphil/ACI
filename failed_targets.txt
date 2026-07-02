@@ -1,5 +1,4 @@
 MyProject
-AWMCore
 Synaptic_Weights
 Matrix7
 Optimus7
