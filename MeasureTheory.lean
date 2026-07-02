@@ -332,4 +332,3 @@ def MTLock : MeasureTheoryLock where
   sigma_univ    := sigma_univ_mem
 
 end MeasureTheory
-
