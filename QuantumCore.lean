@@ -1,4 +1,4 @@
-import Mathlib.Analysis.InnerProductSpace.PiL2
+-import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.LinearAlgebra.Eigenspace.Basic
@@ -102,18 +102,22 @@ theorem post_meas_sa (ρ : DensityOperator (H := H)) (P : Projector (H := H))
 theorem post_meas_pos (ρ : DensityOperator (H := H)) (P : Projector (H := H))
     (h_prob : 0 < meas_prob ρ P) (v : H) :
     0 ≤ (inner (𝕜 := ℂ) v (post_meas_op ρ P h_prob v)).re := by
-  unfold post_meas_op
-  simp only [ContinuousLinearMap.smul_apply, inner_smul_right]
-  apply mul_nonneg
-  · positivity
-  · have step : inner (𝕜 := ℂ) v ((P.op.comp (ρ.op.comp P.op)) v)
-        = inner (𝕜 := ℂ) (P.op v) (ρ.op (P.op v)) := by
-      show inner (𝕜 := ℂ) v (P.op (ρ.op (P.op v))) = _
-      have h := ContinuousLinearMap.adjoint_inner_right P.op v (ρ.op (P.op v))
-      rw [P.h_sa] at h
-      exact h
-    rw [step]
-    exact ρ.h_pos (P.op v)
+  have hpt : post_meas_op ρ P h_prob v
+      = (1 / (meas_prob ρ P : ℂ)) • ((P.op.comp (ρ.op.comp P.op)) v) := rfl
+  rw [hpt, inner_smul_right]
+  have step : inner (𝕜 := ℂ) v ((P.op.comp (ρ.op.comp P.op)) v)
+      = inner (𝕜 := ℂ) (P.op v) (ρ.op (P.op v)) := by
+    show inner (𝕜 := ℂ) v (P.op (ρ.op (P.op v))) = _
+    have h := ContinuousLinearMap.adjoint_inner_right P.op v (ρ.op (P.op v))
+    rw [P.h_sa] at h
+    exact h
+  rw [step]
+  have hcast : (1 / (meas_prob ρ P : ℂ)) = ((1 / meas_prob ρ P : ℝ) : ℂ) := by
+    rw [Complex.ofReal_div, Complex.ofReal_one]
+  rw [hcast, Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im]
+  have h1 : (0 : ℝ) ≤ 1 / meas_prob ρ P := le_of_lt (by positivity)
+  have h2 : 0 ≤ (inner (𝕜 := ℂ) (P.op v) (ρ.op (P.op v))).re := ρ.h_pos (P.op v)
+  nlinarith [mul_nonneg h1 h2]
 
 structure UnitaryOp where
   op    : H →L[ℂ] H
@@ -167,10 +171,10 @@ theorem unitary_preserves_sa (U : UnitaryOp) (A : H →L[ℂ] H)
   rw [ContinuousLinearMap.adjoint_comp, ContinuousLinearMap.adjoint_comp,
       ContinuousLinearMap.adjoint_adjoint, hA, ContinuousLinearMap.comp_assoc]
 
-def is_pure_state (ρ : DensityOperator) : Prop :=
+def is_pure_state (ρ : DensityOperator (H := H)) : Prop :=
   ∃ ψ : H, ‖ψ‖ = 1 ∧ ∀ v : H, ρ.op v = inner (𝕜 := ℂ) ψ v • ψ
 
-theorem pure_state_idempotent (ρ : DensityOperator) (hpure : is_pure_state ρ) (v : H) :
+theorem pure_state_idempotent (ρ : DensityOperator (H := H)) (hpure : is_pure_state ρ) (v : H) :
     ρ.op (ρ.op v) = ρ.op v := by
   obtain ⟨ψ, hψ_norm, hψ⟩ := hpure
   rw [hψ, ContinuousLinearMap.map_smul, hψ, inner_smul_right,
