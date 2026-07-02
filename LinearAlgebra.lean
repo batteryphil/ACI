@@ -38,26 +38,24 @@ theorem scalar_assoc (n : ℕ)
 -- SECTION 2: LINEAR MAPS
 -- ============================================================
 
--- `a` given an explicit ℝ type annotation — previously untyped, which left
--- the HSMul instance unresolved as a stuck metavariable.
 def is_linear (n m : ℕ)
     (f : (Fin n → ℝ) → (Fin m → ℝ)) : Prop :=
   (∀ u v, f (u + v) = f u + f v) ∧
   (∀ (a : ℝ) v, f (a • v) = a • f v)
 
--- `unfold is_linear` added before `constructor`, since `constructor` does not
--- auto-unfold a semireducible def to see the underlying `And`.
+-- `Matrix.dotProduct` does not exist as a namespaced constant. `simp
+-- [Matrix.mulVec]` alone closes both goals (confirmed: the compiler reported
+-- "no goals to be solved" at the trailing `ring`), so the bad reference and
+-- the now-redundant `ring` are both removed.
 theorem matrix_mul_linear (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
     is_linear n m (fun v => A.mulVec v) := by
   unfold is_linear
   constructor
   · intro u v; ext i
-    simp [Matrix.mulVec, Matrix.dotProduct]
-    ring
+    simp [Matrix.mulVec]
   · intro a v; ext i
-    simp [Matrix.mulVec, Matrix.dotProduct]
-    ring
+    simp [Matrix.mulVec]
 
 theorem linear_comp_linear (n m k : ℕ)
     (f : (Fin n → ℝ) → (Fin m → ℝ))
@@ -108,13 +106,16 @@ theorem matrix_det_mul (n : ℕ)
 -- SECTION 4: EIGENVALUES AND EIGENVECTORS
 -- ============================================================
 
--- `λ` is Lean's lambda-syntax token, not usable as a plain identifier —
--- renamed to `lam` throughout this section.
 def is_eigenpair (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (lam : ℝ) (v : Fin n → ℝ) : Prop :=
   v ≠ 0 ∧ A.mulVec v = lam • v
 
+-- `simp at this` already fully reduces to the disjunction `c = 0 ∨ v i = 0`
+-- (simp applies `mul_eq_zero` internally) — calling `mul_eq_zero.mp` on that
+-- again was a type error, since `this` was no longer a product equation.
+-- Second bullet: `mul_comm` in the simp set never actually closed the goal;
+-- needs `ring` for the resulting real-number identity.
 theorem eigenpair_scalar (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (lam : ℝ) (v : Fin n → ℝ) (c : ℝ)
@@ -127,12 +128,11 @@ theorem eigenpair_scalar (n : ℕ)
     ext i
     have := congr_fun h i
     simp at this
-    exact (mul_eq_zero.mp this).resolve_left hc
+    exact this.resolve_left hc
   · ext i
-    simp [Matrix.mulVec_smul,
-          hev.2, mul_comm]
+    simp [Matrix.mulVec_smul, hev.2]
+    ring
 
--- Characteristic polynomial proxy
 noncomputable def char_poly_eval
     (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
@@ -147,23 +147,22 @@ theorem char_poly_eigenvalue (n : ℕ)
     char_poly_eval n A lam ≠ 0 :=
   em _
 
--- Spectral radius proxy. `Finset.univ_nonempty` requires `[Nonempty (Fin n)]`,
--- which cannot be synthesized for a fully generic `n` (n could be 0).
--- Added `[NeZero n]` as an instance argument on the definition — for concrete
--- literals like `21` this is automatic; for generic `n`, callers must supply it.
 noncomputable def spectral_radius
     (n : ℕ) [NeZero n]
     (eigenvalues : Fin n → ℝ) : ℝ :=
   Finset.univ.sup' Finset.univ_nonempty
     (fun i => |eigenvalues i|)
 
+-- `apply Finset.le_sup'` could not infer which index to use — the witness
+-- and function are now supplied explicitly via `exact` instead of leaving it
+-- to unification.
 theorem spectral_radius_nonneg (n : ℕ) [NeZero n]
     (eigenvalues : Fin n → ℝ) :
     0 ≤ spectral_radius n eigenvalues := by
   unfold spectral_radius
-  apply le_trans (abs_nonneg _)
-  apply Finset.le_sup'
-  exact Finset.mem_univ _
+  have hn : 0 < n := Nat.pos_of_ne_zero (NeZero.ne n)
+  exact le_trans (abs_nonneg (eigenvalues ⟨0, hn⟩))
+    (Finset.le_sup' (fun i => |eigenvalues i|) (Finset.mem_univ (⟨0, hn⟩ : Fin n)))
 
 -- ============================================================
 -- SECTION 5: INNER PRODUCT SPACES
@@ -200,7 +199,6 @@ theorem inner_cauchy_schwarz (n : ℕ)
   have h := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ u v
   simpa [sq] using h
 
--- Gram-Schmidt proxy
 theorem gram_schmidt_nonneg (n : ℕ) :
     0 ≤ (n : ℝ) := by positivity
 
@@ -208,14 +206,16 @@ theorem gram_schmidt_nonneg (n : ℕ) :
 -- SECTION 6: RANK AND NULLITY
 -- ============================================================
 
--- `Submodule` has no `.finrank` field — uses the free function
--- `Module.finrank R M` applied to the submodule's carrier type instead of
--- dot notation.
+-- `Matrix.rank` is built internally from `A.mulVecLin`, not `Matrix.toLin' A`
+-- — the two are almost certainly defeq but not syntactically identical, so
+-- `omega` treated the two range/ker terms as unrelated atoms. Restated
+-- throughout in terms of `A.mulVecLin` to match what `Matrix.rank` actually
+-- unfolds to.
 theorem rank_nullity (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
-    A.rank + Module.finrank ℝ (LinearMap.ker (Matrix.toLin' A)) = n := by
-  have := (A.toLin').finrank_range_add_finrank_ker
-  simp [Matrix.rank] at this ⊢
+    A.rank + Module.finrank ℝ (LinearMap.ker A.mulVecLin) = n := by
+  have h := A.mulVecLin.finrank_range_add_finrank_ker
+  simp [Matrix.rank] at h ⊢
   omega
 
 theorem rank_nonneg (n m : ℕ)
@@ -223,15 +223,11 @@ theorem rank_nonneg (n m : ℕ)
     0 ≤ A.rank :=
   Nat.zero_le _
 
--- `A.rank_le_min_height_width` confirmed fabricated (does not exist).
--- Rebuilt from two independently-justifiable facts: rank ≤ m since rank is
--- the finrank of a submodule of the m-dimensional codomain, and rank ≤ n via
--- the rank_nullity theorem proved above (rank = n - nullity ≤ n).
 theorem rank_le_min (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
     A.rank ≤ min m n := by
   apply le_min
-  · have h := Submodule.finrank_le (LinearMap.range (Matrix.toLin' A))
+  · have h := Submodule.finrank_le (LinearMap.range A.mulVecLin)
     simpa [Matrix.rank] using h
   · have := rank_nullity n m A
     omega
@@ -319,30 +315,36 @@ theorem domain_matrix_det_pos :
   intro i _
   positivity
 
--- `native_decide` removed — it compiles to native code, and this goal depends
--- on `Real.decidableEq`, which is noncomputable (ℝ has no computable
--- equality). `simp` alone is expected to close the remaining numeral goal
--- after `Matrix.rank_diagonal`.
+-- The leftover goal after `Matrix.rank_diagonal` is
+-- `21 - Fintype.card {x // (x.val:ℝ)+1 = 0} = 21`. Since a natural number
+-- cast to ℝ plus 1 is always at least 1, that subtype is empty — proved
+-- explicitly here rather than reaching for `native_decide` (which fails,
+-- since ℝ has no computable DecidableEq) or a bare `simp` (which could not
+-- see the emptiness on its own).
 theorem domain_matrix_rank :
     domain_matrix.rank = 21 := by
   unfold domain_matrix
   rw [Matrix.rank_diagonal]
-  simp
+  have hempty : IsEmpty {i : Fin 21 // (i.val : ℝ) + 1 = 0} := by
+    constructor
+    intro x
+    have h0 : (0 : ℝ) ≤ (x.1.val : ℝ) := Nat.cast_nonneg _
+    linarith [x.2]
+  rw [Fintype.card_eq_zero_iff.mpr hempty]
 
 noncomputable def domain_spectral_radius :
     ℝ :=
   spectral_radius 21
     (fun i => (i.val : ℝ) + 1)
 
--- Restructured so the numeric fact is fully pinned down first (as an
--- explicit `have`), then combined — the previous `lt_of_lt_of_le (by norm_num)`
--- ran `norm_num` against a goal whose middle term was still a metavariable
--- at that point in elaboration.
+-- Same fix as spectral_radius_nonneg: witness and function supplied
+-- explicitly to `Finset.le_sup'` instead of relying on `apply`'s unification.
 theorem domain_spectral_pos :
     0 < domain_spectral_radius := by
   unfold domain_spectral_radius spectral_radius
   have h : (0 : ℝ) < |((0 : Fin 21).val : ℝ) + 1| := by norm_num
-  exact lt_of_lt_of_le h (Finset.le_sup' _ (Finset.mem_univ (0 : Fin 21)))
+  exact lt_of_lt_of_le h
+    (Finset.le_sup' (fun i : Fin 21 => |(i.val : ℝ) + 1|) (Finset.mem_univ (0 : Fin 21)))
 
 -- ============================================================
 -- SYSTEM LOCK
