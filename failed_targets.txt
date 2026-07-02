@@ -1,5 +1,4 @@
 MyProject
-Matrix7
 Optimus7
 Optimus7Quantum
 EnergyDomain

@@ -10,6 +10,7 @@ Governor
 LinearAlgebra
 MC2Engine
 Manifold21
+Matrix7
 MoruzinLaw
 N7Spine
 PhysicsCore
