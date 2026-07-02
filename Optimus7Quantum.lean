@@ -17,7 +17,7 @@ variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℂ H]
 def IsPositiveOp (f : H →ₗ[ℂ] H) : Prop :=
   LinearMap.adjoint f = f ∧ ∀ x : H, 0 ≤ (inner (𝕜 := ℂ) x (f x)).re
 
-structure DensityOperator (H := H) where
+structure DensityOperator where
   op           : H →L[ℂ] H
   is_pos       : IsPositiveOp op.toLinearMap
   is_trace_one : LinearMap.trace ℂ H op.toLinearMap = 1
@@ -72,7 +72,7 @@ theorem cptp_trace_preserving {n : ℕ} (Φ : CPTP n) (a : Mat n) :
       rw [hterm k, ih]
   rw [key Φ.kraus, Φ.is_complete, one_mul]
 
-structure UnitaryOperator (H := H) where
+structure UnitaryOperator where
   op         : H →L[ℂ] H
   op_star_op : (ContinuousLinearMap.adjoint op).comp op = ContinuousLinearMap.id ℂ H
   op_op_star : op.comp (ContinuousLinearMap.adjoint op) = ContinuousLinearMap.id ℂ H
@@ -180,7 +180,7 @@ theorem wigner_symmetry (U : UnitaryOperator (H := H)) (ρ : DensityOperator (H 
     rw [step]
     exact ρ.is_pos.2 (ContinuousLinearMap.adjoint U.op v)
 
-structure CertifiedKernel (H := H) where
+structure CertifiedKernel where
   trace_invariant   : ∀ (U : UnitaryOperator (H := H)) (ρ : DensityOperator (H := H)),
     LinearMap.trace ℂ H
       (U.op.comp (ρ.op.comp (ContinuousLinearMap.adjoint U.op))).toLinearMap =
