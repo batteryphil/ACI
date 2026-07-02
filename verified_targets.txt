@@ -24,5 +24,6 @@ QuantumCore
 SetTheory
 SovereignHamiltonian
 SpineLanguage
+StochasticDifferentialEquations
 Synaptic_Weights
 VerifyState

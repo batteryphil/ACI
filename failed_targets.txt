@@ -1,5 +1,4 @@
 MyProject
-StochasticDifferentialEquations
 OptimalControl
 TopologicalDataAnalysis
 StatisticalMechanics
