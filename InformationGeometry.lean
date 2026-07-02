@@ -11,7 +11,9 @@ open Finset Real
 -- ============================================================
 
 structure FisherMetric2D where
-  I00 I01 I11 : ℝ
+  I00 : ℝ
+  I01 : ℝ
+  I11 : ℝ
   I00_pos : 0 < I00
   I11_pos : 0 < I11
   psd     : 0 ≤ I00 * I11 - I01 ^ 2
@@ -79,8 +81,9 @@ theorem kl_nonneg_from_pinsker (kl tv : ℝ)
     (htv : 0 ≤ tv)
     (h : pinsker_bound kl (tv ^ 2 / 2)) :
     0 ≤ kl := by
+  unfold pinsker_bound at h
   have : 0 ≤ tv ^ 2 / 2 := by positivity
-  linarith [h]
+  linarith
 
 noncomputable def mutual_information (H_X H_X_given_Y : ℝ) : ℝ :=
   H_X - H_X_given_Y
@@ -176,8 +179,9 @@ noncomputable def info_closure_margin (df : DomainFisher) : ℝ :=
 theorem info_closure_pos (df : DomainFisher) :
     0 < info_closure_margin df := by
   unfold info_closure_margin
-  apply Finset.lt_inf'_iff.mpr
-  intro d _; exact df.fisher_pos d
+  obtain ⟨d, -, hd⟩ := Finset.exists_mem_eq_inf' Finset.univ_nonempty df.fisher
+  rw [hd]
+  exact df.fisher_pos d
 
 theorem natural_grad_domain_invariant (df : DomainFisher)
     (gradients : Domain21 → ℝ) (d : Domain21) :
