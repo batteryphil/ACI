@@ -1,6 +1,6 @@
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.NormedSpace.OperatorNorm
+import Mathlib.Analysis.NormedSpace.ContinuousLinearMap
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Data.Complex.Basic
 
