@@ -18,4 +18,5 @@ QuantumCore
 SetTheory
 SovereignHamiltonian
 SpineLanguage
+Synaptic_Weights
 VerifyState

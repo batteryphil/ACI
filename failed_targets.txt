@@ -1,5 +1,4 @@
 MyProject
-Synaptic_Weights
 Matrix7
 Optimus7
 Optimus7Quantum
