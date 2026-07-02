@@ -147,3 +147,4 @@ theorem governance_admissible_iff (g : GovernanceState) :
   rfl
 
 end Governor
+
