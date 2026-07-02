@@ -43,10 +43,6 @@ def is_linear (n m : ℕ)
   (∀ u v, f (u + v) = f u + f v) ∧
   (∀ (a : ℝ) v, f (a • v) = a • f v)
 
--- `Matrix.dotProduct` does not exist as a namespaced constant. `simp
--- [Matrix.mulVec]` alone closes both goals (confirmed: the compiler reported
--- "no goals to be solved" at the trailing `ring`), so the bad reference and
--- the now-redundant `ring` are both removed.
 theorem matrix_mul_linear (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
     is_linear n m (fun v => A.mulVec v) := by
@@ -111,11 +107,6 @@ def is_eigenpair (n : ℕ)
     (lam : ℝ) (v : Fin n → ℝ) : Prop :=
   v ≠ 0 ∧ A.mulVec v = lam • v
 
--- `simp at this` already fully reduces to the disjunction `c = 0 ∨ v i = 0`
--- (simp applies `mul_eq_zero` internally) — calling `mul_eq_zero.mp` on that
--- again was a type error, since `this` was no longer a product equation.
--- Second bullet: `mul_comm` in the simp set never actually closed the goal;
--- needs `ring` for the resulting real-number identity.
 theorem eigenpair_scalar (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (lam : ℝ) (v : Fin n → ℝ) (c : ℝ)
@@ -153,9 +144,6 @@ noncomputable def spectral_radius
   Finset.univ.sup' Finset.univ_nonempty
     (fun i => |eigenvalues i|)
 
--- `apply Finset.le_sup'` could not infer which index to use — the witness
--- and function are now supplied explicitly via `exact` instead of leaving it
--- to unification.
 theorem spectral_radius_nonneg (n : ℕ) [NeZero n]
     (eigenvalues : Fin n → ℝ) :
     0 ≤ spectral_radius n eigenvalues := by
@@ -186,10 +174,6 @@ theorem inner_nonneg (n : ℕ)
   apply Finset.sum_nonneg
   intro i _; exact mul_self_nonneg _
 
--- `Finset.inner_mul_le_norm_sq_mul_norm_sq` does not exist in Mathlib —
--- confirmed absent from current docs. Replaced with `Finset.sum_mul_sq_le_sq_mul_sq`,
--- the real finite Cauchy-Schwarz lemma. Its exact signature was not directly
--- inspected, so this proof is unverified against a compiler as of this write.
 theorem inner_cauchy_schwarz (n : ℕ)
     (u v : Fin n → ℝ) :
     standard_inner n u v ^ 2 ≤
@@ -206,11 +190,6 @@ theorem gram_schmidt_nonneg (n : ℕ) :
 -- SECTION 6: RANK AND NULLITY
 -- ============================================================
 
--- `Matrix.rank` is built internally from `A.mulVecLin`, not `Matrix.toLin' A`
--- — the two are almost certainly defeq but not syntactically identical, so
--- `omega` treated the two range/ker terms as unrelated atoms. Restated
--- throughout in terms of `A.mulVecLin` to match what `Matrix.rank` actually
--- unfolds to.
 theorem rank_nullity (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
     A.rank + Module.finrank ℝ (LinearMap.ker A.mulVecLin) = n := by
@@ -315,30 +294,29 @@ theorem domain_matrix_det_pos :
   intro i _
   positivity
 
--- The leftover goal after `Matrix.rank_diagonal` is
--- `21 - Fintype.card {x // (x.val:ℝ)+1 = 0} = 21`. Since a natural number
--- cast to ℝ plus 1 is always at least 1, that subtype is empty — proved
--- explicitly here rather than reaching for `native_decide` (which fails,
--- since ℝ has no computable DecidableEq) or a bare `simp` (which could not
--- see the emptiness on its own).
+-- `Matrix.rank_diagonal` produces a goal about the subtype where entries are
+-- NONZERO (`≠ 0`), not the empty "= 0" subtype assumed previously — the `rw`
+-- had nothing to match. Every diagonal entry here actually is nonzero, so
+-- that subtype is the full `Fin 21`, not empty. Proved via
+-- `Equiv.subtypeUnivEquiv`, which turns "predicate holds for all elements"
+-- into an equivalence with the full type, then `Fintype.card_congr` converts
+-- that equivalence into the needed cardinality equation.
 theorem domain_matrix_rank :
     domain_matrix.rank = 21 := by
   unfold domain_matrix
   rw [Matrix.rank_diagonal]
-  have hempty : IsEmpty {i : Fin 21 // (i.val : ℝ) + 1 = 0} := by
-    constructor
-    intro x
-    have h0 : (0 : ℝ) ≤ (x.1.val : ℝ) := Nat.cast_nonneg _
-    linarith [x.2]
-  rw [Fintype.card_eq_zero_iff.mpr hempty]
+  have hall : ∀ i : Fin 21, (i.val : ℝ) + 1 ≠ 0 := by
+    intro i
+    have h : (0 : ℝ) < (i.val : ℝ) + 1 := by positivity
+    exact h.ne'
+  rw [Fintype.card_congr (Equiv.subtypeUnivEquiv hall)]
+  simp
 
 noncomputable def domain_spectral_radius :
     ℝ :=
   spectral_radius 21
     (fun i => (i.val : ℝ) + 1)
 
--- Same fix as spectral_radius_nonneg: witness and function supplied
--- explicitly to `Finset.le_sup'` instead of relying on `apply`'s unification.
 theorem domain_spectral_pos :
     0 < domain_spectral_radius := by
   unfold domain_spectral_radius spectral_radius
