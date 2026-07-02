@@ -1,3 +1,4 @@
+ACIManifold
 ACI_Governance
 AM10
 AWM21
@@ -7,10 +8,10 @@ FSI
 MC2Engine
 Manifold21
 MoruzinLaw
+N7Spine
 PhysicsCore
 PrimeMasterEngine
+QuantumCore
 SovereignHamiltonian
 SpineLanguage
 VerifyState
-N7Spine
-N7Spine
