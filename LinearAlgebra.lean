@@ -178,21 +178,18 @@ theorem inner_nonneg (n : ℕ)
   apply Finset.sum_nonneg
   intro i _; exact mul_self_nonneg _
 
+-- `Finset.inner_mul_le_norm_sq_mul_norm_sq` does not exist in Mathlib —
+-- confirmed absent from current docs. Replaced with `Finset.sum_mul_sq_le_sq_mul_sq`,
+-- the real finite Cauchy-Schwarz lemma. Its exact signature was not directly
+-- inspected, so this proof is unverified against a compiler as of this write.
 theorem inner_cauchy_schwarz (n : ℕ)
     (u v : Fin n → ℝ) :
     standard_inner n u v ^ 2 ≤
     standard_inner n u u *
-    standard_inner n v v :=
-  Finset.inner_mul_le_norm_sq_mul_norm_sq
-    Finset.univ u v |>.trans_eq (by
-      congr 1
-      · unfold standard_inner
-        congr 1; ext i; ring
-      · constructor
-        · unfold standard_inner
-          congr 1; ext i; ring
-        · unfold standard_inner
-          congr 1; ext i; ring)
+    standard_inner n v v := by
+  unfold standard_inner
+  have h := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ u v
+  simpa [sq] using h
 
 -- Gram-Schmidt proxy
 theorem gram_schmidt_nonneg (n : ℕ) :
