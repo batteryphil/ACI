@@ -71,8 +71,8 @@ theorem OU_variance_decreases_with_theta
     OU_stationary_variance theta2 sigma <
     OU_stationary_variance theta1 sigma := by
   unfold OU_stationary_variance
-  rw [div_lt_div_iff (by positivity) (by positivity)]
-  nlinarith [pow_pos hσ 2]
+  gcongr
+  linarith
 
 noncomputable def OU_path_bound
     (X0 theta t : ℝ) : ℝ :=
@@ -187,10 +187,10 @@ theorem lipschitz_linear_growth
     |f x| ≤ |f 0| + L * |x| := by
   have h := hf x 0
   simp at h
-  calc |f x| = |f x - f 0 + f 0| := by congr 1; ring
-    _ ≤ |f x - f 0| + |f 0| := abs_add _ _
-    _ ≤ L * |x| + |f 0| := by linarith
-    _ = |f 0| + L * |x| := by ring
+  rcases abs_cases (f x) with ⟨hx1, _⟩ | ⟨hx1, _⟩ <;>
+  rcases abs_cases (f x - f 0) with ⟨hd1, _⟩ | ⟨hd1, _⟩ <;>
+  rcases abs_cases (f 0) with ⟨hf01, _⟩ | ⟨hf01, _⟩ <;>
+  linarith
 
 theorem SDE_unique_solution
     (mu sigma : ℝ → ℝ) (L : ℝ) (hL : 0 < L)
