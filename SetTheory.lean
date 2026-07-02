@@ -46,11 +46,14 @@ theorem card_union_le (α : Type*)
     (A ∪ B).card ≤ A.card + B.card :=
   Finset.card_union_le A B
 
+-- `Finset.card_inter_le_left` does not exist — confirmed by the compiler
+-- itself ("Unknown constant"). Rebuilt from `Finset.card_le_card` applied
+-- to `Finset.inter_subset_left`, both foundational and certain to exist.
 theorem card_inter_le_left (α : Type*)
     [DecidableEq α]
     (A B : Finset α) :
     (A ∩ B).card ≤ A.card :=
-  Finset.card_inter_le_left
+  Finset.card_le_card Finset.inter_subset_left
 
 theorem card_subset_le (α : Type*)
     [DecidableEq α]
@@ -95,28 +98,42 @@ theorem bijective_comp (α β γ : Type*)
     Function.Bijective (g ∘ f) :=
   Function.Bijective.comp hg hf
 
+-- `hd ▸ hdf` with an explicit type ascription (`have : d ∉ f d := hd ▸ hdf`)
+-- made the `▸` elaborator try to rewrite in the wrong direction, producing
+-- exactly the "hdf has type d∈f d but expected d∉D" mismatch the compiler
+-- reported. Rebuilt with explicit `rw` throughout so the rewrite direction
+-- is never left for `▸` to infer.
 theorem cantor (α : Type*)
     (f : α → Set α) :
     ¬Function.Surjective f := by
   intro h
   let D := {x | x ∉ f x}
   obtain ⟨d, hd⟩ := h D
-  by_cases hdf : d ∈ f d
-  · have : d ∉ f d := hd ▸ hdf
-    exact absurd hdf this
-  · have : d ∈ f d := hd ▸ hdf
-    exact absurd this hdf
+  have key : d ∈ f d ↔ d ∉ f d := by
+    constructor
+    · intro hmem
+      have hmemD : d ∈ D := by rw [← hd]; exact hmem
+      exact hmemD
+    · intro hnmem
+      have hmemD : d ∈ D := hnmem
+      rw [← hd] at hmemD
+      exact hmemD
+  tauto
 
 -- ============================================================
 -- SECTION 4: ORDINALS AND WELL-ORDERING
 -- ============================================================
 
+-- `Finset.min'_le`'s real signature is `(s) (x) (hx : x ∈ s) : s.min' _ ≤ x`
+-- — the element comes before the membership proof, with no separate
+-- nonempty argument in that position (confirmed by the compiler's own
+-- "expected type ℕ" error where the old code passed `hS`).
 theorem nat_well_order (S : Finset ℕ)
     (hS : S.Nonempty) :
     ∃ m ∈ S, ∀ n ∈ S, m ≤ n :=
   ⟨S.min' hS,
    S.min'_mem hS,
-   fun n hn => S.min'_le hS n hn⟩
+   fun n hn => S.min'_le n hn⟩
 
 def ordinal_add (α β : ℕ) : ℕ := α + β
 
@@ -129,10 +146,6 @@ theorem ordinal_add_zero (α : ℕ) :
     ordinal_add α 0 = α :=
   Nat.add_zero α
 
--- `where` clauses create plain local names, not namespaced ones — the
--- original tried to declare `Nat.rec_aux` via `where`, which isn't valid.
--- `Nat.strongRecOn` already provides exactly this recursion principle
--- directly, with no local helper needed.
 theorem transfinite_induction_proxy
     (P : ℕ → Prop)
     (h : ∀ n, (∀ m, m < n → P m) → P n)
@@ -147,12 +160,6 @@ theorem CBS_proxy (m n : ℕ)
     (hmn : m ≤ n) (hnm : n ≤ m) :
     m = n := Nat.le_antisymm hmn hnm
 
--- The original hand-rolled a Cantor pairing function and tried to close
--- the goal with `simp at h; omega` — but the goal after destructuring is a
--- `Prod` equality `(a,b) = (c,d)`, which `omega` cannot prove (it decides
--- linear arithmetic over ℕ/ℤ, not tuple equality); it would have failed
--- regardless of the pairing function's actual injectivity. Replaced with
--- `Encodable.encode`, whose injectivity for `ℕ × ℕ` Mathlib already proves.
 theorem nat_prod_countable :
     ∃ f : ℕ × ℕ → ℕ,
       Function.Injective f :=
@@ -165,8 +172,6 @@ theorem aleph0_minimal (n : ℕ) :
 theorem CH_proxy :
     (0 : ℕ) ≤ 1 := Nat.zero_le 1
 
--- `Nat.pos_pow_of_pos` does not exist in current Mathlib (confirmed absent
--- via search). `Nat.two_pow_pos` is the real lemma for exactly this case.
 theorem powerset_card_pos (n : ℕ) :
     0 < 2 ^ n :=
   Nat.two_pow_pos n
@@ -251,9 +256,6 @@ theorem domain_card :
 theorem domain_powerset_size :
     2 ^ 21 = 2097152 := by norm_num
 
--- `.toCtorIdx` is not a real auto-generated field for Lean 4 inductive
--- types. Replaced with an explicit rank function, defined by direct pattern
--- match, which is guaranteed to exist and reduce definitionally.
 private def domain_rank : Domain21 → ℕ
   | .A_Energy => 0 | .B_Control => 1 | .C_Thermal => 2 | .D_Structural => 3
   | .E_Boundary => 4 | .F_Diagnostics => 5 | .G_Governance => 6
@@ -327,4 +329,3 @@ def STLock : SetTheoryLock where
   AWM_forcing    := AWM_forcing
 
 end SetTheory
-
