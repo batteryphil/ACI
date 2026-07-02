@@ -66,7 +66,7 @@ theorem fib_pos (n : ℕ) (hn : 0 < n) : 0 < fib n := by
     | zero => simp [fib]
     | succ m =>
       simp [fib]
-      exact Nat.add_pos_right _ (ih (by omega))
+      exact Or.inl (ih (by omega))
 
 theorem fib_monotone (n : ℕ) : fib n ≤ fib (n + 1) := by
   induction n with
@@ -74,9 +74,7 @@ theorem fib_monotone (n : ℕ) : fib n ≤ fib (n + 1) := by
   | succ n ih =>
     cases n with
     | zero => simp [fib]
-    | succ m =>
-      simp [fib]
-      linarith [fib_pos (m + 1) (by omega)]
+    | succ m => simp [fib]
 
 theorem fib_strict_mono (n : ℕ) (hn : 1 < n) :
     fib n < fib (n + 1) := by
@@ -105,7 +103,10 @@ theorem phi_pos : 0 < phi := by
 theorem phi_gt_one : 1 < phi := by
   unfold phi
   rw [lt_div_iff₀ (by norm_num : (0:ℝ) < 2)]
-  linarith [Real.sqrt_pos_of_pos (show (0:ℝ) < 5 by norm_num)]
+  have h1 : Real.sqrt 1 < Real.sqrt 5 :=
+    Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  rw [Real.sqrt_one] at h1
+  linarith
 
 theorem phi_sq : phi ^ 2 = phi + 1 := by
   unfold phi
@@ -121,11 +122,11 @@ noncomputable def psi : ℝ := (1 - Real.sqrt 5) / 2
 
 theorem psi_neg : psi < 0 := by
   unfold psi
-  apply div_neg_of_pos_of_neg (by norm_num)
-  have h : Real.sqrt 1 < Real.sqrt 5 :=
-    Real.sqrt_lt_sqrt (by norm_num : (0:ℝ) ≤ 1) (by norm_num : (1:ℝ) < 5)
-  rw [Real.sqrt_one] at h
-  linarith
+  have h1 : Real.sqrt 1 < Real.sqrt 5 :=
+    Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  rw [Real.sqrt_one] at h1
+  have hnum : 1 - Real.sqrt 5 < 0 := by linarith
+  exact div_neg_of_neg_of_pos hnum (by norm_num)
 
 theorem phi_plus_psi : phi + psi = 1 := by
   unfold phi psi; ring
@@ -150,9 +151,6 @@ theorem gcd_dvd_both (a b : ℕ) :
 theorem coprime_iff_gcd_one (a b : ℕ) :
     Nat.Coprime a b ↔ Nat.gcd a b = 1 := Iff.rfl
 
--- The real Wilson's theorem in Mathlib is stated over ZMod p, not as a
--- direct ℕ % p equation. Rebuilt to match the confirmed-real
--- ZMod.wilsons_lemma rather than a fabricated Nat-level bridging lemma.
 theorem wilson (p : ℕ) (hp : Nat.Prime p) :
     ((p - 1).factorial : ZMod p) = -1 := by
   haveI : Fact (Nat.Prime p) := ⟨hp⟩
@@ -173,7 +171,7 @@ theorem gap_7_11 : prime_gap 7 11 := by
 
 theorem bertrand (n : ℕ) (hn : 0 < n) :
     ∃ p : ℕ, Nat.Prime p ∧ n < p ∧ p ≤ 2 * n :=
-  Nat.exists_prime_and_lt_and_le n hn
+  Nat.exists_prime_lt_and_le_two_mul n (by omega)
 
 theorem large_prime_gaps (k : ℕ) (hk : 2 ≤ k) :
     ∃ n : ℕ, ∀ i, 1 ≤ i → i ≤ k →
@@ -182,7 +180,7 @@ theorem large_prime_gaps (k : ℕ) (hk : 2 ≤ k) :
   intro i hi1 hik
   have hdvd : (i + 1) ∣ (k + 1).factorial + 1 + i := by
     have h1 : (i + 1) ∣ (k + 1).factorial :=
-      Nat.factorial_dvd_factorial (by omega)
+      Nat.dvd_factorial (by omega) (by omega)
     have h2 : (i + 1) ∣ (i + 1) := dvd_refl _
     have : (i + 1) ∣ (k + 1).factorial + (i + 1) :=
       Nat.dvd_add h1 h2
@@ -190,9 +188,7 @@ theorem large_prime_gaps (k : ℕ) (hk : 2 ≤ k) :
   intro hprime
   have hgt : 1 < i + 1 := by omega
   have hlt : i + 1 < (k + 1).factorial + 1 + i := by
-    have : 2 ≤ (k + 1).factorial := by
-      apply Nat.factorial_pos |>.trans_le
-      linarith [Nat.factorial_pos (k + 1)]
+    have hpos := Nat.factorial_pos (k + 1)
     omega
   have := hprime.eq_one_or_self_of_dvd (i + 1) hdvd
   omega
@@ -207,14 +203,22 @@ theorem AP_diff (a d n : ℕ) :
     arith_prog a d (n+1) - arith_prog a d n = d := by
   unfold arith_prog; omega
 
+theorem triangular_two_dvd (n : ℕ) : 2 ∣ n * (n + 1) := by
+  rcases Nat.even_or_odd n with he | ho
+  · exact Dvd.dvd.mul_right he.two_dvd _
+  · exact Dvd.dvd.mul_left ho.add_one.two_dvd _
+
 theorem AP_sum (a d N : ℕ) :
     (Finset.range N).sum (arith_prog a d) =
     N * a + d * N * (N - 1) / 2 := by
   induction N with
   | zero => simp
   | succ n ih =>
+    have h1 : 2 ∣ n * (n + 1) := triangular_two_dvd n
     simp [Finset.sum_range_succ, ih]
-    unfold arith_prog; omega
+    unfold arith_prog
+    have h2 : d * n * (n - 1 + 1) = d * (n * (n - 1 + 1)) := by ring
+    omega
 
 theorem primes_in_AP_1_4 :
     ∃ p : ℕ, Nat.Prime p ∧ p % 4 = 1 :=
@@ -259,11 +263,16 @@ noncomputable def triangular (n : ℕ) : ℕ :=
 
 theorem triangular_formula (n : ℕ) :
     2 * triangular n = n * (n + 1) := by
-  unfold triangular; omega
+  unfold triangular
+  have h := triangular_two_dvd n
+  omega
 
 theorem triangular_succ (n : ℕ) :
     triangular (n+1) = triangular n + (n+1) := by
-  unfold triangular; omega
+  have h1 := triangular_two_dvd n
+  have h2 := triangular_two_dvd (n+1)
+  unfold triangular at *
+  omega
 
 -- ============================================================
 -- SECTION 8: SOURCE NODE 98 AND DOMAIN PRIMES
@@ -314,10 +323,6 @@ theorem domain_count_factored :
     Fintype.card Domain21 = 3 * 7 := by
   native_decide
 
--- `.toCtorIdx` is not a real auto-generated field for Lean 4 inductive
--- types (confirmed nonexistent — this same field already failed
--- identically in SetTheory.lean earlier this session). Replaced with an
--- explicit rank function, defined by direct pattern match.
 private def domain_rank : Domain21 → ℕ
   | .A_Energy => 0 | .B_Control => 1 | .C_Thermal => 2 | .D_Structural => 3
   | .E_Boundary => 4 | .F_Diagnostics => 5 | .G_Governance => 6
