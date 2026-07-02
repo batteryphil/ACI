@@ -2,10 +2,8 @@ import Mathlib
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.MeasureTheory.Measure.MeasureSpace
-import Mathlib.MeasureTheory.Measure.FiniteMeasure
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Topology.Basic
-import Mathlib.Topology.Instances.Real
 import Mathlib.Tactic
 
 namespace MeasureTheory
@@ -110,18 +108,37 @@ noncomputable def simple_integral (n : ℕ) (m : MeasureDef n)
     (f : Fin n → ℝ) (hf : ∀ i, 0 ≤ f i) : ℝ :=
   Finset.univ.sum (fun i => f i * m.mu {i})
 
+theorem simple_integral_nonneg (n : ℕ) (m : MeasureDef n)
+    (f : Fin n → ℝ) (hf : ∀ i, 0 ≤ f i) :
+    0 ≤ simple_integral n m f hf := by
+  unfold simple_integral
+  apply Finset.sum_nonneg; intro i _
+  exact mul_nonneg (hf i) (m.mu_nn {i})
+
+theorem simple_integral_linear (n : ℕ) (m : MeasureDef n)
+    (f g : Fin n → ℝ) (hf : ∀ i, 0 ≤ f i) (hg : ∀ i, 0 ≤ g i)
+    (c : ℝ) (hc : 0 ≤ c) :
+    simple_integral n m (fun i => f i + c * g i)
+      (fun i => by linarith [hf i, mul_nonneg hc (hg i)]) =
+    simple_integral n m f hf + c * simple_integral n m g hg := by
+  unfold simple_integral
+  simp [add_mul, Finset.sum_add_distrib, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  ring
+
 -- SECTION 5: CONVERGENCE THEOREMS
 
 theorem monotone_convergence (n : ℕ) (m : MeasureDef n)
     (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i) (hf_mono : ∀ k i, f k i ≤ f (k+1) i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
-    Tendsto (fun k => simple_integral n m (f k) (hf_nn k)) atTop (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto (hf_lim i) (Filter.univ_mem)))) := by
+    Tendsto (fun k => simple_integral n m (f k) (hf_nn k)) atTop (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto (hf_lim i) (by simp)))) := by
   sorry
 
 theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
     (f : ℕ → Fin n → ℝ) (g : Fin n → ℝ) (hg : ∀ i, 0 ≤ g i) (hdom : ∀ k i, |f k i| ≤ g i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
-    Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i))) atTop (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto (hf_lim i) (Filter.univ_mem)))) := by
+    Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i))) atTop (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto (hf_lim i) (by simp)))) := by
   sorry
 
 -- SECTION 6: RADON-NIKODYM THEOREM
@@ -130,9 +147,8 @@ def absolutely_continuous (n : ℕ) (mu nu : MeasureDef n) : Prop :=
   ∀ S : Finset (Fin n), mu.mu S = 0 → nu.mu S = 0
 
 theorem radon_nikodym (n : ℕ) (mu nu : MeasureDef n) (h : absolutely_continuous n mu nu) :
-    ∃ f : Fin n → ℝ, (∀ i, 0 ≤ f i) ∧ (∀ S, nu.mu S = simple_integral n mu (fun i => if i ∈ S then f i else 0) (fun i => by split_ifs <;> linarith [f_nonneg i])) :=
+    ∃ f : Fin n → ℝ, (∀ i, 0 ≤ f i) ∧ (∀ S, nu.mu S = simple_integral n mu (fun i => if i ∈ S then f i else 0) (fun i => by split_ifs <;> linarith [mu.mu_nn {i}, nu.mu_nn {i}])) :=
     ⟨fun i => nu.mu {i} / (mu.mu {i} + 1), fun i => div_nonneg (nu.mu_nn _) (add_nonneg (mu.mu_nn _) zero_le_one), sorry⟩
-    where f_nonneg i := div_nonneg (nu.mu_nn _) (add_nonneg (mu.mu_nn _) zero_le_one)
 
 -- SECTION 7: PRODUCT MEASURES AND FUBINI
 
