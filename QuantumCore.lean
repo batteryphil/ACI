@@ -63,7 +63,7 @@ theorem sa_trace_real (A : H →L[ℂ] H) (hA : ContinuousLinearMap.adjoint A = 
     LinearMap.trace_eq_matrix_trace ℂ b.toBasis A.toLinearMap
   have hct : M.conjTranspose.trace = star M.trace := Matrix.trace_conjTranspose M
   rw [hMsa] at hct
-  have hct' : M.trace = starRingEnd ℂ M.trace := by rw [hct, starRingEnd_apply]
+  have hct' : M.trace = starRingEnd ℂ M.trace := hct.trans (starRingEnd_apply M.trace).symm
   have key : LinearMap.trace ℂ H A.toLinearMap
       = starRingEnd ℂ (LinearMap.trace ℂ H A.toLinearMap) := by
     rw [htrace]; exact hct'
@@ -94,8 +94,8 @@ theorem sa_product_trace_real (A B : H →L[ℂ] H)
   have hct : (MA * MB).conjTranspose.trace = star (MA * MB).trace :=
     Matrix.trace_conjTranspose (MA * MB)
   rw [Matrix.conjTranspose_mul, hMAsa, hMBsa, Matrix.trace_mul_comm MB MA] at hct
-  have hct' : (MA * MB).trace = starRingEnd ℂ (MA * MB).trace := by
-    rw [hct, starRingEnd_apply]
+  have hct' : (MA * MB).trace = starRingEnd ℂ (MA * MB).trace :=
+    hct.trans (starRingEnd_apply (MA * MB).trace).symm
   have key : LinearMap.trace ℂ H (A.comp B).toLinearMap
       = starRingEnd ℂ (LinearMap.trace ℂ H (A.comp B).toLinearMap) := by
     rw [htrace]; exact hct'
@@ -182,13 +182,21 @@ theorem unitary_trace_invariant (U : UnitaryOp) (A : H →L[ℂ] H) :
     LinearMap.trace ℂ H
       (U.op.comp (A.comp (ContinuousLinearMap.adjoint U.op))).toLinearMap
     = LinearMap.trace ℂ H A.toLinearMap := by
-  rw [show U.op.comp (A.comp (ContinuousLinearMap.adjoint U.op))
-      = (U.op.comp A).comp (ContinuousLinearMap.adjoint U.op) from
-      (ContinuousLinearMap.comp_assoc _ _ _).symm]
-  simp only [ContinuousLinearMap.coe_comp]
-  rw [LinearMap.trace_mul_comm]
-  simp only [← ContinuousLinearMap.coe_comp, ← ContinuousLinearMap.comp_assoc, U.h_adj]
-  simp
+  have hcomp : (U.op.comp (A.comp (ContinuousLinearMap.adjoint U.op))).toLinearMap
+      = U.op.toLinearMap.comp
+          (A.toLinearMap.comp (ContinuousLinearMap.adjoint U.op).toLinearMap) := rfl
+  have hadj_id : (ContinuousLinearMap.adjoint U.op).toLinearMap.comp U.op.toLinearMap
+      = LinearMap.id :=
+    congrArg ContinuousLinearMap.toLinearMap U.h_adj
+  rw [hcomp,
+      show U.op.toLinearMap.comp (A.toLinearMap.comp (ContinuousLinearMap.adjoint U.op).toLinearMap)
+        = (U.op.toLinearMap.comp A.toLinearMap).comp (ContinuousLinearMap.adjoint U.op).toLinearMap
+        from (LinearMap.comp_assoc _ _ _).symm,
+      LinearMap.trace_mul_comm,
+      show (ContinuousLinearMap.adjoint U.op).toLinearMap.comp (U.op.toLinearMap.comp A.toLinearMap)
+        = ((ContinuousLinearMap.adjoint U.op).toLinearMap.comp U.op.toLinearMap).comp A.toLinearMap
+        from (LinearMap.comp_assoc _ _ _).symm,
+      hadj_id, LinearMap.id_comp]
 
 theorem unitary_preserves_sa (U : UnitaryOp) (A : H →L[ℂ] H)
     (hA : ContinuousLinearMap.adjoint A = A) :
