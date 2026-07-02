@@ -29,7 +29,7 @@ theorem GeometryBounds.mid_in_range (g : GeometryBounds) :
 
 /-!
 ═══════════════════════════════════════════
-## TIER 2: SQUASH MAP — FULLY CLOSED
+## TIER 2: SQUASH MAP
 ═══════════════════════════════════════════
 -/
 
@@ -48,33 +48,45 @@ theorem tanh_abs_lt_one (x : ℝ) : |tanh x| < 1 := by
 
 theorem sin_abs_le_one (x : ℝ) : |sin x| ≤ 1 := abs_sin_le_one x
 
+-- `mul_le_mul_of_nonneg_left` needs the same left factor on both sides of
+-- the goal, but the goal's left factor was `|0.08|*|tanh y|` on one side
+-- and `0.08*1` on the other — not syntactically equal, so `apply` couldn't
+-- unify. Rebuilt with explicit bound facts and `nlinarith`.
 theorem perturbation_bound (y : ℝ) :
     |0.08 * tanh y * sin y| ≤ 0.08 := by
   rw [abs_mul, abs_mul]
-  calc |0.08| * |tanh y| * |sin y|
-      ≤ 0.08 * 1 * 1 := by
-        apply mul_le_mul_of_nonneg_left
-        · exact sin_abs_le_one y
-        · apply mul_nonneg (by norm_num)
-          exact le_of_lt (tanh_abs_lt_one y)
-    _ = 0.08 := by ring
+  have h1 : |(0.08 : ℝ)| = 0.08 := by norm_num
+  have h2 : |tanh y| ≤ 1 := le_of_lt (tanh_abs_lt_one y)
+  have h3 : |sin y| ≤ 1 := sin_abs_le_one y
+  have h2' : 0 ≤ |tanh y| := abs_nonneg _
+  have h3' : 0 ≤ |sin y| := abs_nonneg _
+  rw [h1]
+  nlinarith [mul_le_mul h2 h3 h3' zero_le_one]
 
+-- `abs_add` was reported as an unknown identifier by the compiler itself.
+-- Rebuilt the triangle-inequality step using `abs_cases`, which does not
+-- depend on that name.
 theorem y_prime_bound (y : ℝ) (hy : |y| < 1) :
     |y + 0.08 * tanh y * sin y| < 1.08 := by
-  calc |y + 0.08 * tanh y * sin y|
-      ≤ |y| + |0.08 * tanh y * sin y| := abs_add _ _
-    _ ≤ |y| + 0.08 := add_le_add_left (perturbation_bound y) _
-    _ < 1 + 0.08 := by linarith
-    _ = 1.08 := by norm_num
+  have hb := perturbation_bound y
+  rcases abs_cases (y + 0.08 * tanh y * sin y) with ⟨heq, _⟩ | ⟨heq, _⟩ <;>
+    rcases abs_cases y with ⟨hyeq, _⟩ | ⟨hyeq, _⟩ <;>
+    rcases abs_cases (0.08 * tanh y * sin y) with ⟨hpeq, _⟩ | ⟨hpeq, _⟩ <;>
+    linarith
 
+-- Rebuilt around an explicit algebraic identity proved directly by
+-- unfolding `squash`, instead of relying on `simp [squash]` producing an
+-- exact goal shape for a subsequent `show` to match (which it did not).
 theorem squash_near_mid (g : GeometryBounds) (x : ℝ) :
     |squash g x - g.mid| < 1.08 * (g.span / 2) := by
-  simp [squash]
-  set t := tanh ((x - g.mid) / (g.span / 2))
-  set y' := t + 0.08 * tanh t * sin t
-  show |y' * (g.span / 2)| < 1.08 * (g.span / 2)
-  rw [abs_mul]
-  apply mul_lt_mul_of_pos_right _ (by linarith [g.span_pos])
+  have hspan : 0 < g.span / 2 := by linarith [g.span_pos]
+  set t := tanh ((x - g.mid) / (g.span / 2)) with ht
+  set y' := t + 0.08 * tanh t * sin t with hy'
+  have hval : squash g x - g.mid = y' * (g.span / 2) := by
+    simp only [squash, ← ht, ← hy']
+    ring
+  rw [hval, abs_mul, abs_of_pos hspan]
+  apply mul_lt_mul_of_pos_right _ hspan
   apply y_prime_bound
   exact tanh_abs_lt_one _
 
@@ -125,15 +137,20 @@ noncomputable def mobility (n k : ℕ) (hk : 1 < k)
   (Finset.univ.sum (fun t : Fin (k-1) =>
     Real.sqrt (energy (step_diff n traj t)))) / (k - 1 : ℝ)
 
+-- `(k - 1 : ℝ)` in the definition is REAL subtraction (k is cast to ℝ
+-- first, then 1 is subtracted) — not a cast of ℕ's truncated subtraction.
+-- `Nat.zero_le` proved a fact about the wrong operation entirely; the real
+-- positivity here needs `hk` cast to ℝ.
 theorem mobility_nonneg (n k : ℕ) (hk : 1 < k)
     (traj : Trajectory n k) :
     0 ≤ mobility n k hk traj := by
   apply div_nonneg
   · apply sum_nonneg; intro i _; exact Real.sqrt_nonneg _
-  · exact_mod_cast Nat.zero_le _
+  · have : (1 : ℝ) < (k : ℝ) := by exact_mod_cast hk
+    linarith
 
-theorem mobility_static (n k : ℕ) (hk : 1 < k) (x : Fin n → ℝ) :
-    mobility n k hk (fun _ => x) = 0 := by
+theorem mobility_static (n k : ℕ) (_hk : 1 < k) (x : Fin n → ℝ) :
+    mobility n k _hk (fun _ => x) = 0 := by
   simp [mobility, step_diff, energy]
 
 /-!
@@ -184,15 +201,27 @@ noncomputable def awm_trajectory (p : AWMParams n)
   | 0     => s0
   | k + 1 => awm_step p (awm_trajectory p s0 k)
 
+-- `sum_le_card_nsmul`'s conclusion is stated with `nsmul` (`•`), not
+-- multiplication, so `apply` could not unify it against the goal's `n * bound`.
+-- Bridged explicitly via `Fintype.card_fin` and `nsmul_eq_mul`.
 theorem awm_energy_bounded (p : AWMParams n) (s : AWMState n) :
     energy (awm_step p s).x ≤
     n * (1.08 * (p.geo.span / 2) + |p.geo.mid|) ^ 2 := by
-  simp [energy, awm_step]
-  apply sum_le_card_nsmul
-  intro i _
-  apply sq_le_sq'
-  · linarith [squash_near_mid p.geo _, abs_nonneg (p.geo.mid)]
-  · linarith [squash_near_mid p.geo _, abs_nonneg (p.geo.mid)]
+  simp only [energy, awm_step]
+  have hbound : ∀ i ∈ Finset.univ,
+      (squash p.geo
+        (p.alpha i * s.x i + p.beta i * sin (s.x i) + p.gamma i * tanh (s.x i))) ^ 2
+        ≤ (1.08 * (p.geo.span / 2) + |p.geo.mid|) ^ 2 := by
+    intro i _
+    apply sq_le_sq'
+    · linarith [squash_near_mid p.geo
+        (p.alpha i * s.x i + p.beta i * sin (s.x i) + p.gamma i * tanh (s.x i)),
+        abs_nonneg (p.geo.mid)]
+    · linarith [squash_near_mid p.geo
+        (p.alpha i * s.x i + p.beta i * sin (s.x i) + p.gamma i * tanh (s.x i)),
+        abs_nonneg (p.geo.mid)]
+  have hsum := Finset.sum_le_card_nsmul Finset.univ _ _ hbound
+  rwa [Finset.card_univ, Fintype.card_fin, nsmul_eq_mul] at hsum
 
 /-!
 ═══════════════════════════════════════════
