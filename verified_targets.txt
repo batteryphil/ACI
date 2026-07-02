@@ -13,6 +13,7 @@ Manifold21
 Matrix7
 MoruzinLaw
 N7Spine
+Optimus7
 PhysicsCore
 PrimeMasterEngine
 QuantumCore

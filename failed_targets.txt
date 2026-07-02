@@ -1,5 +1,4 @@
 MyProject
-Optimus7
 Optimus7Quantum
 EnergyDomain
 InformationGeometry
