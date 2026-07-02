@@ -25,8 +25,6 @@ theorem fisher_trace_pos (F : FisherMetric2D) :
 theorem fisher_cauchy_schwarz (F : FisherMetric2D) :
     F.I01 ^ 2 ≤ F.I00 * F.I11 := by linarith [F.psd]
 
--- Natural gradient: F⁻¹ ∇L
--- In 2D: ng = F⁻¹ g where det(F) > 0
 noncomputable def natural_gradient (F : FisherMetric2D)
     (g0 g1 : ℝ)
     (hdet : 0 < F.I00 * F.I11 - F.I01 ^ 2) : ℝ × ℝ :=
@@ -54,7 +52,6 @@ theorem cramer_rao_variance_pos (v f : ℝ)
 theorem cramer_rao_efficiency_bound (v f : ℝ)
     (h : cramer_rao_satisfied v f) : f ≤ v := h.2
 
--- Efficiency: e = (1/I) / Var ≤ 1
 noncomputable def statistical_efficiency (variance inv_fisher : ℝ)
     (hv : 0 < variance) : ℝ :=
   inv_fisher / variance
@@ -63,7 +60,7 @@ theorem efficiency_le_one (v f : ℝ) (hv : 0 < v)
     (h : cramer_rao_satisfied v f) :
     statistical_efficiency v f hv ≤ 1 := by
   unfold statistical_efficiency
-  exact div_le_one_of_le h.2 hv.le
+  exact div_le_one_of_le₀ h.2 hv.le
 
 theorem efficiency_pos (v f : ℝ) (hv : 0 < v)
     (h : cramer_rao_satisfied v f) :
@@ -75,10 +72,6 @@ theorem efficiency_pos (v f : ℝ) (hv : 0 < v)
 -- KL(p||q) ≥ 0, = 0 iff p = q
 -- ============================================================
 
--- Score function: ∂/∂θ log p
--- Fisher = E[score²] = -E[∂²/∂θ² log p]
-
--- KL divergence lower bound via Pinsker
 def pinsker_bound (kl_div tv_sq_half : ℝ) : Prop :=
   tv_sq_half ≤ kl_div
 
@@ -89,16 +82,14 @@ theorem kl_nonneg_from_pinsker (kl tv : ℝ)
   have : 0 ≤ tv ^ 2 / 2 := by positivity
   linarith [h]
 
--- Mutual information I(X;Y) = H(X) - H(X|Y)
 noncomputable def mutual_information (H_X H_X_given_Y : ℝ) : ℝ :=
   H_X - H_X_given_Y
 
-theorem mutual_info_nonneg (H_X H_XY : ℝ)
+theorem mutual_info_nonneg (H_X H_X_given_Y : ℝ)
     (h : H_X_given_Y ≤ H_X) :
     0 ≤ mutual_information H_X H_X_given_Y := by
   unfold mutual_information; linarith
 
--- Data processing inequality: I(X;Y) ≥ I(X;f(Y))
 theorem data_processing (I_XY I_Xf : ℝ)
     (h : I_Xf ≤ I_XY) : I_Xf ≤ I_XY := h
 
@@ -115,13 +106,9 @@ structure StatisticalManifold where
 theorem manifold_dim_pos (M : StatisticalManifold) :
     0 < M.dim := M.dim_pos
 
--- Geodesic distance lower bound (from Fisher metric)
--- d(p,q)² ≥ 0 always
 theorem geodesic_distance_nonneg (d : ℝ) (hd : 0 ≤ d) :
     0 ≤ d ^ 2 := sq_nonneg d
 
--- Amari α-connection: α = 1 (exponential), α = -1 (mixture)
--- For α = 0: Levi-Civita connection (Riemannian)
 def alpha_connection (alpha : ℝ) : Prop :=
   alpha = 1 ∨ alpha = 0 ∨ alpha = -1
 
@@ -129,9 +116,6 @@ theorem e_connection_valid : alpha_connection 1 := Or.inl rfl
 theorem m_connection_valid : alpha_connection (-1) := Or.inr (Or.inr rfl)
 theorem lc_connection_valid : alpha_connection 0 := Or.inr (Or.inl rfl)
 
--- Pythagorean theorem in information geometry
--- For e-flat P and m-flat Q through R:
--- KL(p||q) = KL(p||r) + KL(r||q)
 theorem info_pythagorean (D_pq D_pr D_rq : ℝ)
     (hpr : 0 ≤ D_pr) (hrq : 0 ≤ D_rq)
     (h : D_pq = D_pr + D_rq) :
@@ -143,25 +127,25 @@ theorem info_pythagorean (D_pq D_pr D_rq : ℝ)
 -- ============================================================
 
 structure ExponentialFamily where
-  log_partition : ℝ → ℝ   -- A(θ): log partition function
+  log_partition : ℝ → ℝ
   convex_A : ∀ θ₁ θ₂ t : ℝ, 0 ≤ t → t ≤ 1 →
     log_partition (t * θ₁ + (1-t) * θ₂) ≤
     t * log_partition θ₁ + (1-t) * log_partition θ₂
 
--- Mean parameter: μ = ∂A/∂θ (convexity gives this)
 theorem log_partition_convex (E : ExponentialFamily)
     (θ₁ θ₂ t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
     E.log_partition (t * θ₁ + (1-t) * θ₂) ≤
     t * E.log_partition θ₁ + (1-t) * E.log_partition θ₂ :=
   E.convex_A θ₁ θ₂ t ht0 ht1
 
--- Fisher = ∂²A/∂θ² ≥ 0 (from convexity of A)
 theorem fisher_from_convexity (E : ExponentialFamily)
     (θ eps : ℝ) (heps : 0 < eps) :
     0 ≤ E.log_partition (θ + eps) + E.log_partition (θ - eps) -
         2 * E.log_partition θ := by
   have h := E.convex_A (θ + eps) (θ - eps) (1/2) (by norm_num) (by norm_num)
-  simp at h; linarith
+  have heq : (1:ℝ)/2 * (θ + eps) + (1 - 1/2) * (θ - eps) = θ := by ring
+  rw [heq] at h
+  linarith
 
 -- ============================================================
 -- SECTION 6: AWM INFORMATION GEOMETRY BRIDGE
@@ -177,7 +161,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Each domain has an associated Fisher information
+instance : Nonempty Domain21 := ⟨Domain21.A_Energy⟩
+
 structure DomainFisher where
   fisher : Domain21 → ℝ
   fisher_pos : ∀ d, 0 < fisher d
@@ -185,7 +170,6 @@ structure DomainFisher where
 theorem domain_fisher_all_positive (df : DomainFisher) :
     ∀ d : Domain21, 0 < df.fisher d := df.fisher_pos
 
--- Information-geometric closure: all Fisher values bounded below
 noncomputable def info_closure_margin (df : DomainFisher) : ℝ :=
   Finset.univ.inf' Finset.univ_nonempty df.fisher
 
@@ -195,7 +179,6 @@ theorem info_closure_pos (df : DomainFisher) :
   apply Finset.lt_inf'_iff.mpr
   intro d _; exact df.fisher_pos d
 
--- Natural gradient descent preserves domain information structure
 theorem natural_grad_domain_invariant (df : DomainFisher)
     (gradients : Domain21 → ℝ) (d : Domain21) :
     ∃ ng : ℝ, ng = gradients d / df.fisher d := by
@@ -224,6 +207,6 @@ def IGLock : InformationGeometryLock where
   info_closure  := info_closure_pos
   e_conn        := e_connection_valid
   m_conn        := m_connection_valid
-  pythagorean   := fun D_pq D_pr D_rq hpr _ h => info_pythagorean D_pq D_pr D_rq hpr (by linarith [h]) h
+  pythagorean   := fun D_pq D_pr D_rq hpr hrq h => info_pythagorean D_pq D_pr D_rq hpr hrq h
 
 end InformationGeometry
