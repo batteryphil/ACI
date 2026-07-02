@@ -5,6 +5,7 @@ AWM21
 AWMCore
 AntaresCategory
 BioinformaticsTheory
+EnergyDomain
 FSI
 Governor
 LinearAlgebra

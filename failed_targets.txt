@@ -1,5 +1,4 @@
 MyProject
-EnergyDomain
 InformationGeometry
 NumberTheoryCore
 StochasticDifferentialEquations
