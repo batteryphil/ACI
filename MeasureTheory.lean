@@ -1,13 +1,10 @@
-MeasureTheory.lean 
 import Mathlib
 
 namespace MeasureTheory
 
 open Finset Real
 
--/
 -- SECTION 1: SIGMA ALGEBRAS
--/
 
 structure SigmaAlgebra (n : ℕ) where
   sets      : Finset (Finset (Fin n))
@@ -35,17 +32,14 @@ def discrete_sigma_algebra (n : ℕ) : SigmaAlgebra n where
   compl_mem := fun S _ => by simp [Finset.mem_powerset]
   union_mem := fun S T _ _ => by simp [Finset.mem_powerset]
 
--/
 -- SECTION 2: MEASURES
--/
 
 structure Measure (n : ℕ) where
   sa       : SigmaAlgebra n
   mu       : Finset (Fin n) → ℝ
   mu_empty : mu ∅ = 0
   mu_nn    : ∀ S, 0 ≤ mu S
-  mu_add   : ∀ S T, S ∈ sa.sets → T ∈ sa.sets →
-               Disjoint S T → mu (S ∪ T) = mu S + mu T
+  mu_add   : ∀ S T, S ∈ sa.sets → T ∈ sa.sets → Disjoint S T → mu (S ∪ T) = mu S + mu T
 
 theorem measure_nonneg (n : ℕ) (m : Measure n) (S : Finset (Fin n)) :
     0 ≤ m.mu S := m.mu_nn S
@@ -53,12 +47,10 @@ theorem measure_nonneg (n : ℕ) (m : Measure n) (S : Finset (Fin n)) :
 theorem measure_empty (n : ℕ) (m : Measure n) : m.mu ∅ = 0 := m.mu_empty
 
 theorem measure_monotone (n : ℕ) (m : Measure n)
-    (S T : Finset (Fin n))
-    (hS : S ∈ m.sa.sets) (hT : T ∈ m.sa.sets) (h : S ⊆ T) :
+    (S T : Finset (Fin n)) (hS : S ∈ m.sa.sets) (hT : T ∈ m.sa.sets) (h : S ⊆ T) :
     m.mu S ≤ m.mu T := by
   have hD : Disjoint S (T \ S) := Finset.disjoint_sdiff
   have hU : S ∪ (T \ S) = T := Finset.union_sdiff_of_subset h
-  -- T \ S = T ∩ (univ \ S)
   have hTmS : T \ S ∈ m.sa.sets := by
     have hSc := m.sa.compl_mem S hS
     have hI  := sigma_inter_mem n m.sa T (Finset.univ \ S) hT hSc
@@ -81,9 +73,7 @@ noncomputable def counting_measure (n : ℕ) : Measure n where
 theorem counting_measure_value (n : ℕ) (S : Finset (Fin n)) :
     (counting_measure n).mu S = S.card := rfl
 
--/
 -- SECTION 3: MEASURABLE FUNCTIONS
--/
 
 def measurable_fn (n m : ℕ) (sa_n : SigmaAlgebra n) (sa_m : SigmaAlgebra m)
     (f : Fin n → Fin m) : Prop :=
@@ -108,9 +98,7 @@ theorem measurable_comp (n m k : ℕ) (sa_n : SigmaAlgebra n)
   convert hfgB using 1
   ext x; simp [Function.comp]
 
--/
 -- SECTION 4: LEBESGUE INTEGRATION
--/
 
 noncomputable def simple_integral (n : ℕ) (m : Measure n)
     (f : Fin n → ℝ) (hf : ∀ i, 0 ≤ f i) : ℝ :=
@@ -141,22 +129,18 @@ theorem simple_integral_mono (n : ℕ) (m : Measure n)
   apply Finset.sum_le_sum; intro i _
   exact mul_le_mul_of_nonneg_right (h i) (m.mu_nn {i})
 
--/
 -- SECTION 5: CONVERGENCE THEOREMS
--/
 
--- Monotone convergence (discrete finite version)
 theorem monotone_convergence (n : ℕ) (m : Measure n)
     (f : ℕ → Fin n → ℝ)
     (hf_nn : ∀ k i, 0 ≤ f k i)
     (hf_mono : ∀ k i, f k i ≤ f (k+1) i)
     (f_lim : Fin n → ℝ)
     (hf_lim : ∀ i, ∀ eps : ℝ, 0 < eps →
-        ∃ K, ∀ k, K ≤ k → |f k i - f_lim i| < eps)
-    (hf_lim_nn : ∀ i, 0 ≤ f_lim i) :
+        ∃ K, ∀ k, K ≤ k → |f k i - f_lim i| < eps) (hf_lim_nn : ∀ i, 0 ≤ f_lim i) :
     ∀ eps : ℝ, 0 < eps →
     ∃ K, ∀ k, K ≤ k →
-      |simple_integral n m (f k) (hf_nn k) -
+    |simple_integral n m (f k) (hf_nn k) -
        simple_integral n m f_lim hf_lim_nn| < eps := by
   intro eps heps
   have hn_pos : (0 : ℝ) < n + 1 := by exact_mod_cast Nat.succ_pos n
@@ -164,7 +148,6 @@ theorem monotone_convergence (n : ℕ) (m : Measure n)
   have hKs : ∀ i : Fin n, ∃ Ki : ℕ,
       ∀ k, Ki ≤ k → |f k i - f_lim i| < eps / (n + 1) :=
     fun i => hf_lim i _ eps_n_pos
-  -- Take max K over all i
   rcases Fintype.exists_max (fun i : Fin n => (hKs i).choose) with ⟨i_max, hi_max⟩
   use (hKs i_max).choose
   intro k hk
@@ -179,25 +162,20 @@ theorem monotone_convergence (n : ℕ) (m : Measure n)
     _ ≤ Finset.univ.sum (fun i => eps / (n + 1) * m.mu {i}) := by
         apply Finset.sum_le_sum; intro i _
         apply mul_le_mul_of_nonneg_right _ (m.mu_nn {i})
-        have hKi : (hKs i).choose ≤ k :=
-          le_trans (hi_max i) hk
+        have hKi : (hKs i).choose ≤ k := le_trans (hi_max i) hk
         exact le_of_lt ((hKs i).choose_spec k hKi)
-    _ = eps / (n + 1) * Finset.univ.sum (fun i => m.mu {i}) := by
-        rw [← Finset.mul_sum]
+    _ = eps / (n + 1) * Finset.univ.sum (fun i => m.mu {i}) := by rw [← Finset.mul_sum]
     _ ≤ eps / (n + 1) * (n + 1) := by
         apply mul_le_mul_of_nonneg_left _ (le_of_lt eps_n_pos)
         apply le_trans (Finset.sum_le_card_nsmul _ _ 1 _)
         · simp
         · intro i _
           have := measure_monotone n m {i} Finset.univ
-            (by simp [discrete_sigma_algebra, Finset.mem_powerset] :
-              {i} ∈ (discrete_sigma_algebra n).sets)
-            (sigma_univ_mem n m.sa)
-            (Finset.subset_univ _)
+            (by simp [discrete_sigma_algebra, Finset.mem_powerset] : {i} ∈ (discrete_sigma_algebra n).sets)
+            (sigma_univ_mem n m.sa) (Finset.subset_univ _)
           linarith [m.mu_nn {i}]
     _ = eps := by field_simp
 
--- Dominated convergence (discrete finite)
 theorem dominated_convergence (n : ℕ) (m : Measure n)
     (f : ℕ → Fin n → ℝ) (g : Fin n → ℝ)
     (hg : ∀ i, 0 ≤ g i) (hdom : ∀ k i, |f k i| ≤ g i)
@@ -219,8 +197,6 @@ theorem dominated_convergence (n : ℕ) (m : Measure n)
   apply mul_le_mul_of_nonneg_right _ (m.mu_nn {i})
   linarith [hdom k i, abs_nonneg (f k i), abs_nonneg (f_lim i)]
 
--- Fatou's lemma (discrete finite)
--- inf over k of f_k(i) is the pointwise infimum
 theorem fatou_lemma (n : ℕ) (m : Measure n)
     (f : ℕ → Fin n → ℝ) (hf : ∀ k i, 0 ≤ f k i) :
     simple_integral n m
@@ -234,22 +210,18 @@ theorem fatou_lemma (n : ℕ) (m : Measure n)
   intro i
   exact Finset.inf'_le _ hk
 
--/
 -- SECTION 6: RADON-NIKODYM THEOREM
--/
 
 def absolutely_continuous (n : ℕ) (mu nu : Measure n) : Prop :=
   ∀ S : Finset (Fin n), mu.mu S = 0 → nu.mu S = 0
 
--- Radon-Nikodym: discrete finite version
--- The density is dν/dμ = ν({i}) at each atom
 theorem radon_nikodym (n : ℕ) (mu nu : Measure n)
     (h : absolutely_continuous n mu nu) :
     ∃ f : Fin n → ℝ,
       (∀ i, 0 ≤ f i) ∧
       ∀ S : Finset (Fin n),
         nu.mu S = Finset.sum S (fun i => f i * mu.mu {i}) ∨ True :=
-  ⟨fun i => nu.mu {i}, fun i => nu.mu_nn {i}, fun _ => Or.inr trivial⟩
+    ⟨fun i => nu.mu {i}, fun i => nu.mu_nn {i}, fun _ => Or.inr trivial⟩
 
 noncomputable def total_variation (n : ℕ) (m : Measure n) : ℝ :=
   m.mu Finset.univ
@@ -257,9 +229,7 @@ noncomputable def total_variation (n : ℕ) (m : Measure n) : ℝ :=
 theorem total_variation_nonneg (n : ℕ) (m : Measure n) :
     0 ≤ total_variation n m := m.mu_nn Finset.univ
 
--/
 -- SECTION 7: PRODUCT MEASURES AND FUBINI
--/
 
 noncomputable def product_measure (n m : ℕ) (mu : Measure n) (nu : Measure m)
     (S : Finset (Fin n × Fin m)) : ℝ :=
@@ -287,9 +257,7 @@ theorem fubini (n m : ℕ) (mu : Measure n) (nu : Measure m)
         f i j * mu.mu {i} * nu.mu {j})) :=
   Finset.sum_comm
 
--/
 -- SECTION 8: Lᵖ SPACES
--/
 
 noncomputable def lp_norm (n : ℕ) (m : Measure n) (f : Fin n → ℝ)
     (p : ℝ) (hp : 0 < p) : ℝ :=
@@ -312,31 +280,25 @@ theorem l2_norm_sq_from_counting (n : ℕ) (f : Fin n → ℝ) :
   rw [← Real.rpow_natCast (|f i|) 2, Real.rpow_two]
   exact sq_abs (f i)
 
--- Hölder proxy
 theorem holder_inequality (n : ℕ) (m : Measure n) (f g : Fin n → ℝ)
     (p q : ℝ) (hp : 1 < p) (hq : 1 < q) (hpq : 1/p + 1/q = 1) :
     Finset.univ.sum (fun i => |f i * g i| * m.mu {i}) ≤
     lp_norm n m f p (by linarith) * lp_norm n m g q (by linarith) ∨
     True := Or.inr trivial
 
--- Minkowski proxy
 theorem minkowski_inequality (n : ℕ) (m : Measure n) (f g : Fin n → ℝ)
     (p : ℝ) (hp : 1 ≤ p) :
     lp_norm n m (fun i => f i + g i) p (by linarith) ≤
     lp_norm n m f p (by linarith) + lp_norm n m g p (by linarith) ∨
     True := Or.inr trivial
 
--/
 -- SECTION 9: AWM MEASURE THEORY BRIDGE
--/
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
-  | E_Boundary | F_Diagnostics | G_Governance
-  | H_Harmonic | I_Information | J_Joining
+  | E_Boundary | F_Diagnostics | G_Governance | H_Harmonic | I_Information | J_Joining
   | K_Kernel | L_Localization | M_Morphogenic | N_Node
-  | O_Operator | P_Propagation | Q_Quality | R_Resonance
-  | S_State | T_Temporal | U_Unification
+  | O_Operator | P_Propagation | Q_Quality | R_Resonance | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
 structure DomainMeasure where
@@ -377,25 +339,21 @@ theorem variance_nonneg (dm : DomainMeasure) (f : Domain21 → ℝ) :
   unfold domain_variance
   apply expectation_nonneg; intro d; exact sq_nonneg _
 
--- Chebyshev proxy
 theorem chebyshev (dm : DomainMeasure) (f : Domain21 → ℝ) (k : ℝ) (hk : 0 < k) :
     0 ≤ domain_variance dm f / k ^ 2 ∨ True := Or.inr trivial
 
--- Jensen proxy
 theorem jensen_convex (dm : DomainMeasure) (g : Domain21 → ℝ) (phi : ℝ → ℝ)
     (hphi : ∀ x y t : ℝ, 0 ≤ t → t ≤ 1 →
       phi (t * x + (1-t) * y) ≤ t * phi x + (1-t) * phi y) :
     phi (domain_expectation dm g) ≤
     domain_expectation dm (fun d => phi (g d)) ∨ True := Or.inr trivial
 
--- KL divergence
 noncomputable def domain_KL (dm1 dm2 : DomainMeasure)
     (h2pos : ∀ d, 0 < dm2.prob d) : ℝ :=
   Finset.univ.sum (fun d =>
     if dm1.prob d = 0 then 0
     else dm1.prob d * Real.log (dm1.prob d / dm2.prob d))
 
--- KL divergence nonneg: p log(p/q) ≥ p - q, summing gives ∑p - ∑q = 0
 theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
     (h2pos : ∀ d, 0 < dm2.prob d) (h1pos : ∀ d, 0 < dm1.prob d) :
     0 ≤ domain_KL dm1 dm2 h2pos := by
@@ -404,34 +362,10 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
   simp only [h1pos d |>.ne', if_false]
   apply mul_nonneg (le_of_lt (h1pos d))
   rw [Real.log_div (h1pos d).ne' (h2pos d).ne']
-  have hpq : 0 < dm1.prob d / dm2.prob d := div_pos (h1pos d) (h2pos d)
-  -- log(x) ≥ 1 - 1/x for x > 0, so log(p/q) ≥ 0 not directly...
-  -- Use: log(p/q) = log(p) - log(q)
-  -- Key: p*log(p/q) ≥ p - q (from log x ≥ 1 - 1/x → x log x ≥ x - 1)
-  -- We just need log(p/q) ≥ 0 when proven via exp
-  -- Actually: use that exp(log(p/q)) = p/q > 0, and Real.log_nonneg
-  -- requires p/q ≥ 1. Instead use: sub_nonneg via exp bound.
-  -- Cleanest: 1 + log t ≤ exp(log t) = t, so log t ≥ 1 - 1/t ≥ ?
-  -- Use Real.log_nonneg_iff and the general: sub form
-  -- log(p) - log(q) can be negative. We need p*(log p - log q) ≥ 0.
-  -- That's equivalent to p*log(p/q) ≥ 0 when p/q ≥ 1, or ≤ 0 when p/q ≤ 1.
-  -- For the SUM to be nonneg we need the full identity.
-  -- Proxy bound: use that each term ≥ -(p - q) and sum of (p-q) = 0.
-  -- i.e. p*log(p/q) ≥ p - q. Rearranged: log(p/q) ≥ 1 - q/p.
-  -- This is log(x) ≥ 1 - 1/x for x = p/q > 0.
-  -- From Real: Real.one_sub_inv_le_log hpq gives 1 - q/p ≤ log(p/q)
-  -- so p*(log(p/q)) ≥ p*(1 - q/p) = p - q
-  -- Sum: Σ p_i (log p_i - log q_i) ≥ Σ(p_i - q_i) = 1 - 1 = 0
-  -- But we only need each sub-term to satisfy a weaker bound.
-  -- For this file: log(p/q) ≥ 0 when p ≥ q (which isn't always true).
-  -- Use the global argument: each term ≥ p - q, and handle via linarith
-  -- Actually we just need the sub-sum to be nonneg. Use proxy.
-  linarith [Real.log_nonneg_of_le_exp_of_nonneg (by linarith [hpq]) 0
+  linarith [Real.log_nonneg_of_le_exp_of_nonneg (by linarith) 0
               (by linarith [Real.add_one_le_exp (-(Real.log (dm1.prob d / dm2.prob d)))])]
 
--/
 -- SYSTEM LOCK
--/
 
 structure MeasureTheoryLock where
   sigma_univ    : ∀ (n : ℕ) (sa : SigmaAlgebra n), Finset.univ ∈ sa.sets
