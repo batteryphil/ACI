@@ -104,7 +104,7 @@ theorem phi_pos : 0 < phi := by
 
 theorem phi_gt_one : 1 < phi := by
   unfold phi
-  rw [lt_div_iff (by norm_num : (0:ℝ) < 2)]
+  rw [lt_div_iff₀ (by norm_num : (0:ℝ) < 2)]
   linarith [Real.sqrt_pos_of_pos (show (0:ℝ) < 5 by norm_num)]
 
 theorem phi_sq : phi ^ 2 = phi + 1 := by
@@ -122,8 +122,10 @@ noncomputable def psi : ℝ := (1 - Real.sqrt 5) / 2
 theorem psi_neg : psi < 0 := by
   unfold psi
   apply div_neg_of_pos_of_neg (by norm_num)
-  linarith [Real.sqrt_lt_sqrt (by norm_num : (0:ℝ) ≤ 1)
-    (by norm_num : (1:ℝ) < 5)]
+  have h : Real.sqrt 1 < Real.sqrt 5 :=
+    Real.sqrt_lt_sqrt (by norm_num : (0:ℝ) ≤ 1) (by norm_num : (1:ℝ) < 5)
+  rw [Real.sqrt_one] at h
+  linarith
 
 theorem phi_plus_psi : phi + psi = 1 := by
   unfold phi psi; ring
@@ -148,9 +150,13 @@ theorem gcd_dvd_both (a b : ℕ) :
 theorem coprime_iff_gcd_one (a b : ℕ) :
     Nat.Coprime a b ↔ Nat.gcd a b = 1 := Iff.rfl
 
+-- The real Wilson's theorem in Mathlib is stated over ZMod p, not as a
+-- direct ℕ % p equation. Rebuilt to match the confirmed-real
+-- ZMod.wilsons_lemma rather than a fabricated Nat-level bridging lemma.
 theorem wilson (p : ℕ) (hp : Nat.Prime p) :
-    (p - 1).factorial % p = p - 1 :=
-  Nat.Prime.factorial_mulInv_atPrime hp
+    ((p - 1).factorial : ZMod p) = -1 := by
+  haveI : Fact (Nat.Prime p) := ⟨hp⟩
+  exact ZMod.wilsons_lemma p
 
 -- ============================================================
 -- SECTION 5: PRIME GAPS AND DISTRIBUTION
@@ -169,17 +175,14 @@ theorem bertrand (n : ℕ) (hn : 0 < n) :
     ∃ p : ℕ, Nat.Prime p ∧ n < p ∧ p ≤ 2 * n :=
   Nat.exists_prime_and_lt_and_le n hn
 
--- Large prime gaps exist: between consecutive
--- composites n!+2, n!+3, ..., n!+n there are no primes
 theorem large_prime_gaps (k : ℕ) (hk : 2 ≤ k) :
     ∃ n : ℕ, ∀ i, 1 ≤ i → i ≤ k →
       ¬Nat.Prime (n + i) := by
   use (k + 1).factorial + 1
   intro i hi1 hik
   have hdvd : (i + 1) ∣ (k + 1).factorial + 1 + i := by
-    have h1 : (i + 1) ∣ (k + 1).factorial := by
-      apply Nat.factorial_dvd_factorial_of_le
-      omega
+    have h1 : (i + 1) ∣ (k + 1).factorial :=
+      Nat.factorial_dvd_factorial (by omega)
     have h2 : (i + 1) ∣ (i + 1) := dvd_refl _
     have : (i + 1) ∣ (k + 1).factorial + (i + 1) :=
       Nat.dvd_add h1 h2
@@ -270,7 +273,7 @@ theorem ninety_eight_factored :
     98 = 2 * 7 ^ 2 := by norm_num
 
 theorem ninety_eight_prime_factors :
-    (98 : ℕ).factors = [2, 7, 7] := by native_decide
+    (98 : ℕ).primeFactorsList = [2, 7, 7] := by native_decide
 
 theorem twenty_one_factored :
     21 = 3 * 7 := by norm_num
@@ -311,9 +314,22 @@ theorem domain_count_factored :
     Fintype.card Domain21 = 3 * 7 := by
   native_decide
 
+-- `.toCtorIdx` is not a real auto-generated field for Lean 4 inductive
+-- types (confirmed nonexistent — this same field already failed
+-- identically in SetTheory.lean earlier this session). Replaced with an
+-- explicit rank function, defined by direct pattern match.
+private def domain_rank : Domain21 → ℕ
+  | .A_Energy => 0 | .B_Control => 1 | .C_Thermal => 2 | .D_Structural => 3
+  | .E_Boundary => 4 | .F_Diagnostics => 5 | .G_Governance => 6
+  | .H_Harmonic => 7 | .I_Information => 8 | .J_Joining => 9
+  | .K_Kernel => 10 | .L_Localization => 11 | .M_Morphogenic => 12
+  | .N_Node => 13 | .O_Operator => 14 | .P_Propagation => 15
+  | .Q_Quality => 16 | .R_Resonance => 17 | .S_State => 18
+  | .T_Temporal => 19 | .U_Unification => 20
+
 noncomputable def domain_fib_index
     (d : Domain21) : ℕ :=
-  fib (d.toCtorIdx + 1)
+  fib (domain_rank d + 1)
 
 theorem domain_fib_positive (d : Domain21) :
     0 < domain_fib_index d := by
@@ -341,7 +357,7 @@ theorem seven_resonant :
   unfold is_core_prime_resonant core_primes; decide
 
 noncomputable def domain_mod7 (d : Domain21) : ℕ :=
-  d.toCtorIdx % 7
+  domain_rank d % 7
 
 theorem domain_mod7_lt (d : Domain21) :
     domain_mod7 d < 7 := by
