@@ -72,7 +72,6 @@ theorem OU_variance_decreases_with_theta
     OU_stationary_variance theta1 sigma := by
   unfold OU_stationary_variance
   gcongr
-  linarith
 
 noncomputable def OU_path_bound
     (X0 theta t : ℝ) : ℝ :=
