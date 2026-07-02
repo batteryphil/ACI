@@ -39,7 +39,6 @@ Combinatorics
 LieTheory
 LogicModelTheory
 AlgebraicGeometry
-SetTheory
 CategoryTheoryAdvanced
 TopologyAdvanced
 ProbabilityTheory
