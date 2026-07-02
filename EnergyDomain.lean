@@ -2,9 +2,7 @@ import Mathlib
 
 namespace EnergyDomain
 
--- ============================================================
 -- 21-DOMAIN ENERGY/SYSTEMS REGISTRY
--- ============================================================
 
 inductive Domain : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -15,6 +13,8 @@ inductive Domain : Type where
   | Q_Quality | R_Resonance | S_State
   | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
+
+instance : Nonempty Domain := ⟨Domain.A_Energy⟩
 
 def all_domains : List Domain := [
   .A_Energy, .B_Control, .C_Thermal, .D_Structural,
@@ -30,9 +30,7 @@ theorem all_domains_nodup : all_domains.Nodup := by decide
 theorem all_domains_complete (d : Domain) : d ∈ all_domains := by
   cases d <;> decide
 
--- ============================================================
 -- DOMAIN PRIORITY
--- ============================================================
 
 def domain_priority : Domain → ℕ
   | .A_Energy      => 1  | .B_Control     => 2
@@ -54,22 +52,17 @@ theorem priority_bounded (d : Domain) : domain_priority d ≤ 21 := by
   cases d <;> decide
 
 theorem priority_injective : Function.Injective domain_priority := by
-  intro a b h
-  cases a <;> cases b <;> simp_all [domain_priority]
+  decide
 
--- ============================================================
 -- SYSTEM CORE
--- ============================================================
 
 structure SystemCore where
   domains    : List Domain
   condition  : Prop
   existence  : domains.length > 0
 
--- ============================================================
 -- MARGIN CLOSURE LAW
 -- M_N7 = minimum margin — system closes iff M_N7 > 0
--- ============================================================
 
 noncomputable def M_N7 (margins : Domain → ℝ) : ℝ :=
   Finset.univ.inf' Finset.univ_nonempty margins
@@ -82,12 +75,10 @@ theorem system_valid (margins : Domain → ℝ)
     (h : M_N7 margins > 0) : ∀ d : Domain, margins d > 0 :=
   (closure_law margins).mp h
 
--- ============================================================
 -- UNIFICATION LAW
--- ============================================================
 
 def U_valid (all_critical no_contradiction
-             g_accept k_close : Bool) : Bool :=
+    g_accept k_close : Bool) : Bool :=
   all_critical && no_contradiction && g_accept && k_close
 
 theorem closure_complete :
@@ -99,14 +90,107 @@ theorem unification_law (g_accept k_close : Bool)
   simp [hg, hk]
 
 -- ============================================================
--- ENERGY DOMAIN AUDIT SEAL
+-- DEI: DYNAMIC ENERGY INTEGRATION LAWS
+-- Formalizes the logical STRUCTURE of the named physical criteria
+-- (Lawson threshold, MHD β-bound, net-power balance, control-timescale
+-- ordering, closed-loop system unification) as real, provable statements
+-- about the inequalities that define each regime. This does not derive
+-- or verify the underlying plasma physics (kinetic theory, MHD stability
+-- analysis, transport PDEs) — only the logical shape of the criteria
+-- as stated: a triple product exceeding a threshold, a ratio staying
+-- inside a bound, one sum dominating another, and a timescale ordering.
 -- ============================================================
+
+-- 1. Lawson criterion: viability holds iff the triple product of density,
+-- temperature, and confinement time meets or exceeds the threshold.
+def LawsonViable (n T τ threshold : ℝ) : Prop :=
+  n * T * τ ≥ threshold
+
+theorem lawson_monotone_n (n n' T τ threshold : ℝ)
+    (hn : n ≤ n') (hT : 0 ≤ T) (hτ : 0 ≤ τ)
+    (h : LawsonViable n T τ threshold) :
+    LawsonViable n' T τ threshold := by
+  unfold LawsonViable at *
+  have : n * T * τ ≤ n' * T * τ := by
+    apply mul_le_mul_of_nonneg_right _ hτ
+    apply mul_le_mul_of_nonneg_right hn hT
+  linarith
+
+-- 2. MHD stability envelope: β must stay within the empirical bound.
+def BetaStable (β βmax : ℝ) : Prop :=
+  0 ≤ β ∧ β ≤ βmax
+
+theorem betaStable_lower (β βmax : ℝ) (h : BetaStable β βmax) : 0 ≤ β := h.1
+theorem betaStable_upper (β βmax : ℝ) (h : BetaStable β βmax) : β ≤ βmax := h.2
+
+theorem betaStable_tighter (β βmax βmax' : ℝ) (hle : βmax ≤ βmax')
+    (h : BetaStable β βmax) : BetaStable β βmax' :=
+  ⟨h.1, le_trans h.2 hle⟩
+
+-- 3. Net power balance: fusion output must dominate all loss channels
+-- combined (bremsstrahlung, transport, edge losses).
+def NetPowerPositive (P_fusion P_brem P_transport P_edge : ℝ) : Prop :=
+  P_fusion ≥ P_brem + P_transport + P_edge
+
+theorem netPower_scales (P_fusion P_brem P_transport P_edge c : ℝ)
+    (hc : 0 ≤ c) (h : NetPowerPositive P_fusion P_brem P_transport P_edge) :
+    NetPowerPositive (c * P_fusion) (c * P_brem) (c * P_transport) (c * P_edge) := by
+  unfold NetPowerPositive at *
+  nlinarith [mul_le_mul_of_nonneg_left h hc]
+
+-- 4. Feedback control: the control loop must act strictly faster than
+-- the instability grows.
+def ControlStable (τ_control γ : ℝ) : Prop :=
+  0 < γ ∧ τ_control < 1 / γ
+
+theorem controlStable_pos (τ_control γ : ℝ) (h : ControlStable τ_control γ) :
+    0 < γ := h.1
+
+theorem controlStable_faster_needed (τ_control τ_control' γ : ℝ)
+    (hτ : τ_control' ≤ τ_control) (h : ControlStable τ_control γ) :
+    ControlStable τ_control' γ :=
+  ⟨h.1, lt_of_le_of_lt hτ h.2⟩
+
+-- 5. System closure: the full loop is unified exactly when every stage
+-- (formation, distribution, stability, control) simultaneously holds.
+structure DEIClosure where
+  n T τ threshold : ℝ
+  β βmax : ℝ
+  P_fusion P_brem P_transport P_edge : ℝ
+  τ_control γ : ℝ
+  lawson_ok  : LawsonViable n T τ threshold
+  beta_ok    : BetaStable β βmax
+  power_ok   : NetPowerPositive P_fusion P_brem P_transport P_edge
+  control_ok : ControlStable τ_control γ
+
+theorem deiClosure_lawson (d : DEIClosure) : LawsonViable d.n d.T d.τ d.threshold :=
+  d.lawson_ok
+
+theorem deiClosure_beta (d : DEIClosure) : BetaStable d.β d.βmax :=
+  d.beta_ok
+
+theorem deiClosure_power (d : DEIClosure) :
+    NetPowerPositive d.P_fusion d.P_brem d.P_transport d.P_edge :=
+  d.power_ok
+
+theorem deiClosure_control (d : DEIClosure) : ControlStable d.τ_control d.γ :=
+  d.control_ok
+
+theorem deiClosure_all (d : DEIClosure) :
+    LawsonViable d.n d.T d.τ d.threshold ∧
+    BetaStable d.β d.βmax ∧
+    NetPowerPositive d.P_fusion d.P_brem d.P_transport d.P_edge ∧
+    ControlStable d.τ_control d.γ :=
+  ⟨d.lawson_ok, d.beta_ok, d.power_ok, d.control_ok⟩
+
+-- ENERGY DOMAIN AUDIT SEAL
 
 structure EnergyAuditVector where
   domain_count      : ℕ
   domains_unique    : Bool
   closure_law_holds : Bool
   unification_valid : Bool
+  dei_defined       : Bool
   sovereign_sealed  : Bool
 
 def EnergyDomain_audit : EnergyAuditVector := {
@@ -114,6 +198,7 @@ def EnergyDomain_audit : EnergyAuditVector := {
   domains_unique    := true
   closure_law_holds := true
   unification_valid := true
+  dei_defined       := true
   sovereign_sealed  := true
 }
 
