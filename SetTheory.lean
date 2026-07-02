@@ -95,7 +95,6 @@ theorem bijective_comp (α β γ : Type*)
     Function.Bijective (g ∘ f) :=
   Function.Bijective.comp hg hf
 
--- Cantor's theorem: |A| < |P(A)|
 theorem cantor (α : Type*)
     (f : α → Set α) :
     ¬Function.Surjective f := by
@@ -112,7 +111,6 @@ theorem cantor (α : Type*)
 -- SECTION 4: ORDINALS AND WELL-ORDERING
 -- ============================================================
 
--- Well-ordering on naturals
 theorem nat_well_order (S : Finset ℕ)
     (hS : S.Nonempty) :
     ∃ m ∈ S, ∀ n ∈ S, m ≤ n :=
@@ -120,7 +118,6 @@ theorem nat_well_order (S : Finset ℕ)
    S.min'_mem hS,
    fun n hn => S.min'_le hS n hn⟩
 
--- Ordinal arithmetic proxy
 def ordinal_add (α β : ℕ) : ℕ := α + β
 
 theorem ordinal_add_assoc (α β γ : ℕ) :
@@ -132,67 +129,62 @@ theorem ordinal_add_zero (α : ℕ) :
     ordinal_add α 0 = α :=
   Nat.add_zero α
 
--- Transfinite induction proxy
+-- `where` clauses create plain local names, not namespaced ones — the
+-- original tried to declare `Nat.rec_aux` via `where`, which isn't valid.
+-- `Nat.strongRecOn` already provides exactly this recursion principle
+-- directly, with no local helper needed.
 theorem transfinite_induction_proxy
     (P : ℕ → Prop)
     (h : ∀ n, (∀ m, m < n → P m) → P n)
     (n : ℕ) : P n :=
-  Nat.rec_aux h n
-  where
-    Nat.rec_aux : (∀ n, (∀ m, m < n → P m) → P n) →
-        ∀ n, P n :=
-      fun h n => Nat.strongRecOn n h
+  Nat.strongRecOn n h
 
 -- ============================================================
 -- SECTION 5: CARDINALS
 -- ============================================================
 
--- Cantor-Bernstein-Schroeder proxy
 theorem CBS_proxy (m n : ℕ)
     (hmn : m ≤ n) (hnm : n ≤ m) :
     m = n := Nat.le_antisymm hmn hnm
 
--- Countability of ℕ × ℕ
+-- The original hand-rolled a Cantor pairing function and tried to close
+-- the goal with `simp at h; omega` — but the goal after destructuring is a
+-- `Prod` equality `(a,b) = (c,d)`, which `omega` cannot prove (it decides
+-- linear arithmetic over ℕ/ℤ, not tuple equality); it would have failed
+-- regardless of the pairing function's actual injectivity. Replaced with
+-- `Encodable.encode`, whose injectivity for `ℕ × ℕ` Mathlib already proves.
 theorem nat_prod_countable :
     ∃ f : ℕ × ℕ → ℕ,
       Function.Injective f :=
-  ⟨fun ⟨m, n⟩ =>
-    (m + n) * (m + n + 1) / 2 + m,
-   fun ⟨a, b⟩ ⟨c, d⟩ h => by
-     simp at h
-     omega⟩
+  ⟨Encodable.encode, Encodable.encode_injective⟩
 
--- Aleph-0 is smallest infinite cardinal proxy
 theorem aleph0_minimal (n : ℕ) :
     n < n + 1 :=
   Nat.lt_succ_self n
 
--- Continuum hypothesis proxy
 theorem CH_proxy :
     (0 : ℕ) ≤ 1 := Nat.zero_le 1
 
--- Power set cardinality
+-- `Nat.pos_pow_of_pos` does not exist in current Mathlib (confirmed absent
+-- via search). `Nat.two_pow_pos` is the real lemma for exactly this case.
 theorem powerset_card_pos (n : ℕ) :
     0 < 2 ^ n :=
-  Nat.pos_pow_of_pos n (by norm_num)
+  Nat.two_pow_pos n
 
 -- ============================================================
 -- SECTION 6: AXIOM OF CHOICE
 -- ============================================================
 
--- Choice function exists for nonempty families
 theorem choice_nonempty (α : Type*)
     (f : ℕ → Finset α)
     (hf : ∀ n, (f n).Nonempty) :
     ∀ n, ∃ x, x ∈ f n :=
   fun n => (hf n).exists_mem
 
--- Zorn's lemma proxy
 theorem zorn_proxy (n : ℕ) :
     ∃ m : ℕ, ∀ k, k ≤ m → k ≤ n :=
   ⟨n, fun k hk => hk⟩
 
--- Well-ordering theorem proxy
 theorem WO_proxy :
     ∀ n m : ℕ, n ≤ m ∨ m ≤ n :=
   Nat.le_or_le
@@ -201,11 +193,9 @@ theorem WO_proxy :
 -- SECTION 7: FORCING AND INDEPENDENCE
 -- ============================================================
 
--- Independence of CH proxy
 theorem CH_independent_proxy :
     True := trivial
 
--- Forcing extension proxy
 def forcing_condition (n : ℕ) : Prop :=
   0 ≤ n
 
@@ -213,7 +203,6 @@ theorem forcing_condition_holds (n : ℕ) :
     forcing_condition n :=
   Nat.zero_le n
 
--- Consistency strength proxy
 theorem consistency_nonneg (n : ℕ) :
     0 ≤ n := Nat.zero_le n
 
@@ -221,7 +210,6 @@ theorem consistency_nonneg (n : ℕ) :
 -- SECTION 8: LARGE CARDINALS
 -- ============================================================
 
--- Inaccessible cardinal proxy
 def is_inaccessible_proxy (κ : ℕ) : Prop :=
   0 < κ ∧ ∀ α < κ, 2 ^ α < κ
 
@@ -229,7 +217,6 @@ theorem omega_not_inaccessible :
     ¬is_inaccessible_proxy 0 := by
   intro h; exact Nat.lt_irrefl 0 h.1
 
--- Measurable cardinal proxy
 def is_measurable_proxy (κ : ℕ) : Prop :=
   κ > 0
 
@@ -237,7 +224,6 @@ theorem one_measurable_proxy :
     is_measurable_proxy 1 := by
   unfold is_measurable_proxy; norm_num
 
--- Woodin cardinal proxy
 def woodin_proxy (κ : ℕ) : Prop :=
   κ > 0
 
@@ -258,36 +244,39 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain set cardinality
 theorem domain_card :
     Fintype.card Domain21 = 21 :=
   by native_decide
 
--- Domain power set size
 theorem domain_powerset_size :
     2 ^ 21 = 2097152 := by norm_num
 
--- Domain well-ordering
-theorem domain_well_ordered :
-    ∃ m : Domain21, ∀ d : Domain21,
-      m.toCtorIdx ≤ d.toCtorIdx :=
-  ⟨Domain21.A_Energy, by
-    intro d; simp [Domain21.toCtorIdx]
-    omega⟩
+-- `.toCtorIdx` is not a real auto-generated field for Lean 4 inductive
+-- types. Replaced with an explicit rank function, defined by direct pattern
+-- match, which is guaranteed to exist and reduce definitionally.
+private def domain_rank : Domain21 → ℕ
+  | .A_Energy => 0 | .B_Control => 1 | .C_Thermal => 2 | .D_Structural => 3
+  | .E_Boundary => 4 | .F_Diagnostics => 5 | .G_Governance => 6
+  | .H_Harmonic => 7 | .I_Information => 8 | .J_Joining => 9
+  | .K_Kernel => 10 | .L_Localization => 11 | .M_Morphogenic => 12
+  | .N_Node => 13 | .O_Operator => 14 | .P_Propagation => 15
+  | .Q_Quality => 16 | .R_Resonance => 17 | .S_State => 18
+  | .T_Temporal => 19 | .U_Unification => 20
 
--- Domain Cantor: no surjection onto power set
+theorem domain_well_ordered :
+    ∃ m : Domain21, ∀ d : Domain21, domain_rank m ≤ domain_rank d :=
+  ⟨Domain21.A_Energy, fun d => Nat.zero_le _⟩
+
 theorem domain_cantor :
     ¬∃ f : Domain21 → Set Domain21,
       Function.Surjective f := by
   intro ⟨f, hf⟩
   exact cantor Domain21 f hf
 
--- Domain cardinal positive
 theorem domain_cardinal_pos :
     0 < Fintype.card Domain21 := by
   rw [domain_card]; norm_num
 
--- AWM forcing condition
 theorem AWM_forcing :
     forcing_condition 21 :=
   forcing_condition_holds 21
@@ -338,3 +327,4 @@ def STLock : SetTheoryLock where
   AWM_forcing    := AWM_forcing
 
 end SetTheory
+
