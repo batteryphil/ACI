@@ -132,7 +132,6 @@ theorem bridge_variance_zero_at_endpoints
     brownian_bridge_variance 0 T hT (le_of_lt hT) = 0 := by
   unfold brownian_bridge_variance; simp
 
--- Fixed: field_simp leaves T * (1 - 1) = 0; ring closes it
 theorem bridge_variance_zero_at_T
     (T : ℝ) (hT : 0 < T) :
     brownian_bridge_variance T T hT (le_refl T) = 0 := by
@@ -316,5 +315,3 @@ def SDESystemLock : SDELock where
                     system_variance_pos sde
 
 end StochasticDifferentialEquations
-
-
