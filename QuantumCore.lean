@@ -74,10 +74,10 @@ theorem proj_spectrum (P : Projector) (v : H) (lam : ℂ)
     · right; linear_combination h
   · exact absurd hv0 hv_ne
 
-noncomputable def meas_prob (ρ : DensityOperator) (P : Projector) : ℝ :=
+noncomputable def meas_prob (ρ : DensityOperator (H := H)) (P : Projector (H := H)) : ℝ :=
   (LinearMap.trace ℂ H (ρ.op.comp P.op).toLinearMap).re
 
-theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
+theorem meas_prob_cyclic (ρ : DensityOperator (H := H)) (P : Projector (H := H)) :
     meas_prob ρ P
     = (LinearMap.trace ℂ H (P.op.comp (ρ.op.comp P.op)).toLinearMap).re := by
   unfold meas_prob
@@ -87,18 +87,20 @@ theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
   simp only [ContinuousLinearMap.coe_comp]
   exact (LinearMap.trace_mul_comm ℂ ρ.op.toLinearMap P.op.toLinearMap).symm
 
-noncomputable def post_meas_op (ρ : DensityOperator) (P : Projector)
+noncomputable def post_meas_op (ρ : DensityOperator (H := H)) (P : Projector (H := H))
     (h_prob : 0 < meas_prob ρ P) : H →L[ℂ] H :=
   (1 / (meas_prob ρ P : ℂ)) • (P.op.comp (ρ.op.comp P.op))
 
-theorem post_meas_sa (ρ : DensityOperator) (P : Projector) (h_prob : 0 < meas_prob ρ P) :
+theorem post_meas_sa (ρ : DensityOperator (H := H)) (P : Projector (H := H))
+    (h_prob : 0 < meas_prob ρ P) :
     ContinuousLinearMap.adjoint (post_meas_op ρ P h_prob) = post_meas_op ρ P h_prob := by
   unfold post_meas_op
   rw [map_smulₛₗ, sa_composition_seal ρ.op P.op ρ.h_sa P.h_sa]
   congr 1
   rw [map_div₀, map_one, Complex.conj_ofReal]
 
-theorem post_meas_pos (ρ : DensityOperator) (P : Projector) (h_prob : 0 < meas_prob ρ P) (v : H) :
+theorem post_meas_pos (ρ : DensityOperator (H := H)) (P : Projector (H := H))
+    (h_prob : 0 < meas_prob ρ P) (v : H) :
     0 ≤ (inner (𝕜 := ℂ) v (post_meas_op ρ P h_prob v)).re := by
   unfold post_meas_op
   simp only [ContinuousLinearMap.smul_apply, inner_smul_right]
@@ -122,7 +124,8 @@ axiom MHD_Stable : Prop
 axiom Unitary_Evolution : Prop
 axiom unitary_of_mhd_stable : MHD_Stable → Unitary_Evolution
 
-noncomputable def unitary_evolve (U : UnitaryOp) (ρ : DensityOperator) : H →L[ℂ] H :=
+noncomputable def unitary_evolve (U : UnitaryOp (H := H)) (ρ : DensityOperator (H := H)) :
+    H →L[ℂ] H :=
   U.op.comp (ρ.op.comp (ContinuousLinearMap.adjoint U.op))
 
 theorem unitary_trace_invariant (U : UnitaryOp) (A : H →L[ℂ] H) :
