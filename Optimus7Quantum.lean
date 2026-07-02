@@ -84,7 +84,7 @@ theorem unitary_norm_one (U : UnitaryOperator (H := H)) (v : H) :
     simpa using hcomp
   have h := ContinuousLinearMap.adjoint_inner_right U.op v (U.op v)
   rw [hid] at h
-  have hre := congrArg Complex.re h
+  have hre := congrArg (RCLike.re (K := ℂ)) h
   rw [inner_self_eq_norm_sq, inner_self_eq_norm_sq] at hre
   nlinarith [norm_nonneg (U.op v), norm_nonneg v]
 
