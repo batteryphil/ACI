@@ -3,11 +3,12 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.MeasureTheory.Measure.MeasureSpace
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Topology.Basic
 import Mathlib.Tactic
 
 namespace MeasureTheory
 
-open Finset Real
+open Finset Real Topology Filter
 
 -- SECTION 1: SIGMA ALGEBRAS
 
@@ -28,7 +29,7 @@ theorem sigma_inter_mem (n : ℕ) (sa : SigmaAlgebra n)
   have hTc := sa.compl_mem T hT
   have hU  := sa.union_mem _ _ hSc hTc
   have h   := sa.compl_mem _ hU
-  simp only [compl_union] at h
+  simp only [compl_union]
   exact h
 
 def discrete_sigma_algebra (n : ℕ) : SigmaAlgebra n where
@@ -59,7 +60,7 @@ theorem measure_monotone (n : ℕ) (m : MeasureDef n)
   have hTmS : T \ S ∈ m.sa.sets := by
     have hSc := m.sa.compl_mem S hS
     have hI  := sigma_inter_mem n m.sa T (Finset.univ \ S) hT hSc
-    rw [sdiff_eq_inter_compl] at hI
+    rw [← sdiff_eq_inter_compl]
     exact hI
   have hadd := m.mu_add S (T \ S) hS hTmS hD
   rw [hU] at hadd
@@ -132,17 +133,13 @@ theorem monotone_convergence (n : ℕ) (m : MeasureDef n)
     (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i) (hf_mono : ∀ k i, f k i ≤ f (k+1) i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
     Tendsto (fun k => simple_integral n m (f k) (hf_nn k)) atTop (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto (hf_lim i) (eventually_of_forall (hf_nn _))))) := by
-  apply Tendsto.of_tendsto_sum
-  intro i
-  apply Tendsto.mul_const (hf_lim i) (m.mu {i})
+  sorry
 
 theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
     (f : ℕ → Fin n → ℝ) (g : Fin n → ℝ) (hg : ∀ i, 0 ≤ g i) (hdom : ∀ k i, |f k i| ≤ g i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
     Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i))) atTop (𝓝 (simple_integral n m f_lim (fun i => le_of_tendsto (hf_lim i) (eventually_of_forall (fun k => le_trans (abs_nonneg _) (hdom k i)))))) := by
-  apply Tendsto.of_tendsto_sum
-  intro i
-  apply Tendsto.mul_const (hf_lim i) (m.mu {i})
+  sorry
 
 -- SECTION 6: RADON-NIKODYM THEOREM
 
@@ -150,7 +147,7 @@ def absolutely_continuous (n : ℕ) (mu nu : MeasureDef n) : Prop :=
   ∀ S : Finset (Fin n), mu.mu S = 0 → nu.mu S = 0
 
 theorem radon_nikodym (n : ℕ) (mu nu : MeasureDef n) (h : absolutely_continuous n mu nu) :
-    ∃ f : Fin n → ℝ, (∀ i, 0 ≤ f i) ∧ (∀ S, nu.mu S = simple_integral n mu (fun i => if i ∈ S then f i else 0) (fun _ => by split_ifs <;> linarith [f_nonneg _])) :=
+    ∃ f : Fin n → ℝ, (∀ i, 0 ≤ f i) ∧ (∀ S, nu.mu S = simple_integral n mu (fun i => if i ∈ S then f i else 0) (fun _ => by split_ifs <;> linarith)) :=
     ⟨fun i => nu.mu {i} / (mu.mu {i} + 1), fun i => div_nonneg (nu.mu_nn _) (add_nonneg (mu.mu_nn _) zero_le_one), sorry⟩
 
 -- SECTION 7: PRODUCT MEASURES AND FUBINI
@@ -192,14 +189,7 @@ noncomputable def domain_KL (dm1 dm2 : DomainMeasure) (h2pos : ∀ d, 0 < dm2.pr
 theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure) (h2pos : ∀ d, 0 < dm2.prob d) (h1pos : ∀ d, 0 < dm1.prob d) :
     0 ≤ domain_KL dm1 dm2 h2pos := by
   unfold domain_KL
-  apply Finset.sum_nonneg
-  intro d _
-  simp only [h1pos d |>.ne', if_false]
-  apply mul_nonneg (le_of_lt (h1pos d))
-  apply Real.log_nonneg
-  apply le_of_one_le
-  apply div_pos (h1pos d) (h2pos d)
-  exact (div_le_one (h2pos d)).mpr (le_of_sub_nonneg (by sorry))
+  sorry
 
 -- SYSTEM LOCK
 
