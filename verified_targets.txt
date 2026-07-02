@@ -6,6 +6,7 @@ AntaresCategory
 BioinformaticsTheory
 FSI
 Governor
+LinearAlgebra
 MC2Engine
 Manifold21
 MoruzinLaw
