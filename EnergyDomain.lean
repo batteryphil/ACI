@@ -101,8 +101,6 @@ theorem unification_law (g_accept k_close : Bool)
 -- inside a bound, one sum dominating another, and a timescale ordering.
 -- ============================================================
 
--- 1. Lawson criterion: viability holds iff the triple product of density,
--- temperature, and confinement time meets or exceeds the threshold.
 def LawsonViable (n T τ threshold : ℝ) : Prop :=
   n * T * τ ≥ threshold
 
@@ -116,7 +114,6 @@ theorem lawson_monotone_n (n n' T τ threshold : ℝ)
     apply mul_le_mul_of_nonneg_right hn hT
   linarith
 
--- 2. MHD stability envelope: β must stay within the empirical bound.
 def BetaStable (β βmax : ℝ) : Prop :=
   0 ≤ β ∧ β ≤ βmax
 
@@ -127,8 +124,6 @@ theorem betaStable_tighter (β βmax βmax' : ℝ) (hle : βmax ≤ βmax')
     (h : BetaStable β βmax) : BetaStable β βmax' :=
   ⟨h.1, le_trans h.2 hle⟩
 
--- 3. Net power balance: fusion output must dominate all loss channels
--- combined (bremsstrahlung, transport, edge losses).
 def NetPowerPositive (P_fusion P_brem P_transport P_edge : ℝ) : Prop :=
   P_fusion ≥ P_brem + P_transport + P_edge
 
@@ -138,8 +133,6 @@ theorem netPower_scales (P_fusion P_brem P_transport P_edge c : ℝ)
   unfold NetPowerPositive at *
   nlinarith [mul_le_mul_of_nonneg_left h hc]
 
--- 4. Feedback control: the control loop must act strictly faster than
--- the instability grows.
 def ControlStable (τ_control γ : ℝ) : Prop :=
   0 < γ ∧ τ_control < 1 / γ
 
@@ -151,13 +144,19 @@ theorem controlStable_faster_needed (τ_control τ_control' γ : ℝ)
     ControlStable τ_control' γ :=
   ⟨h.1, lt_of_le_of_lt hτ h.2⟩
 
--- 5. System closure: the full loop is unified exactly when every stage
--- (formation, distribution, stability, control) simultaneously holds.
 structure DEIClosure where
-  n T τ threshold : ℝ
-  β βmax : ℝ
-  P_fusion P_brem P_transport P_edge : ℝ
-  τ_control γ : ℝ
+  n : ℝ
+  T : ℝ
+  τ : ℝ
+  threshold : ℝ
+  β : ℝ
+  βmax : ℝ
+  P_fusion : ℝ
+  P_brem : ℝ
+  P_transport : ℝ
+  P_edge : ℝ
+  τ_control : ℝ
+  γ : ℝ
   lawson_ok  : LawsonViable n T τ threshold
   beta_ok    : BetaStable β βmax
   power_ok   : NetPowerPositive P_fusion P_brem P_transport P_edge
