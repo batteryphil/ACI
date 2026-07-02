@@ -59,6 +59,7 @@ theorem measure_monotone (n : ℕ) (m : MeasureDef n)
   have hTmS : T \ S ∈ m.sa.sets := by
     have hSc := m.sa.compl_mem S hS
     have hI  := sigma_inter_mem n m.sa T (Finset.univ \ S) hT hSc
+    simp [sdiff_eq] at hI
     exact hI
   have hadd := m.mu_add S (T \ S) hS hTmS hD
   rw [hU] at hadd
@@ -159,7 +160,7 @@ theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
       ∃ K, ∀ k, K ≤ k → |f k i - f_lim i| < eps) :
     ∃ K : ℕ, ∀ k, K ≤ k →
       |simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i)) -
-       simple_integral n m f_lim (fun i => le_of_forall_le_of_dense (fun _ _ => sorry))| ≤
+       simple_integral n m f_lim (fun i => le_refl _)| ≤
       simple_integral n m g hg := by
   sorry
 
@@ -221,7 +222,8 @@ noncomputable def lp_norm (n : ℕ) (m : MeasureDef n) (f : Fin n → ℝ)
 
 theorem lp_norm_nonneg (n : ℕ) (m : MeasureDef n) (f : Fin n → ℝ)
     (p : ℝ) (hp : 0 < p) : 0 ≤ lp_norm n m f p hp := by
-  unfold lp_norm; apply Real.rpow_nonneg; apply Finset.sum_nonneg; intro i _; apply mul_nonneg; apply abs_nonneg; apply m.mu_nn
+  unfold lp_norm; apply Real.rpow_nonneg; apply Finset.sum_nonneg; intro i _; 
+  apply mul_nonneg; apply Real.rpow_nonneg (abs_nonneg _); apply m.mu_nn
 
 theorem l2_norm_sq_from_counting (n : ℕ) (f : Fin n → ℝ) :
     (lp_norm n (counting_measure n) f 2 (by norm_num)) ^ 2 =
@@ -299,10 +301,8 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
   simp only [h1pos d |>.ne', if_false];
   apply mul_nonneg (le_of_lt (h1pos d));
   apply Real.log_nonneg;
-  rw [ge_iff_le];
-  -- Directly compare the log argument to 1 using logarithmic identity properties
-  apply le_of_one_le_div (div_pos (h1pos d) (h2pos d)) -- Corrected logic path
-  sorry 
+  apply le_of_one_le
+  apply div_pos (h1pos d) (h2pos d)
 
 -- SYSTEM LOCK
 
