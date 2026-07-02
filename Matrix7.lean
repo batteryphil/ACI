@@ -23,8 +23,7 @@ theorem trace_unitary_invariance {n : ℕ} (U : UnitaryOperator n) (ρ : Density
 theorem hermitian_preserved {n : ℕ} (U : UnitaryOperator n) (ρ : DensityOperator n) :
     (U.op * ρ.op * star U.op).IsHermitian := by
   unfold Matrix.IsHermitian
-  rw [conjTranspose_mul, conjTranspose_mul, conjTranspose_conjTranspose,
-      Matrix.IsHermitian.eq ρ.is_hermitian, mul_assoc]
+  rw [conjTranspose_mul, conjTranspose_mul, star_star, ρ.is_hermitian, mul_assoc]
 
 theorem hermitian_trace_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ) (hA : A.IsHermitian) :
     (A.trace).im = 0 := by
