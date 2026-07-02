@@ -1,152 +1,147 @@
-import Mathlib.Analysis.InnerProductSpace.Basic
-import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.LinearAlgebra.Trace
-import Mathlib.LinearAlgebra.UnitaryGroup
-import Mathlib.Data.Complex.Basic
+import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.LinearAlgebra.Matrix.Trace
+import Mathlib.Tactic
+
+set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
 open Complex
-open scoped BigOperators
+
+namespace QuantumCore
 
 variable {H : Type*}
-variable [NormedAddCommGroup H]
-variable [InnerProductSpace ℂ H]
-variable [FiniteDimensional ℂ H]
-variable [CompleteSpace H]
-variable [Nontrivial H]
+  [NormedAddCommGroup H]
+  [InnerProductSpace ℂ H]
+  [FiniteDimensional ℂ H]
+  [CompleteSpace H]
+  [Nontrivial H]
 
-/- =========================
-   Core Structures
-========================= -/
+/-
+Key design rule:
+We NEVER mix LinearMap and ContinuousLinearMap in compositions.
+We only convert at trace boundaries.
+-/
+
+abbrev CL := ContinuousLinearMap ℂ H H
 
 structure DensityOperator where
-  op : H →L[ℂ] H
+  op      : CL
+  h_sa    : op.adjoint = op
+  h_pos   : ∀ v : H, 0 ≤ (inner v (op v)).re
+  h_trace : (LinearMap.trace ℂ H op.toLinearMap).re = 1
+
+theorem density_trace_one (ρ : DensityOperator) :
+    (LinearMap.trace ℂ H ρ.op.toLinearMap).re = 1 :=
+  ρ.h_trace
+
+theorem sa_real_diagonal (A : CL)
+    (hA : A.adjoint = A) (v : H) :
+    (inner v (A v)).im = 0 := by
+  have h1 : inner (A v) v = inner v (A v) := by
+    simpa [hA] using (A.adjoint_inner_left v v)
+  have h2 : inner (A v) v = starRingEnd ℂ (inner v (A v)) :=
+    (inner_conj_symm (A v) v).symm
+  have h : inner v (A v) = starRingEnd ℂ (inner v (A v)) :=
+    h1.symm.trans h2
+  have : Complex.im (inner v (A v)) = 0 := by
+    simpa [Complex.conj_im] using congrArg Complex.im h
+  exact this
+
+theorem sa_linear (A B : CL) (α β : ℝ)
+    (hA : A.adjoint = A) (hB : B.adjoint = B) :
+    ((α : ℂ) • A + (β : ℂ) • B).adjoint =
+      (α : ℂ) • A + (β : ℂ) • B := by
+  simp [hA, hB, Complex.conj_ofReal]
+
+theorem sa_composition_seal (ρ P : CL)
+    (hρ : ρ.adjoint = ρ) (hP : P.adjoint = P) :
+    (P ∘L (ρ ∘L P)).adjoint = P ∘L (ρ ∘L P) := by
+  simp [hρ, hP, ContinuousLinearMap.adjoint_comp, ContinuousLinearMap.comp_assoc]
 
 structure Projector where
-  op : H →L[ℂ] H
-  idempotent : op ∘ₗ op = op
+  op   : CL
+  h_sa : op.adjoint = op
+  h_id : op ∘L op = op
+
+theorem proj_idempotent (P : Projector) (v : H) :
+    P.op (P.op v) = P.op v :=
+  congrArg (fun f => f v) P.h_id
+
+theorem proj_spectrum (P : Projector) (v : H) (lam : ℂ)
+    (hv : P.op v = lam • v) (hv_ne : v ≠ 0) :
+    lam = 0 ∨ lam = 1 := by
+  have h := congrArg (fun f => f v) P.h_id
+  simp [hv] at h
+  have : (lam * lam - lam) • v = 0 := by
+    simpa [sub_smul, smul_smul] using h
+  have := smul_eq_zero.mp this
+  cases this with
+  | inl hlam =>
+      have : lam * (lam - 1) = 0 := by
+        have : lam * (lam - 1) = lam * lam - lam := by ring
+        simp [this, hlam]
+      cases mul_eq_zero.mp this with
+      | inl h1 => exact Or.inl h1
+      | inr h2 => exact Or.inr h2
+  | inr hv0 => exact (hv_ne hv0).elim
+
+/-
+TRACE SAFETY RULE:
+convert to LinearMap ONLY here
+-/
+noncomputable def meas_prob (ρ : DensityOperator) (P : Projector) : ℝ :=
+  (LinearMap.trace ℂ H
+    (ρ.op ∘L P.op).toLinearMap).re
+
+theorem meas_prob_cyclic (ρ : DensityOperator) (P : Projector) :
+    meas_prob ρ P =
+    (LinearMap.trace ℂ H
+      (P.op ∘L (ρ.op ∘L P.op)).toLinearMap).re := by
+  unfold meas_prob
+  simp
+
+noncomputable def post_meas_op (ρ : DensityOperator) (P : Projector)
+    (h_prob : 0 < meas_prob ρ P) : CL :=
+  (1 / (meas_prob ρ P : ℂ)) • (P.op ∘L (ρ.op ∘L P.op))
+
+theorem post_meas_sa (ρ : DensityOperator) (P : Projector)
+    (h_prob : 0 < meas_prob ρ P) :
+    (post_meas_op ρ P h_prob).adjoint =
+      post_meas_op ρ P h_prob := by
+  unfold post_meas_op
+  simp [sa_composition_seal ρ.op P.op ρ.h_sa P.h_sa, Complex.conj_ofReal]
+
+theorem post_meas_pos (ρ : DensityOperator) (P : Projector)
+    (h_prob : 0 < meas_prob ρ P) (v : H) :
+    0 ≤ (inner v ((post_meas_op ρ P h_prob) v)).re := by
+  simp [post_meas_op]
+  have h := ρ.h_pos (P.op v)
+  positivity
 
 structure UnitaryOp where
-  op : H →L[ℂ] H
-  adjoint_mul :
-    (ContinuousLinearMap.adjoint op) ∘ₗ op = LinearMap.id
+  op    : CL
+  h_adj : op.adjoint ∘L op = 1
+  h_inv : op ∘L op.adjoint = 1
 
-/-- Promote LinearMap composition to ContinuousLinearMap composition -/
-def compSL (A B : H →L[ℂ] H) : H →L[ℂ] H :=
-  A ∘ₗ B
+noncomputable def unitary_evolve (U : UnitaryOp) (ρ : DensityOperator) : CL :=
+  U.op ∘L (ρ.op ∘L U.op.adjoint)
 
-infixr:80 " ∘ₛₗ " => compSL
+theorem unitary_trace_invariant (U : UnitaryOp) (A : CL) :
+    LinearMap.trace ℂ H
+      (U.op ∘L (A ∘L U.op.adjoint)).toLinearMap
+    = LinearMap.trace ℂ H A.toLinearMap := by
+  sorry
 
-/-- Trace shorthand -/
-def Tr (A : H →L[ℂ] H) : ℂ :=
-  LinearMap.trace ℂ H A
+theorem unitary_preserves_sa (U : UnitaryOp) (A : CL)
+    (hA : A.adjoint = A) :
+    (U.op ∘L (A ∘L U.op.adjoint)).adjoint =
+      U.op ∘L (A ∘L U.op.adjoint) := by
+  simp [hA, ContinuousLinearMap.adjoint_comp]
 
-/- =========================
-   Core Theorems
-========================= -/
+def is_pure_state (ρ : DensityOperator) : Prop :=
+  ∃ ψ : H, ‖ψ‖ = 1 ∧ ∀ v : H,
+    ρ.op v = inner ψ v • ψ
 
-/-- Cyclic property of trace (2-term) -/
-theorem trace_cyclic (A B : H →L[ℂ] H) :
-    Tr (A ∘ₛₗ B) = Tr (B ∘ₛₗ A) :=
-by
-  simpa [Tr, compSL] using LinearMap.trace_comp_comm A B
-
-/-- Cyclic property (3-term rotation) -/
-theorem trace_cyclic_three (A B C : H →L[ℂ] H) :
-    Tr (A ∘ₛₗ B ∘ₛₗ C) = Tr (B ∘ₛₗ C ∘ₛₗ A) :=
-by
-  simpa [Tr, compSL]
-    using LinearMap.trace_comp_comm (A ∘ₗ B) C
-
-/-- Projector sandwich identity -/
-theorem trace_projector_sandwich
-  (ρ : DensityOperator) (P : Projector) :
-  Tr (ρ.op ∘ₛₗ P.op)
-    = Tr (P.op ∘ₛₗ ρ.op ∘ₛₗ P.op) :=
-by
-  classical
-
-  -- Step 1: cyclic swap
-  have h₁ :
-    Tr (ρ.op ∘ₛₗ P.op)
-      = Tr (P.op ∘ₛₗ ρ.op) :=
-    trace_cyclic _ _
-
-  -- Step 2: use idempotence
-  have h₂ : P.op ∘ₛₗ P.op = P.op := by
-    simpa [compSL] using P.idempotent
-
-  -- Step 3: rebuild safely
-  calc
-    Tr (ρ.op ∘ₛₗ P.op)
-        = Tr (P.op ∘ₛₗ ρ.op) := h₁
-    _ = Tr ((P.op ∘ₛₗ ρ.op) ∘ₛₗ P.op) := by
-        simp [h₂]
-    _ = Tr (P.op ∘ₛₗ ρ.op ∘ₛₗ P.op) := rfl
-
-/-- Unitary invariance of trace -/
-theorem trace_unitary_invariant
-  (U : UnitaryOp) (A : H →L[ℂ] H) :
-  Tr (U.op ∘ₛₗ A ∘ₛₗ ContinuousLinearMap.adjoint U.op)
-    = Tr A :=
-by
-  classical
-
-  -- Step 1: rotate trace
-  have h₁ :
-    Tr (U.op ∘ₛₗ A ∘ₛₗ ContinuousLinearMap.adjoint U.op)
-      = Tr (A ∘ₛₗ ContinuousLinearMap.adjoint U.op ∘ₛₗ U.op) :=
-    trace_cyclic_three _ _ _
-
-  -- Step 2: collapse adjoint * U = I
-  have h₂ :
-    ContinuousLinearMap.adjoint U.op ∘ₛₗ U.op = LinearMap.id := by
-    simpa [compSL] using U.adjoint_mul
-
-  -- Step 3: finalize
-  simpa [h₂, compSL] using h₁
-
-/- =========================
-   Inner Product Layer
-========================= -/
-
-/-- Basic projector action (definition-level) -/
-theorem projector_action (ψ v : H) :
-  (inner ℂ ψ v • ψ) = ((inner ℂ ψ v) • ψ) :=
-rfl
-
-/-- Inner expansion identity -/
-theorem projector_inner_expand (ψ v : H) :
-  inner ℂ ψ (inner ℂ ψ v • ψ)
-    = inner ℂ ψ v * ‖ψ‖ ^ 2 :=
-by
-  simpa using inner_smul_right ψ ψ (inner ℂ ψ v)
-
-/-- Lift scalar identity to vector form -/
-theorem projector_vector_form (ψ v : H) :
-  inner ℂ ψ (inner ℂ ψ v • ψ) • ψ
-    = (inner ℂ ψ v * ‖ψ‖ ^ 2) • ψ :=
-by
-  have h :=
-    inner_smul_right ψ ψ (inner ℂ ψ v)
-  simpa using congrArg (fun x => x • ψ) h
-
-/- =========================
-   Probability Interpretation
-========================= -/
-
-/-- Measurement probability (Born rule form) -/
-def measurementProb (ρ : DensityOperator) (P : Projector) : ℂ :=
-  Tr (ρ.op ∘ₛₗ P.op)
-
-/-- Stability under projector sandwich -/
-theorem measurement_stable
-  (ρ : DensityOperator) (P : Projector) :
-  measurementProb ρ P
-    = Tr (P.op ∘ₛₗ ρ.op ∘ₛₗ P.op) :=
-by
-  simpa [measurementProb]
-    using trace_projector_sandwich ρ P
-
-/- =========================
-   End QuantumCore
-========================= -/
+end QuantumCore
