@@ -12,40 +12,45 @@ open Finset Matrix
 theorem vec_add_comm (n : ℕ)
     (u v : Fin n → ℝ) :
     u + v = v + u := by
-  ext i; ring
+  ext i; show u i + v i = v i + u i; ring
 
 theorem vec_add_assoc (n : ℕ)
     (u v w : Fin n → ℝ) :
     u + v + w = u + (v + w) := by
-  ext i; ring
+  ext i; show u i + v i + w i = u i + (v i + w i); ring
 
 theorem vec_zero_add (n : ℕ)
     (v : Fin n → ℝ) :
     (0 : Fin n → ℝ) + v = v := by
-  ext i; ring
+  ext i; show (0 : ℝ) + v i = v i; ring
 
 theorem scalar_distrib (n : ℕ)
     (a b : ℝ) (v : Fin n → ℝ) :
     (a + b) • v = a • v + b • v := by
-  ext i; ring
+  ext i; show (a + b) * v i = a * v i + b * v i; ring
 
 theorem scalar_assoc (n : ℕ)
     (a b : ℝ) (v : Fin n → ℝ) :
     a • (b • v) = (a * b) • v := by
-  ext i; ring
+  ext i; show a * (b * v i) = (a * b) * v i; ring
 
 -- ============================================================
 -- SECTION 2: LINEAR MAPS
 -- ============================================================
 
+-- `a` given an explicit ℝ type annotation — previously untyped, which left
+-- the HSMul instance unresolved as a stuck metavariable.
 def is_linear (n m : ℕ)
     (f : (Fin n → ℝ) → (Fin m → ℝ)) : Prop :=
   (∀ u v, f (u + v) = f u + f v) ∧
-  (∀ a v, f (a • v) = a • f v)
+  (∀ (a : ℝ) v, f (a • v) = a • f v)
 
+-- `unfold is_linear` added before `constructor`, since `constructor` does not
+-- auto-unfold a semireducible def to see the underlying `And`.
 theorem matrix_mul_linear (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
     is_linear n m (fun v => A.mulVec v) := by
+  unfold is_linear
   constructor
   · intro u v; ext i
     simp [Matrix.mulVec, Matrix.dotProduct]
@@ -60,6 +65,7 @@ theorem linear_comp_linear (n m k : ℕ)
     (hf : is_linear n m f)
     (hg : is_linear m k g) :
     is_linear n k (g ∘ f) := by
+  unfold is_linear
   constructor
   · intro u v
     simp [Function.comp,
@@ -102,18 +108,19 @@ theorem matrix_det_mul (n : ℕ)
 -- SECTION 4: EIGENVALUES AND EIGENVECTORS
 -- ============================================================
 
--- Eigenvalue equation: Av = λv
+-- `λ` is Lean's lambda-syntax token, not usable as a plain identifier —
+-- renamed to `lam` throughout this section.
 def is_eigenpair (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
-    (λ : ℝ) (v : Fin n → ℝ) : Prop :=
-  v ≠ 0 ∧ A.mulVec v = λ • v
+    (lam : ℝ) (v : Fin n → ℝ) : Prop :=
+  v ≠ 0 ∧ A.mulVec v = lam • v
 
 theorem eigenpair_scalar (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
-    (λ : ℝ) (v : Fin n → ℝ) (c : ℝ)
+    (lam : ℝ) (v : Fin n → ℝ) (c : ℝ)
     (hc : c ≠ 0)
-    (hev : is_eigenpair n A λ v) :
-    is_eigenpair n A λ (c • v) := by
+    (hev : is_eigenpair n A lam v) :
+    is_eigenpair n A lam (c • v) := by
   constructor
   · intro h
     apply hev.1
@@ -129,26 +136,28 @@ theorem eigenpair_scalar (n : ℕ)
 noncomputable def char_poly_eval
     (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
-    (λ : ℝ) : ℝ :=
-  (A - λ • 1).det
+    (lam : ℝ) : ℝ :=
+  (A - lam • 1).det
 
 theorem char_poly_eigenvalue (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
-    (λ : ℝ) (v : Fin n → ℝ)
-    (hev : is_eigenpair n A λ v) :
-    char_poly_eval n A λ = 0 ∨
-    char_poly_eval n A λ ≠ 0 :=
+    (lam : ℝ) (v : Fin n → ℝ)
+    (hev : is_eigenpair n A lam v) :
+    char_poly_eval n A lam = 0 ∨
+    char_poly_eval n A lam ≠ 0 :=
   em _
 
--- Spectral radius proxy
+-- Spectral radius proxy. `Finset.univ_nonempty` requires `[Nonempty (Fin n)]`,
+-- which cannot be synthesized for a fully generic `n` (n could be 0).
+-- Added `[NeZero n]` as an instance argument on the definition — for concrete
+-- literals like `21` this is automatic; for generic `n`, callers must supply it.
 noncomputable def spectral_radius
-    (n : ℕ)
+    (n : ℕ) [NeZero n]
     (eigenvalues : Fin n → ℝ) : ℝ :=
   Finset.univ.sup' Finset.univ_nonempty
     (fun i => |eigenvalues i|)
 
-theorem spectral_radius_nonneg (n : ℕ)
-    (hn : 0 < n)
+theorem spectral_radius_nonneg (n : ℕ) [NeZero n]
     (eigenvalues : Fin n → ℝ) :
     0 ≤ spectral_radius n eigenvalues := by
   unfold spectral_radius
@@ -199,11 +208,12 @@ theorem gram_schmidt_nonneg (n : ℕ) :
 -- SECTION 6: RANK AND NULLITY
 -- ============================================================
 
--- Rank-nullity theorem
+-- `Submodule` has no `.finrank` field — uses the free function
+-- `Module.finrank R M` applied to the submodule's carrier type instead of
+-- dot notation.
 theorem rank_nullity (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
-    A.rank + (LinearMap.ker
-      (Matrix.toLin' A)).finrank = n := by
+    A.rank + Module.finrank ℝ (LinearMap.ker (Matrix.toLin' A)) = n := by
   have := (A.toLin').finrank_range_add_finrank_ker
   simp [Matrix.rank] at this ⊢
   omega
@@ -213,35 +223,39 @@ theorem rank_nonneg (n m : ℕ)
     0 ≤ A.rank :=
   Nat.zero_le _
 
+-- `A.rank_le_min_height_width` confirmed fabricated (does not exist).
+-- Rebuilt from two independently-justifiable facts: rank ≤ m since rank is
+-- the finrank of a submodule of the m-dimensional codomain, and rank ≤ n via
+-- the rank_nullity theorem proved above (rank = n - nullity ≤ n).
 theorem rank_le_min (n m : ℕ)
     (A : Matrix (Fin m) (Fin n) ℝ) :
-    A.rank ≤ min m n :=
-  A.rank_le_min_height_width
+    A.rank ≤ min m n := by
+  apply le_min
+  · have h := Submodule.finrank_le (LinearMap.range (Matrix.toLin' A))
+    simpa [Matrix.rank] using h
+  · have := rank_nullity n m A
+    omega
 
 -- ============================================================
 -- SECTION 7: SVD AND MATRIX DECOMPOSITIONS
 -- ============================================================
 
--- Singular values nonneg
 theorem singular_values_nonneg (n : ℕ)
     (σ : Fin n → ℝ)
     (hσ : ∀ i, 0 ≤ σ i)
     (i : Fin n) :
     0 ≤ σ i := hσ i
 
--- LU decomposition proxy
 theorem LU_det (n : ℕ)
     (L U : Matrix (Fin n) (Fin n) ℝ) :
     (L * U).det = L.det * U.det :=
   Matrix.det_mul L U
 
--- QR decomposition proxy
 theorem QR_proxy (n : ℕ) :
     ∃ Q R : Matrix (Fin n) (Fin n) ℝ,
       Q * R = Q * R :=
   ⟨1, 1, rfl⟩
 
--- Spectral theorem: symmetric = orthogonally diagonalizable
 theorem spectral_theorem_proxy (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : Aᵀ = A) :
@@ -251,7 +265,6 @@ theorem spectral_theorem_proxy (n : ℕ)
 -- SECTION 8: TENSOR PRODUCTS
 -- ============================================================
 
--- Tensor product dimension
 def tensor_dim (m n : ℕ) : ℕ := m * n
 
 theorem tensor_dim_comm (m n : ℕ) :
@@ -263,7 +276,6 @@ theorem tensor_dim_pos (m n : ℕ)
     0 < tensor_dim m n :=
   Nat.mul_pos hm hn
 
--- Kronecker product trace
 theorem kronecker_trace (m n : ℕ)
     (A : Matrix (Fin m) (Fin m) ℝ)
     (B : Matrix (Fin n) (Fin n) ℝ) :
@@ -284,10 +296,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain state vector
 def domain_state_dim : ℕ := 21
 
--- Domain inner product
 noncomputable def domain_inner
     (u v : Fin 21 → ℝ) : ℝ :=
   standard_inner 21 u v
@@ -297,7 +307,6 @@ theorem domain_inner_nonneg
     0 ≤ domain_inner v v :=
   inner_nonneg 21 v
 
--- Domain matrix
 noncomputable def domain_matrix :
     Matrix (Fin 21) (Fin 21) ℝ :=
   Matrix.diagonal (fun i => (i.val : ℝ) + 1)
@@ -310,27 +319,30 @@ theorem domain_matrix_det_pos :
   intro i _
   positivity
 
--- Domain rank
+-- `native_decide` removed — it compiles to native code, and this goal depends
+-- on `Real.decidableEq`, which is noncomputable (ℝ has no computable
+-- equality). `simp` alone is expected to close the remaining numeral goal
+-- after `Matrix.rank_diagonal`.
 theorem domain_matrix_rank :
     domain_matrix.rank = 21 := by
   unfold domain_matrix
   rw [Matrix.rank_diagonal]
   simp
-  native_decide
 
--- Domain spectral radius
 noncomputable def domain_spectral_radius :
     ℝ :=
   spectral_radius 21
     (fun i => (i.val : ℝ) + 1)
 
+-- Restructured so the numeric fact is fully pinned down first (as an
+-- explicit `have`), then combined — the previous `lt_of_lt_of_le (by norm_num)`
+-- ran `norm_num` against a goal whose middle term was still a metavariable
+-- at that point in elaboration.
 theorem domain_spectral_pos :
     0 < domain_spectral_radius := by
-  unfold domain_spectral_radius
-    spectral_radius
-  apply lt_of_lt_of_le (by norm_num)
-  apply Finset.le_sup'
-  exact Finset.mem_univ ⟨0, by norm_num⟩
+  unfold domain_spectral_radius spectral_radius
+  have h : (0 : ℝ) < |((0 : Fin 21).val : ℝ) + 1| := by norm_num
+  exact lt_of_lt_of_le h (Finset.le_sup' _ (Finset.mem_univ (0 : Fin 21)))
 
 -- ============================================================
 -- SYSTEM LOCK
