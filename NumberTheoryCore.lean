@@ -236,13 +236,11 @@ theorem AP_sum (a d N : ℕ) :
       rcases n with _ | m
       · simp
       · simp only [Nat.succ_sub_one]; ring
+    have ealg2 : (n + 1) * a = n * a + a := by ring
     simp only [Finset.sum_range_succ, ih]
     unfold arith_prog
     simp only [Nat.add_sub_cancel]
-    have key : 2 * (n * a + d * n * (n - 1) / 2 + (a + n * d)) =
-               2 * ((n + 1) * a + d * (n + 1) * n / 2) := by
-      rw [Nat.mul_add, Nat.mul_add, e1, e2, ealg]; ring
-    exact Nat.eq_of_mul_eq_mul_left (by norm_num) key
+    omega
 
 theorem primes_in_AP_1_4 :
     ∃ p : ℕ, Nat.Prime p ∧ p % 4 = 1 :=
@@ -295,9 +293,8 @@ theorem triangular_succ (n : ℕ) :
     triangular (n+1) = triangular n + (n+1) := by
   have h1 := triangular_formula n
   have h2 := triangular_formula (n+1)
-  have key : 2 * triangular (n+1) = 2 * (triangular n + (n+1)) := by
-    rw [h2, Nat.mul_add, h1]; ring
-  exact Nat.eq_of_mul_eq_mul_left (by norm_num) key
+  have hring : (n+1) * (n+1+1) = n * (n+1) + 2 * (n+1) := by ring
+  omega
 
 -- ============================================================
 -- SECTION 8: SOURCE NODE 98 AND DOMAIN PRIMES
