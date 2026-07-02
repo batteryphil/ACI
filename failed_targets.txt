@@ -1,4 +1,3 @@
-Governor
 MyProject
 AWMCore
 Synaptic_Weights
