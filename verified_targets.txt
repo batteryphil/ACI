@@ -5,6 +5,8 @@ AWM21
 AWMCore
 AntaresCategory
 BioinformaticsTheory
+CodingTheory
+CryptographyTheory
 EnergyDomain
 ErgodicTheory
 FSI
