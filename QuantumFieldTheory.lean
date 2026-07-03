@@ -20,9 +20,7 @@ theorem action_linear (n : ℕ)
     action n (fun i => L1 i + c * L2 i) =
     action n L1 + c * action n L2 := by
   unfold action
-  simp [Finset.sum_add_distrib,
-        Finset.mul_sum, mul_add]
-  ring
+  simp [Finset.sum_add_distrib, Finset.mul_sum]
 
 theorem EL_proxy (phi : ℝ → ℝ) :
     ∃ EOM : ℝ → ℝ, True :=
@@ -82,11 +80,6 @@ noncomputable def euclidean_partition
   Finset.univ.sum (fun i =>
     Real.exp (-beta * E i))
 
--- `Fintype.card_pos_iff.mp hn` needs `hn : 0 < Fintype.card (Fin n)`, but
--- the actual `hn` has type `0 < n` — not syntactically identical despite
--- propositional equality (same risk already found and fixed in
--- Thermodynamics). Rebuilt via a direct, unambiguous Finset.Nonempty
--- witness.
 theorem euclidean_Z_pos (n : ℕ)
     (hn : 0 < n) (beta : ℝ)
     (E : Fin n → ℝ) :
@@ -144,16 +137,6 @@ noncomputable def beta_function
     (b0 g : ℝ) : ℝ :=
   -b0 * g ^ 3
 
--- CONFIRMED PRE-EXISTING MATHEMATICAL ERROR (not a proof-tactic bug, the
--- same class of issue found in CodingTheory's hamming_singleton earlier
--- this session): the original hypothesis `g ≠ 0` makes the claim FALSE
--- for negative g — e.g. b0=1, g=-1 gives beta_function = 1 > 0, not < 0.
--- Every downstream call site (asymptotic_freedom_proxy, all domain_*
--- usages) passes g=1>0, so narrowing the hypothesis to 0 < g (the real
--- physics intent — asymptotic freedom for a positive coupling) breaks
--- nothing. The original proof itself was also a broken, non-typechecking
--- chain of dot-notation calls; rebuilt from scratch as a direct,
--- straightforward proof of the corrected, true statement.
 theorem beta_neg_AF (b0 g : ℝ)
     (hb0 : 0 < b0) (hg : 0 < g) :
     beta_function b0 g < 0 := by
