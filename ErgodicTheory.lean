@@ -140,10 +140,14 @@ theorem uniform_max_partition_entropy :
     Real.log 7 := by
   show partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7) _ _ = Real.log 7
   unfold partition_entropy
+  have hcard : (Finset.univ : Finset (Fin 7)).card = 7 := by
+    simp
   have hsum : (univ : Finset (Fin 7)).sum
       (fun _ : Fin 7 => (1:ℝ)/7 * Real.log ((1:ℝ)/7))
-      = 7 * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
-    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+      = (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
+    rw [Finset.sum_const, hcard]
+    show (7:ℕ) • ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) = (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7))
+    rw [nsmul_eq_mul]
     norm_num
   rw [hsum]
   have hlog : Real.log ((1:ℝ)/7) = -Real.log 7 := by
@@ -206,6 +210,7 @@ theorem lyapunov_linear_map
     Real.log |a| := by
   unfold lyapunov_exponent_estimate
   rw [Real.log_pow]
+  show (n:ℝ) * Real.log |a| / n = Real.log |a|
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   field_simp
 
