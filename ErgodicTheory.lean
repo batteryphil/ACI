@@ -55,6 +55,7 @@ theorem time_average_bounded
         Finset.sum_le_sum (fun k _ => hM _)
     _ = M * N := by
         simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        ring
 
 def is_ergodic (T : ℕ → ℕ) (space_avg : ℝ) : Prop :=
   ∀ eps : ℝ, 0 < eps →
@@ -139,12 +140,10 @@ theorem uniform_max_partition_entropy :
     Real.log 7 := by
   show partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7) _ _ = Real.log 7
   unfold partition_entropy
-  have h7 : (7:ℝ) ≠ 0 := by norm_num
   have hlog : Real.log ((1:ℝ)/7) = -Real.log 7 := by
-    rw [Real.log_div one_ne_zero h7, Real.log_one]; ring
+    rw [one_div, Real.log_inv]
   simp only [hlog, Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
-  push_cast
-  ring
+  norm_num
 
 theorem KS_entropy_lower_bound
     (probs : Fin 7 → ℝ)
@@ -202,7 +201,7 @@ theorem lyapunov_linear_map
   unfold lyapunov_exponent_estimate
   rw [Real.log_pow]
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
-  field_simp
+  rw [mul_comm, mul_div_assoc, div_self hnz, mul_one]
 
 theorem stable_manifold_contraction
     (lambda delta0 : ℝ)
