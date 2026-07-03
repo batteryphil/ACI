@@ -119,29 +119,29 @@ noncomputable def simple_integral (n : ℕ) (m : MeasureDef n)
 
 -- SECTION 5: CONVERGENCE THEOREMS
 -- Both theorems below are stated over a finite index set (Fin n), so the
--- real, honest proof is via continuity of finite sums (tendsto_finset_sum)
+-- real, honest proof is via continuity of finite sums (tendsto_finsetSum)
 -- rather than the general measure-theoretic MCT/DCT machinery, which is not
 -- needed here. The hf_mono/hg/hdom hypotheses are kept in the statements to
 -- preserve the intended shape but are genuinely unused in a finite-sum proof.
 
 theorem monotone_convergence (n : ℕ) (m : MeasureDef n)
-    (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i) (hf_mono : ∀ k i, f k i ≤ f (k+1) i)
+    (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i) (_hf_mono : ∀ k i, f k i ≤ f (k+1) i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
     Tendsto (fun k => simple_integral n m (f k) (hf_nn k)) atTop
       (𝓝 (simple_integral n m f_lim (fun i => ge_of_tendsto' (hf_lim i) (fun k => hf_nn k i)))) := by
   unfold simple_integral
-  apply tendsto_finset_sum
+  apply tendsto_finsetSum
   intro i _
   exact (hf_lim i).mul_const (m.mu {i})
 
 theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
-    (f : ℕ → Fin n → ℝ) (g : Fin n → ℝ) (hg : ∀ i, 0 ≤ g i) (hdom : ∀ k i, |f k i| ≤ g i)
+    (f : ℕ → Fin n → ℝ) (g : Fin n → ℝ) (_hg : ∀ i, 0 ≤ g i) (hdom : ∀ k i, |f k i| ≤ g i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
-    Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg _) (hdom k i))) atTop
+    Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg (f k i)) (hdom k i))) atTop
       (𝓝 (simple_integral n m f_lim
-        (fun i => ge_of_tendsto' (hf_lim i) (fun k => le_trans (abs_nonneg _) (hdom k i))))) := by
+        (fun i => ge_of_tendsto' (hf_lim i) (fun k => le_trans (abs_nonneg (f k i)) (hdom k i))))) := by
   unfold simple_integral
-  apply tendsto_finset_sum
+  apply tendsto_finsetSum
   intro i _
   exact (hf_lim i).mul_const (m.mu {i})
 
@@ -164,7 +164,7 @@ noncomputable def product_measure (n m : ℕ) (mu : MeasureDef n) (nu : MeasureD
       if (i, j) ∈ S then mu.mu {i} * nu.mu {j} else 0))
 
 theorem fubini (n m : ℕ) (mu : MeasureDef n) (nu : MeasureDef m)
-    (f : Fin n → Fin m → ℝ) (hf : ∀ i j, 0 ≤ f i j) :
+    (f : Fin n → Fin m → ℝ) (_hf : ∀ i j, 0 ≤ f i j) :
     Finset.univ.sum (fun i : Fin n =>
       Finset.univ.sum (fun j : Fin m => f i j * mu.mu {i} * nu.mu {j})) =
     Finset.univ.sum (fun j : Fin m =>
@@ -173,7 +173,7 @@ theorem fubini (n m : ℕ) (mu : MeasureDef n) (nu : MeasureDef m)
 
 -- SECTION 8: Lᵖ SPACES
 
-noncomputable def lp_norm (n : ℕ) (m : MeasureDef n) (f : Fin n → ℝ) (p : ℝ) (hp : 0 < p) : ℝ :=
+noncomputable def lp_norm (n : ℕ) (m : MeasureDef n) (f : Fin n → ℝ) (p : ℝ) (_hp : 0 < p) : ℝ :=
   (Finset.univ.sum (fun i => |f i| ^ p * m.mu {i})) ^ (1/p)
 
 -- SECTION 9: AWM MEASURE THEORY BRIDGE
@@ -188,7 +188,7 @@ structure DomainMeasure where
   prob_nn  : ∀ d, 0 ≤ prob d
   prob_sum : Finset.univ.sum prob = 1
 
-noncomputable def domain_KL (dm1 dm2 : DomainMeasure) (h2pos : ∀ d, 0 < dm2.prob d) : ℝ :=
+noncomputable def domain_KL (dm1 dm2 : DomainMeasure) (_h2pos : ∀ d, 0 < dm2.prob d) : ℝ :=
   Finset.univ.sum (fun d => if dm1.prob d = 0 then 0 else dm1.prob d * Real.log (dm1.prob d / dm2.prob d))
 
 theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
@@ -227,7 +227,6 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
     have hlogflip : Real.log (dm2.prob d / dm1.prob d) = -Real.log (dm1.prob d / dm2.prob d) := by
       rw [← inv_div, Real.log_inv]
     rw [hlogflip]
-    ring
   rw [hflip] at hsum
   linarith [hsum]
 
