@@ -17,6 +17,7 @@ Matrix7
 MeasureTheory
 MoruzinLaw
 N7Spine
+NoncommutativeGeometry
 NumberTheoryCore
 Optimus7
 Optimus7Quantum
