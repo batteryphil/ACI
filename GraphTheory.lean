@@ -67,7 +67,7 @@ theorem handshaking (n : ℕ) (G : Graph n) :
     rcases lt_trichotomy a b with h | h | h
     · tauto
     · tauto
-    · refine ⟨fun _ => Or.inl (Or.inr ⟨(b, a), ⟨h, rfl, rfl⟩⟩), fun _ => h⟩
+    · refine ⟨fun _ => Or.inl (Or.inr ⟨(b, a), ⟨h, rfl, rfl⟩⟩), fun _ => trivial⟩
   have hd1 : Disjoint E (E.image (fun p => (p.2, p.1))) := by
     rw [Finset.disjoint_left]
     rintro ⟨a, b⟩ ha hb
@@ -136,7 +136,7 @@ def complete_graph (n : ℕ) : Graph n where
   sym := by intro i j; simp [ne_comm]
   irref := by intro i; simp
 
-theorem complete_graph_connected (n : ℕ) (hn : 1 < n) :
+theorem complete_graph_connected (n : ℕ) (_hn : 1 < n) :
     is_connected n (complete_graph n) := by
   intro i j
   by_cases h : i = j
@@ -157,7 +157,7 @@ def is_acyclic (n : ℕ) (G : Graph n) : Prop :=
 def is_tree (n : ℕ) (G : Graph n) : Prop :=
   is_connected n G ∧ is_acyclic n G
 
-theorem tree_edges_proxy (n : ℕ) (hn : 0 < n) :
+theorem tree_edges_proxy (n : ℕ) (_hn : 0 < n) :
     n - 1 ≤ n := Nat.sub_le n 1
 
 theorem prufer_count (n : ℕ) (hn : 2 ≤ n) :
@@ -184,7 +184,7 @@ def is_proper_coloring (n k : ℕ)
     G.adj i j = true → c i ≠ c j
 
 theorem trivial_coloring (n : ℕ)
-    (G : Graph n) (hn : 0 < n) :
+    (G : Graph n) (_hn : 0 < n) :
     is_proper_coloring n n G id := by
   intro i j hadj heq
   have : i = j := heq
@@ -269,8 +269,8 @@ def is_matching (n : ℕ) (G : Graph n)
     ij.2 ≠ kl.1 ∧ ij.2 ≠ kl.2
 
 theorem empty_matching (n : ℕ)
-    (G : Graph n) :
-    is_matching n G ∅ := by
+    (_G : Graph n) :
+    is_matching n _G ∅ := by
   constructor
   · simp
   · simp
@@ -302,7 +302,7 @@ theorem expected_degree_nonneg
   linarith
 
 noncomputable def connectivity_threshold
-    (n : ℕ) (hn : 0 < n) : ℝ :=
+    (n : ℕ) (_hn : 0 < n) : ℝ :=
   Real.log n / n
 
 theorem threshold_pos (n : ℕ) (hn : 1 < n) :
