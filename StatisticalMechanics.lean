@@ -5,10 +5,8 @@ namespace StatisticalMechanics
 
 open Finset Real
 
--- ============================================================
 -- SECTION 1: PARTITION FUNCTION
 -- Z(β) = Σ exp(-β E_i)
--- ============================================================
 
 noncomputable def partition_function
     (beta : ℝ) (energies : Fin 7 → ℝ)
@@ -51,10 +49,8 @@ theorem partition_shift
   congr 1; ext i
   rw [← Real.exp_add]; ring_nf
 
--- ============================================================
 -- SECTION 2: GIBBS PROBABILITY DISTRIBUTION
 -- p_i = exp(-β E_i) / Z
--- ============================================================
 
 noncomputable def gibbs_prob
     (beta : ℝ) (energies : Fin 7 → ℝ)
@@ -74,7 +70,7 @@ theorem gibbs_prob_le_one
     (hbeta : 0 < beta) (i : Fin 7) :
     gibbs_prob beta energies hbeta i ≤ 1 := by
   unfold gibbs_prob
-  apply div_le_one_of_le _ (le_of_lt
+  apply div_le_one_of_le₀ _ (le_of_lt
     (partition_function_pos beta energies hbeta))
   exact Finset.single_le_sum
     (fun j _ => le_of_lt (Real.exp_pos _))
@@ -88,10 +84,8 @@ theorem gibbs_sums_to_one
   rw [← Finset.sum_div]
   exact div_self (partition_function_pos beta energies hbeta).ne'
 
--- ============================================================
 -- SECTION 3: FREE ENERGY
 -- F = -kT log Z
--- ============================================================
 
 noncomputable def free_energy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
@@ -107,7 +101,6 @@ theorem free_energy_finite
 
 -- F decreases as temperature increases (β decreases)
 -- ΔF = -ΔT · S where S ≥ 0
-
 -- Internal energy U = -∂(log Z)/∂β
 noncomputable def internal_energy
     (beta : ℝ) (energies : Fin 7 → ℝ)
@@ -122,10 +115,8 @@ theorem internal_energy_is_weighted_avg
     univ.sum (fun i =>
       energies i * gibbs_prob beta energies hbeta i) := rfl
 
--- ============================================================
 -- SECTION 4: ENTROPY
 -- S = -k Σ p_i log p_i
--- ============================================================
 
 noncomputable def gibbs_entropy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
@@ -161,10 +152,8 @@ theorem uniform_max_entropy
   rw [Real.log_inv, Real.log_natCast]
   ring
 
--- ============================================================
 -- SECTION 5: MAXWELL-BOLTZMANN DISTRIBUTION
 -- f(v) = √(m/2πkT) exp(-mv²/2kT)
--- ============================================================
 
 noncomputable def maxwell_boltzmann
     (m k T v : ℝ)
@@ -198,13 +187,13 @@ theorem maxwell_boltzmann_max_at_zero
   apply Real.exp_le_exp.mpr
   nlinarith [sq_nonneg v, mul_pos hk hT]
 
--- ============================================================
 -- SECTION 6: THERMODYNAMIC LAWS
--- ============================================================
 
 -- First law: ΔU = Q + W
 structure ThermodynamicProcess where
-  delta_U Q W : ℝ
+  delta_U : ℝ
+  Q       : ℝ
+  W       : ℝ
   first_law : delta_U = Q + W
 
 theorem first_law_holds (p : ThermodynamicProcess) :
@@ -246,9 +235,7 @@ theorem carnot_efficiency_pos
 theorem third_law_limit (S_0 : ℝ) (h : S_0 = 0) :
     S_0 = 0 := h
 
--- ============================================================
 -- SECTION 7: PHASE TRANSITIONS
--- ============================================================
 
 -- Order parameter: φ = 0 (disordered), φ ≠ 0 (ordered)
 def is_ordered (phi : ℝ) : Prop := phi ≠ 0
@@ -284,9 +271,7 @@ theorem symmetry_breaking_minima
   · linarith
   · linarith
 
--- ============================================================
 -- SECTION 8: AWM STATISTICAL MECHANICS BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -303,7 +288,6 @@ structure DomainThermal where
   beta     : ℝ
   beta_pos : 0 < beta
 
--- Domain partition function
 noncomputable def domain_partition
     (dt : DomainThermal) : ℝ :=
   Finset.univ.sum (fun d =>
@@ -317,7 +301,6 @@ theorem domain_partition_pos
   · intro d _; exact Real.exp_pos _
   · exact Finset.univ_nonempty
 
--- Domain Gibbs probabilities sum to one
 noncomputable def domain_gibbs
     (dt : DomainThermal) (d : Domain21) : ℝ :=
   Real.exp (-dt.beta * dt.energy d) /
@@ -341,9 +324,7 @@ def thermal_equilibrium (dt : DomainThermal) : Prop :=
     domain_gibbs dt d1 = domain_gibbs dt d2 ↔
     dt.energy d1 = dt.energy d2
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure StatMechLock where
   Z_pos      : ∀ (beta : ℝ) (E : Fin 7 → ℝ) (hb : 0 < beta),
@@ -378,3 +359,4 @@ def SMSLock : StatMechLock where
   dom_sum    := domain_gibbs_sum_one
 
 end StatisticalMechanics
+
