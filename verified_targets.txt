@@ -34,4 +34,5 @@ SpineLanguage
 StatisticalMechanics
 StochasticDifferentialEquations
 Synaptic_Weights
+Thermodynamics
 VerifyState
