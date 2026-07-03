@@ -138,14 +138,8 @@ theorem uniform_max_partition_entropy :
       (by rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]; norm_num) =
     Real.log 7 := by
   unfold partition_entropy
-  have hlog : Real.log ((1:ℝ)/7) = -Real.log 7 := by
-    rw [one_div, Real.log_inv]
-  have hsum_eq : (Finset.univ : Finset (Fin 7)).sum
-      (fun _ : Fin 7 => (1:ℝ)/7 * Real.log ((1:ℝ)/7)) =
-      7 * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
-    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
-    norm_num
-  rw [hsum_eq, hlog]
+  simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul,
+    one_div, Real.log_inv]
   ring
 
 theorem KS_entropy_lower_bound
@@ -195,6 +189,12 @@ theorem lyapunov_positive_chaotic
 theorem lyapunov_negative_stable
     (lambda : ℝ) (h : lambda < 0) : lambda < 0 := h
 
+-- `Real.log_pow n |a|` as a direct term application confirmed broken by
+-- the compiler (misparses the argument boundary around |a|). Used as a
+-- `rw` rule on the goal instead, which lets rewrite-unification (not
+-- term-application elaboration) handle it; closes the resulting simple
+-- division identity with field_simp against the actual confirmed goal
+-- shape (n * (log|a| / n) = log|a|) rather than a guessed one.
 theorem lyapunov_linear_map
     (a : ℝ) (ha : 0 < |a|) (n : ℕ) (hn : 0 < n) :
     lyapunov_exponent_estimate
@@ -202,9 +202,9 @@ theorem lyapunov_linear_map
       (fun k => pow_pos ha k) =
     Real.log |a| := by
   unfold lyapunov_exponent_estimate
+  rw [Real.log_pow]
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
-  have hpow : Real.log (|a| ^ n) = (n:ℝ) * Real.log |a| := Real.log_pow n |a|
-  rw [hpow, mul_div_assoc, div_self hnz, mul_one]
+  field_simp
 
 theorem stable_manifold_contraction
     (lambda delta0 : ℝ)
