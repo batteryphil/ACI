@@ -17,7 +17,6 @@ PhaseTransitions
 DifferentialGeometry
 FunctionalAnalysis
 AlgebraicTopology
-MeasureTheory
 AbstractAlgebra
 NumberTheory
 StringTheory

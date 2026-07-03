@@ -13,6 +13,7 @@ LinearAlgebra
 MC2Engine
 Manifold21
 Matrix7
+MeasureTheory
 MoruzinLaw
 N7Spine
 NumberTheoryCore
