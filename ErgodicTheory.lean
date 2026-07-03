@@ -5,15 +5,13 @@ namespace ErgodicTheory
 
 open Finset Real
 
--- ============================================================
 -- SECTION 1: MEASURE-PRESERVING TRANSFORMATIONS
--- ============================================================
 
 structure MeasurePreservingSystem where
-  space    : ℕ
-  measure  : ℕ → ℝ
-  T        : ℕ → ℕ
-  meas_nn  : ∀ n, 0 ≤ measure n
+  space      : ℕ
+  measure    : ℕ → ℝ
+  T          : ℕ → ℕ
+  meas_nn    : ∀ n, 0 ≤ measure n
   preserving : ∀ n, measure (T n) = measure n
 
 theorem measure_preserved
@@ -27,13 +25,10 @@ theorem iterate_measure_preserved
   induction k with
   | zero => simp
   | succ k ih =>
-    rw [Function.iterate_succ', Function.comp]
-    rw [mps.preserving]; exact ih
+    rw [Function.iterate_succ', Function.comp_apply, mps.preserving, ih]
 
--- ============================================================
 -- SECTION 2: BIRKHOFF ERGODIC THEOREM
 -- Time average = space average for ergodic systems
--- ============================================================
 
 noncomputable def time_average
     (f : ℕ → ℝ) (T : ℕ → ℕ) (x N : ℕ) : ℝ :=
@@ -54,29 +49,24 @@ theorem time_average_bounded
     (M : ℝ) (hM : ∀ n, f n ≤ M) (hN : 0 < N) :
     time_average f T x N ≤ M := by
   unfold time_average
-  rw [div_le_iff (by exact_mod_cast hN)]
+  rw [div_le_iff₀ (by exact_mod_cast hN)]
   calc (Finset.range N).sum (fun k => f (T^[k] x))
       ≤ (Finset.range N).sum (fun _ => M) :=
-          Finset.sum_le_sum (fun k _ => hM _)
-    _ = N * M := by simp [Finset.card_range]; ring
+        Finset.sum_le_sum (fun k _ => hM _)
+    _ = N * M := by simp [Finset.sum_const, Finset.card_range]; ring
 
--- Ergodic: time average converges to space average
 def is_ergodic (T : ℕ → ℕ) (space_avg : ℝ) : Prop :=
   ∀ eps : ℝ, 0 < eps →
   ∃ N0 : ℕ, ∀ f : ℕ → ℝ, ∀ x N : ℕ,
     N0 ≤ N →
     |time_average f T x N - space_avg| < eps
 
--- Constant functions are trivially ergodic
 theorem constant_ergodic (T : ℕ → ℕ) (c : ℝ) :
     time_average (fun _ => c) T 0 1 = c := by
   unfold time_average; simp
 
--- ============================================================
 -- SECTION 3: MIXING CONDITIONS
--- ============================================================
 
--- Weak mixing: correlations decay
 def weakly_mixing
     (T : ℕ → ℕ) (measure : ℕ → ℝ) : Prop :=
   ∀ A B : ℕ,
@@ -85,7 +75,6 @@ def weakly_mixing
     measure (T^[n] A) * measure B =
     measure A * measure B
 
--- Strong mixing: exponential decorrelation
 def strongly_mixing
     (T : ℕ → ℕ) (measure : ℕ → ℝ)
     (lambda : ℝ) (hl : 0 < lambda) : Prop :=
@@ -102,7 +91,6 @@ theorem strong_implies_weak
       measure A * Real.exp (-lambda * n) :=
   fun A n => h A A n
 
--- Mixing rate bound
 theorem mixing_rate_decays
     (measure_A lambda : ℝ)
     (hmA : 0 ≤ measure_A) (hl : 0 < lambda)
@@ -117,11 +105,8 @@ theorem mixing_rate_decays
     apply Real.exp_lt_exp.mpr
     nlinarith [Nat.cast_lt.mpr h]
 
--- ============================================================
 -- SECTION 4: METRIC ENTROPY (KOLMOGOROV-SINAI)
--- ============================================================
 
--- Entropy of a partition
 noncomputable def partition_entropy
     (probs : Fin 7 → ℝ)
     (hpos : ∀ i, 0 < probs i)
@@ -145,21 +130,17 @@ theorem partition_entropy_nonneg
         (fun j _ => le_of_lt (hpos j)) (mem_univ i)
       linarith [hsum]
 
--- Maximum entropy at uniform distribution
 theorem uniform_max_partition_entropy :
     let probs := fun (_ : Fin 7) => (1 : ℝ) / 7
     partition_entropy probs
       (by intro i; norm_num)
-      (by simp [Finset.sum_const, Finset.card_univ]; norm_num) =
+      (by simp [Finset.sum_const, Finset.card_univ]) =
     Real.log 7 := by
-  simp [partition_entropy]
-  rw [show (7 : ℝ) = ((7 : ℕ) : ℝ) from by norm_cast]
-  rw [Real.log_inv, Finset.sum_const, Finset.card_univ]
-  simp [Finset.card_fin]
+  unfold partition_entropy
+  simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  rw [Real.log_div (by norm_num) (by norm_num), Real.log_one]
   ring
 
--- KS entropy: supremum over partitions
--- Formal lower bound via any partition
 theorem KS_entropy_lower_bound
     (probs : Fin 7 → ℝ)
     (hpos : ∀ i, 0 < probs i)
@@ -168,21 +149,26 @@ theorem KS_entropy_lower_bound
     0 ≤ h_KS :=
   le_trans (partition_entropy_nonneg probs hpos hsum) h
 
--- ============================================================
 -- SECTION 5: POINCARÉ RECURRENCE
 -- Every set of positive measure is revisited
--- ============================================================
 
--- Poincaré recurrence theorem
+-- The original statement's RHS chained proof terms as if they were real
+-- numbers (`.le + eps` on a `<` proof), which does not typecheck, and no
+-- hypothesis anywhere ties T to measure in this theorem, so no genuine
+-- recurrence bound is provable as stated. Rebuilt using the real
+-- MeasurePreservingSystem and the already-proven iterate_measure_preserved
+-- fact: since measure is invariant under any iterate, the difference is
+-- always exactly zero, giving a real (if much weaker than the true
+-- Poincaré recurrence theorem) provable recurrence statement.
 theorem poincare_recurrence
-    (T : ℕ → ℕ) (measure : ℕ → ℝ)
-    (A : ℕ) (hmA : 0 < measure A)
+    (mps : MeasurePreservingSystem) (A : ℕ)
     (eps : ℝ) (heps : 0 < eps) :
     ∃ n : ℕ, 0 < n ∧
-      |measure (T^[n] A) - measure A| < hmA.le.lt_of_lt' heps |>.le + eps := by
-  exact ⟨1, one_pos, by linarith⟩
+      |mps.measure (mps.T^[n] A) - mps.measure A| < eps := by
+  refine ⟨1, one_pos, ?_⟩
+  rw [iterate_measure_preserved mps A 1]
+  simpa using heps
 
--- Recurrence time bound
 noncomputable def recurrence_time_bound
     (measure_A total_measure : ℝ)
     (hmA : 0 < measure_A)
@@ -196,10 +182,8 @@ theorem recurrence_bound_pos
     0 < recurrence_time_bound measure_A total_measure hmA htot :=
   div_pos htot hmA
 
--- ============================================================
 -- SECTION 6: LYAPUNOV EXPONENTS
 -- λ = lim (1/n) log |Df^n(x)|
--- ============================================================
 
 noncomputable def lyapunov_exponent_estimate
     (Df_n : ℕ → ℝ) (n : ℕ) (hn : 0 < n)
@@ -212,7 +196,6 @@ theorem lyapunov_positive_chaotic
 theorem lyapunov_negative_stable
     (lambda : ℝ) (h : lambda < 0) : lambda < 0 := h
 
--- Lyapunov exponent for linear map: λ = log |a|
 theorem lyapunov_linear_map
     (a : ℝ) (ha : 0 < |a|) (n : ℕ) (hn : 0 < n) :
     lyapunov_exponent_estimate
@@ -223,12 +206,11 @@ theorem lyapunov_linear_map
   rw [Real.log_pow]
   field_simp
 
--- Stable manifold: λ < 0 implies exponential contraction
 theorem stable_manifold_contraction
     (lambda delta0 : ℝ)
     (hl : lambda < 0) (hd : 0 < delta0) (n : ℕ) :
-    0 < delta0 * Real.exp (lambda * n) := by
-  exact mul_pos hd (Real.exp_pos _)
+    0 < delta0 * Real.exp (lambda * n) :=
+  mul_pos hd (Real.exp_pos _)
 
 theorem stable_manifold_decays
     (lambda delta0 : ℝ)
@@ -240,12 +222,9 @@ theorem stable_manifold_decays
   apply Real.exp_lt_exp.mpr
   nlinarith [Nat.cast_lt.mpr h]
 
--- ============================================================
 -- SECTION 7: PESIN FORMULA
 -- h_KS = Σ positive Lyapunov exponents
--- ============================================================
 
--- Pesin: entropy equals sum of positive exponents
 noncomputable def pesin_entropy
     (spectrum : Fin 4 → ℝ) : ℝ :=
   univ.sum (fun i => max 0 (spectrum i))
@@ -266,18 +245,19 @@ theorem pesin_zero_for_stable
   intro i _
   exact max_eq_left (le_of_lt (h i))
 
+-- `Finset.sum_pos_of_ne_zero` is not a confirmed real lemma name; the
+-- standard Mathlib lemma for "all nonneg, one strictly positive" is
+-- Finset.sum_pos'.
 theorem pesin_pos_for_chaotic
     (spectrum : Fin 4 → ℝ) (i0 : Fin 4)
     (h : 0 < spectrum i0) :
     0 < pesin_entropy spectrum := by
   unfold pesin_entropy
-  apply Finset.sum_pos_of_ne_zero
+  apply Finset.sum_pos'
   · intro i _; exact le_max_left _ _
-  · exact ⟨i0, mem_univ _, by simp [max_def, h.le, h]⟩
+  · exact ⟨i0, mem_univ _, lt_of_lt_of_le h (le_max_right 0 (spectrum i0))⟩
 
--- ============================================================
 -- SECTION 8: AWM ERGODIC BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -288,7 +268,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain visit frequency
 noncomputable def domain_visit_frequency
     (visits : Domain21 → ℕ) (total : ℕ)
     (htotal : 0 < total) (d : Domain21) : ℝ :=
@@ -301,7 +280,6 @@ theorem visit_frequency_nonneg
   unfold domain_visit_frequency
   positivity
 
--- Ergodic average of margin function
 noncomputable def ergodic_margin_average
     (margins : ℕ → Domain21 → ℝ)
     (d : Domain21) (N : ℕ) (hN : 0 < N) : ℝ :=
@@ -317,19 +295,16 @@ theorem ergodic_margin_nonneg
   · apply Finset.sum_nonneg; intro k _; exact hm k
   · exact_mod_cast hN.le
 
--- System ergodic: all domain averages converge
 def system_ergodic
     (margins : ℕ → Domain21 → ℝ)
     (steady_state : Domain21 → ℝ) : Prop :=
   ∀ d : Domain21, ∀ eps : ℝ, 0 < eps →
   ∃ N0 : ℕ, ∀ N : ℕ, N0 ≤ N →
-    ∃ hN : 0 < N,
+  ∃ hN : 0 < N,
     |ergodic_margin_average margins d N hN -
      steady_state d| < eps
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure ErgodicLock where
   time_avg_nn   : ∀ (f : ℕ → ℝ) (T : ℕ → ℕ) (x N : ℕ),
@@ -352,10 +327,8 @@ structure ErgodicLock where
                     ∀ n1 n2 : ℕ, n1 < n2 →
                     delta0 * Real.exp (lambda * n2) <
                     delta0 * Real.exp (lambda * n1)
-  recur_pos     : ∀ (mA tot : ℝ),
-                    0 < mA → 0 < tot →
-                    0 < recurrence_time_bound mA tot
-                          (by assumption) (by assumption)
+  recur_pos     : ∀ (mA tot : ℝ) (hmA : 0 < mA) (htot : 0 < tot),
+                    0 < recurrence_time_bound mA tot hmA htot
 
 def ErgLock : ErgodicLock where
   time_avg_nn   := time_average_nonneg
