@@ -132,30 +132,20 @@ theorem partition_entropy_nonneg
         (fun j _ => le_of_lt (hpos j)) (mem_univ i)
       linarith [hsum]
 
--- Restated with named hypotheses (matching every other theorem in this
--- file) instead of embedded anonymous `by` proof terms inside the type
--- signature. Those embedded terms are elaborated as part of the
--- theorem's TYPE before the tactic body even runs, and are the most
--- likely real source of the persistent CharZero/simp failures across
--- prior rounds, since every prior fix only touched the proof body.
-theorem uniform_max_partition_entropy
-    (hpos : ∀ i : Fin 7, (0:ℝ) < (1:ℝ)/7)
-    (hsum : (univ : Finset (Fin 7)).sum (fun _ => (1:ℝ)/7) = 1) :
-    partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7) hpos hsum = Real.log 7 := by
+theorem uniform_max_partition_entropy :
+    partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7)
+      (fun _ => by norm_num)
+      (by rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]; norm_num) =
+    Real.log 7 := by
   unfold partition_entropy
-  have hcard : (Finset.univ : Finset (Fin 7)).card = 7 := by
-    simp
-  have hsum2 : (univ : Finset (Fin 7)).sum
-      (fun _ : Fin 7 => (1:ℝ)/7 * Real.log ((1:ℝ)/7))
-      = (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
-    rw [Finset.sum_const, hcard]
-    show (7:ℕ) • ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) = (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7))
-    rw [nsmul_eq_mul]
-    norm_num
-  rw [hsum2]
   have hlog : Real.log ((1:ℝ)/7) = -Real.log 7 := by
     rw [one_div, Real.log_inv]
-  rw [hlog]
+  have hsum_eq : (Finset.univ : Finset (Fin 7)).sum
+      (fun _ : Fin 7 => (1:ℝ)/7 * Real.log ((1:ℝ)/7)) =
+      7 * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+    norm_num
+  rw [hsum_eq, hlog]
   ring
 
 theorem KS_entropy_lower_bound
@@ -213,8 +203,8 @@ theorem lyapunov_linear_map
     Real.log |a| := by
   unfold lyapunov_exponent_estimate
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
-  rw [Real.log_pow]
-  field_simp [hnz]
+  have hpow : Real.log (|a| ^ n) = (n:ℝ) * Real.log |a| := Real.log_pow n |a|
+  rw [hpow, mul_div_assoc, div_self hnz, mul_one]
 
 theorem stable_manifold_contraction
     (lambda delta0 : ℝ)
