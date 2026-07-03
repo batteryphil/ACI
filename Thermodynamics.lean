@@ -135,6 +135,10 @@ noncomputable def gibbs_entropy (n : ℕ)
     if p i = 0 then 0
     else p i * Real.log (p i))
 
+-- After `rw [neg_mul, neg_nonneg]` the goal is `k * S ≤ 0` (nonpositive),
+-- not `0 ≤ k * S` — `mul_nonneg` proves the wrong direction entirely.
+-- Real fix is `mul_nonpos_of_nonneg_of_nonpos`, matching what the log
+-- actually reported the goal to be.
 theorem gibbs_entropy_nonneg (n : ℕ)
     (k : ℝ) (hk : 0 ≤ k)
     (p : Fin n → ℝ) (hp : ∀ i, 0 ≤ p i)
@@ -142,8 +146,7 @@ theorem gibbs_entropy_nonneg (n : ℕ)
     0 ≤ gibbs_entropy n k p hp := by
   unfold gibbs_entropy
   rw [neg_mul, neg_nonneg]
-  apply mul_nonneg hk
-  rw [neg_nonneg]
+  apply mul_nonpos_of_nonneg_of_nonpos hk
   apply Finset.sum_nonpos; intro i _
   split_ifs with h
   · linarith
@@ -167,8 +170,7 @@ theorem entropy_mixing_nonneg (n : ℕ)
     0 ≤ entropy_of_mixing n k x hx := by
   unfold entropy_of_mixing
   rw [neg_mul, neg_nonneg]
-  apply mul_nonneg hk
-  rw [neg_nonneg]
+  apply mul_nonpos_of_nonneg_of_nonpos hk
   apply Finset.sum_nonpos; intro i _
   apply mul_nonpos_of_nonneg_of_nonpos
     (le_of_lt (hx i))
@@ -249,10 +251,6 @@ noncomputable def partition_function (n : ℕ)
   Finset.univ.sum (fun i =>
     Real.exp (-beta * E i))
 
--- `Fintype.card_pos_iff.mp hn` needs `hn : 0 < Fintype.card (Fin n)`, but
--- the actual `hn` has type `0 < n` — not syntactically identical even
--- though propositionally equal. Rebuilt via a direct, unambiguous
--- Finset.Nonempty witness instead of relying on that defeq.
 theorem partition_function_pos (n : ℕ)
     (hn : 0 < n) (beta : ℝ)
     (E : Fin n → ℝ) :
@@ -329,8 +327,7 @@ theorem domain_gibbs_nonneg :
   gibbs_entropy_nonneg 21 1 (by norm_num)
     (fun _ => 1/21)
     (by intro _; norm_num)
-    (by simp [Finset.sum_const,
-              Finset.card_fin]; norm_num)
+    (by simp [Finset.sum_const, Finset.card_fin])
 
 noncomputable def domain_carnot :=
   carnot_efficiency 1000 300
@@ -381,13 +378,11 @@ structure ThermodynamicsLock where
   ideal_gas_nn   : ∀ (n Cv T : ℝ),
                      0 ≤ n → 0 ≤ Cv → 0 ≤ T →
                      0 ≤ ideal_gas_energy n Cv T
-  boltz_nn       : ∀ (k Omega : ℝ),
-                     0 ≤ k → 1 ≤ Omega →
+  boltz_nn       : ∀ (k Omega : ℝ) (hk : 0 ≤ k) (hOmega : 1 ≤ Omega),
                      0 ≤ boltzmann_entropy k Omega
                        (by linarith)
-  gibbs_nn       : ∀ (n : ℕ) (k : ℝ)
+  gibbs_nn       : ∀ (n : ℕ) (k : ℝ) (hk : 0 ≤ k)
                      (p : Fin n → ℝ)
-                     (hk : 0 ≤ k)
                      (hp : ∀ i, 0 ≤ p i)
                      (hsum : Finset.univ.sum p = 1),
                      0 ≤ gibbs_entropy n k p hp
