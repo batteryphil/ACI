@@ -1,4 +1,3 @@
--- NumberTheory.lean
 import Mathlib
 
 namespace NumberTheory
@@ -192,8 +191,8 @@ theorem totient_prime (p : ℕ) (hp : Nat.Prime p) :
     constructor
     · intro ⟨hk, hcop⟩
       exact ⟨by omega,
-             hk,
-             hcop⟩
+            hk,
+            hcop⟩
     · intro ⟨hk1, hk2, hcop⟩
       exact ⟨hk2, hcop⟩]
   simp [Finset.Ico_card]
@@ -226,11 +225,11 @@ theorem mobius_prime (p : ℕ) (hp : Nat.Prime p) :
         dvd_trans (dvd_pow_self q 2) hdvd |>.trans
           (dvd_refl p)
       exact (hp.eq_one_or_self_of_dvd q
-        (dvd_trans (dvd_pow_self q (by omega)) hdvd)).resolve_left
-        hq.one_lt.ne'
+                  (dvd_trans (dvd_pow_self q (by omega)) hdvd)).resolve_left
+          hq.one_lt.ne'
     rw [hqp] at hdvd
     have := hp.eq_one_or_self_of_dvd p (dvd_of_mul_dvd_left
-      hdvd (dvd_refl p))
+                              hdvd (dvd_refl p))
     omega
   · simp [hp.factors_unique]
 
@@ -258,7 +257,7 @@ theorem mobius_multiplicative :
     by_cases hn : n = 1
     · simp [hn]
     simp only [hm, hn, mul_eq_one_iff_eq_one_of_nonneg
-      (Nat.zero_le _) (Nat.zero_le _) |>.not.mpr
+    (Nat.zero_le _) (Nat.zero_le _) |>.not.mpr
       (by intro ⟨h1, h2⟩; exact hm h1),
       ite_false]
     split_ifs with h1 h2 h2
@@ -427,7 +426,7 @@ theorem chebyshev_theta_pos (n : ℕ) (hn : 2 < n) :
       (by exact_mod_cast
         (Finset.mem_filter.mp hp).2.one_lt))
   · exact ⟨2, by simp [Finset.mem_filter,
-      Finset.mem_range, hn], Real.log_pos (by norm_num)⟩
+                Finset.mem_range, hn], Real.log_pos (by norm_num)⟩
 
 noncomputable def von_mangoldt (n : ℕ) : ℝ :=
   if ∃ p k : ℕ, Nat.Prime p ∧ 0 < k ∧ p^k = n
@@ -565,7 +564,7 @@ structure NumberTheoryLock where
                       p_adic_val p n hp hn
   bertrand        : ∀ (n : ℕ), 0 < n →
                       ∃ p : ℕ, Nat.Prime p ∧
-                        n < p ∧ p ≤ 2 * n
+                               n < p ∧ p ≤ 2 * n
   mangoldt_nn     : ∀ (n : ℕ), 0 ≤ von_mangoldt n
   chebyshev_pos   : ∀ (n : ℕ), 2 < n →
                       0 < chebyshev_theta n
