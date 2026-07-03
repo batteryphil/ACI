@@ -128,9 +128,9 @@ theorem gibbs_entropy_nonneg
     0 ≤ gibbs_entropy beta k energies hbeta hk :=
   let hS : univ.sum (fun i => gibbs_prob beta energies hbeta i * Real.log (gibbs_prob beta energies hbeta i)) ≤ 0 :=
     Finset.sum_nonpos (fun i _ =>
-      mul_nonpos_of_nonneg_of_nonpos (le_of_lt (gibbs_prob_pos beta energies hbeta i))
+      mul_nonpos_of_nonneg_of_nonneg (le_of_lt (gibbs_prob_pos beta energies hbeta i))
         (Real.log_nonpos (le_of_lt (gibbs_prob_pos beta energies hbeta i)) (gibbs_prob_le_one beta energies hbeta i)))
-  mul_nonneg_of_nonpos_of_nonpos (neg_le_zero.mpr hk.le) hS
+  mul_nonneg_of_nonpos_of_nonpos (neg_nonpos.mpr hk.le) hS
 
 theorem uniform_max_entropy
     (beta k : ℝ) (hbeta : 0 < beta) (hk : 0 < k) :
