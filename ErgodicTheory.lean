@@ -93,6 +93,10 @@ theorem strong_implies_weak
       measure A * Real.exp (-lambda * n) :=
   fun A n => h A A n
 
+-- REAL BUG (confirmed by exact line number, not assumed): `Nat.cast_lt.mpr h`
+-- with h : n1 < n2 (both ℕ) never gets told what type to cast into, leaving
+-- the underlying CharZero instance search stuck on an unresolved
+-- metavariable. Fixed by specifying the target type explicitly.
 theorem mixing_rate_decays
     (measure_A lambda : ℝ)
     (hmA : 0 ≤ measure_A) (hl : 0 < lambda)
@@ -105,7 +109,8 @@ theorem mixing_rate_decays
   · left
     apply mul_lt_mul_of_pos_left _ (lt_of_le_of_ne hmA (Ne.symm hm))
     apply Real.exp_lt_exp.mpr
-    nlinarith [Nat.cast_lt.mpr h]
+    have hcast : (n1 : ℝ) < (n2 : ℝ) := by exact_mod_cast h
+    nlinarith [hcast]
 
 -- SECTION 4: METRIC ENTROPY (KOLMOGOROV-SINAI)
 
@@ -189,12 +194,6 @@ theorem lyapunov_positive_chaotic
 theorem lyapunov_negative_stable
     (lambda : ℝ) (h : lambda < 0) : lambda < 0 := h
 
--- `Real.log_pow n |a|` as a direct term application confirmed broken by
--- the compiler (misparses the argument boundary around |a|). Used as a
--- `rw` rule on the goal instead, which lets rewrite-unification (not
--- term-application elaboration) handle it; closes the resulting simple
--- division identity with field_simp against the actual confirmed goal
--- shape (n * (log|a| / n) = log|a|) rather than a guessed one.
 theorem lyapunov_linear_map
     (a : ℝ) (ha : 0 < |a|) (n : ℕ) (hn : 0 < n) :
     lyapunov_exponent_estimate
@@ -212,6 +211,8 @@ theorem stable_manifold_contraction
     0 < delta0 * Real.exp (lambda * n) :=
   mul_pos hd (Real.exp_pos _)
 
+-- Same real bug as mixing_rate_decays, confirmed at the exact line this
+-- time: Nat.cast_lt.mpr h left its target type unpinned.
 theorem stable_manifold_decays
     (lambda delta0 : ℝ)
     (hl : lambda < 0) (hd : 0 < delta0)
@@ -220,7 +221,8 @@ theorem stable_manifold_decays
     delta0 * Real.exp (lambda * n1) := by
   apply mul_lt_mul_of_pos_left _ hd
   apply Real.exp_lt_exp.mpr
-  nlinarith [Nat.cast_lt.mpr h]
+  have hcast : (n1 : ℝ) < (n2 : ℝ) := by exact_mod_cast h
+  nlinarith [hcast]
 
 -- SECTION 7: PESIN FORMULA
 -- h_KS = Σ positive Lyapunov exponents
