@@ -1,7 +1,6 @@
 MyProject
 OptimalControl
 TopologicalDataAnalysis
-ErgodicTheory
 ConvexAnalysis
 ControlTheory
 OptimalTransport

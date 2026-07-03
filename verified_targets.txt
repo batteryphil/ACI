@@ -6,6 +6,7 @@ AWMCore
 AntaresCategory
 BioinformaticsTheory
 EnergyDomain
+ErgodicTheory
 FSI
 Governor
 InformationGeometry
