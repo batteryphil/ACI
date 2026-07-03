@@ -16,6 +16,11 @@ theorem metric_sym (n : ℕ)
     (M : MetricTensor n) :
     M.g.transpose = M.g := M.sym
 
+-- `simp` alone could not reduce the match expression on concrete Fin 4
+-- values (confirmed by the compiler leaving unsolved goals and silently
+-- inserting a sorry after `nondegenerate` failed). `fin_cases`/
+-- `Fin.prod_univ_four` force each match branch to reduce to a concrete
+-- numeral before simp/norm_num run.
 def minkowski : MetricTensor 4 where
   g := Matrix.diagonal
     (fun i => match i with
@@ -23,19 +28,19 @@ def minkowski : MetricTensor 4 where
       | ⟨1, _⟩ => 1
       | ⟨2, _⟩ => 1
       | ⟨3, _⟩ => 1)
-  sym := by ext i j; simp [Matrix.diagonal_apply]
+  sym := by
+    ext i j
+    fin_cases i <;> fin_cases j <;> simp [Matrix.diagonal_apply]
   nondegenerate := by
-    simp [Matrix.det_diagonal]
+    rw [Matrix.det_diagonal, Fin.prod_univ_four]
     norm_num
 
 theorem minkowski_det :
     minkowski.g.det = -1 := by
-  simp [minkowski, Matrix.det_diagonal]
+  unfold minkowski
+  rw [Matrix.det_diagonal, Fin.prod_univ_four]
   norm_num
 
--- `Matrix.dotProduct` confirmed fabricated (same bug already found in
--- LinearAlgebra.lean earlier this session) — real form is the bare
--- top-level `dotProduct`.
 noncomputable def line_element (n : ℕ)
     (M : MetricTensor n)
     (dx : Fin n → ℝ) : ℝ :=
@@ -134,8 +139,6 @@ noncomputable def gravitational_redshift
     (r r_s : ℝ) (hr : r_s < r) : ℝ :=
   Real.sqrt (1 - r_s / r)
 
--- `div_lt_one_of_lt` confirmed fabricated (same bug as CodingTheory
--- earlier this session). Real lemma is the iff form `div_lt_one`.
 theorem redshift_pos
     (r r_s : ℝ) (hr_s : 0 ≤ r_s)
     (hr : r_s < r) :
@@ -145,9 +148,6 @@ theorem redshift_pos
   rw [sub_pos]
   exact (div_lt_one (by linarith)).mpr hr
 
--- `Real.sqrt_le_one` is a plain Iff (√x ≤ 1 ↔ x ≤ 1) with no arguments —
--- the original `apply` followed by two bullet proofs did not match this
--- signature at all. Real usage is `.mpr` with a single proof.
 theorem redshift_le_one
     (r r_s : ℝ) (hr_s : 0 ≤ r_s)
     (hr : r_s < r) :
@@ -220,11 +220,6 @@ noncomputable def hawking_temp
     (hhbar : 0 < hbar) : ℝ :=
   hbar * c ^ 3 / (8 * Real.pi * G * M * k_B)
 
--- The original's deeply nested `apply mul_pos` chain with 5 bullets is a
--- real risk (bullet-to-subgoal mapping for a left-associated 5-factor
--- product is easy to get wrong without a compiler). Rebuilt via
--- positivity, which uses the local hypotheses (hG, hM, hk, etc.)
--- automatically and needs no manual association bookkeeping.
 theorem hawking_temp_pos
     (hbar c G M k_B : ℝ)
     (hG : 0 < G) (hM : 0 < M)
@@ -259,8 +254,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- `nondegenerate := by simp` risked relying on simp implicitly knowing
--- Matrix.det_one and one_ne_zero — made the unfolding explicit instead.
 noncomputable def domain_metric :
     MetricTensor 21 where
   g    := 1
