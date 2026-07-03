@@ -71,9 +71,6 @@ theorem hamming_perfect_proxy (r : ℕ) :
     0 < 2 ^ r :=
   Nat.two_pow_pos r
 
--- The original hypothesis `1 ≤ r` made this claim FALSE (r=1 gives
--- 2^1=2 < 3). Real Hamming codes need r ≥ 2 for this bound to hold;
--- corrected the hypothesis to match the actual mathematical fact.
 theorem hamming_singleton (r : ℕ) (hr : 2 ≤ r) :
     3 ≤ hamming_n r + 1 := by
   unfold hamming_n
@@ -96,7 +93,7 @@ theorem cyclic_shift_twice (n : ℕ) (hn : 0 < n)
   congr 1
   apply Fin.ext
   show ((i.val + 1) % n + 1) % n = (i.val + 2) % n
-  omega
+  rw [Nat.mod_add_mod]
 
 def gen_poly_degree (n k : ℕ) : ℕ := n - k
 
@@ -172,7 +169,8 @@ theorem bhattacharyya_le_one (p : ℝ)
   unfold bhattacharyya
   nlinarith [Real.sq_sqrt
     (mul_nonneg hp0 (by linarith : (0:ℝ) ≤ 1 - p)),
-    Real.sqrt_nonneg (p * (1-p))]
+    Real.sqrt_nonneg (p * (1-p)),
+    sq_nonneg (p - 1/2)]
 
 theorem polarization_proxy (n : ℕ) :
     0 < 2 ^ n :=
