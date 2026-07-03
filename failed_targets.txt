@@ -35,7 +35,6 @@ NumericalAnalysis
 PartialDifferentialEquations
 InformationTheoryAdvanced
 OperatorTheory
-FluidDynamics
 Thermodynamics
 GeneralRelativity
 QuantumFieldTheory

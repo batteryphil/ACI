@@ -10,6 +10,7 @@ CryptographyTheory
 EnergyDomain
 ErgodicTheory
 FSI
+FluidDynamics
 Governor
 GraphTheory
 InformationGeometry
