@@ -58,7 +58,11 @@ def hamming_k (r : ℕ) : ℕ := 2^r - 1 - r
 
 theorem hamming_n_pos (r : ℕ) (hr : 0 < r) :
     0 < hamming_n r := by
-  unfold hamming_n; omega
+  unfold hamming_n
+  have h2 : 2 ≤ 2 ^ r := by
+    calc (2:ℕ) = 2 ^ 1 := (pow_one 2).symm
+      _ ≤ 2 ^ r := Nat.pow_le_pow_right (by norm_num) hr
+  omega
 
 theorem hamming_error_correction :
     (3 - 1) / 2 = 1 := by norm_num
@@ -67,9 +71,16 @@ theorem hamming_perfect_proxy (r : ℕ) :
     0 < 2 ^ r :=
   Nat.two_pow_pos r
 
-theorem hamming_singleton (r : ℕ) (hr : 1 ≤ r) :
+-- The original hypothesis `1 ≤ r` made this claim FALSE (r=1 gives
+-- 2^1=2 < 3). Real Hamming codes need r ≥ 2 for this bound to hold;
+-- corrected the hypothesis to match the actual mathematical fact.
+theorem hamming_singleton (r : ℕ) (hr : 2 ≤ r) :
     3 ≤ hamming_n r + 1 := by
-  unfold hamming_n; omega
+  unfold hamming_n
+  have h4 : 4 ≤ 2 ^ r := by
+    calc (4:ℕ) = 2 ^ 2 := by norm_num
+      _ ≤ 2 ^ r := Nat.pow_le_pow_right (by norm_num) hr
+  omega
 
 -- SECTION 3: CYCLIC CODES
 
@@ -82,7 +93,10 @@ theorem cyclic_shift_twice (n : ℕ) (hn : 0 < n)
     cyclic_shift n hn (cyclic_shift n hn c) i =
     c ⟨(i.val + 2) % n, Nat.mod_lt _ hn⟩ := by
   unfold cyclic_shift
-  congr 1; ext; omega
+  congr 1
+  apply Fin.ext
+  show ((i.val + 1) % n + 1) % n = (i.val + 2) % n
+  omega
 
 def gen_poly_degree (n k : ℕ) : ℕ := n - k
 
