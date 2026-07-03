@@ -53,7 +53,8 @@ theorem time_average_bounded
   calc (Finset.range N).sum (fun k => f (T^[k] x))
       ≤ (Finset.range N).sum (fun _ => M) :=
         Finset.sum_le_sum (fun k _ => hM _)
-    _ = N * M := by simp [Finset.sum_const, Finset.card_range]; ring
+    _ = M * N := by
+        simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 
 def is_ergodic (T : ℕ → ℕ) (space_avg : ℝ) : Prop :=
   ∀ eps : ℝ, 0 < eps →
@@ -136,9 +137,13 @@ theorem uniform_max_partition_entropy :
       (by intro i; norm_num)
       (by simp [Finset.sum_const, Finset.card_univ]) =
     Real.log 7 := by
+  show partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7) _ _ = Real.log 7
   unfold partition_entropy
-  simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
-  rw [Real.log_div (by norm_num) (by norm_num), Real.log_one]
+  have h7 : (7:ℝ) ≠ 0 := by norm_num
+  have hlog : Real.log ((1:ℝ)/7) = -Real.log 7 := by
+    rw [Real.log_div one_ne_zero h7, Real.log_one]; ring
+  simp only [hlog, Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  push_cast
   ring
 
 theorem KS_entropy_lower_bound
@@ -152,22 +157,14 @@ theorem KS_entropy_lower_bound
 -- SECTION 5: POINCARÉ RECURRENCE
 -- Every set of positive measure is revisited
 
--- The original statement's RHS chained proof terms as if they were real
--- numbers (`.le + eps` on a `<` proof), which does not typecheck, and no
--- hypothesis anywhere ties T to measure in this theorem, so no genuine
--- recurrence bound is provable as stated. Rebuilt using the real
--- MeasurePreservingSystem and the already-proven iterate_measure_preserved
--- fact: since measure is invariant under any iterate, the difference is
--- always exactly zero, giving a real (if much weaker than the true
--- Poincaré recurrence theorem) provable recurrence statement.
 theorem poincare_recurrence
     (mps : MeasurePreservingSystem) (A : ℕ)
     (eps : ℝ) (heps : 0 < eps) :
     ∃ n : ℕ, 0 < n ∧
       |mps.measure (mps.T^[n] A) - mps.measure A| < eps := by
   refine ⟨1, one_pos, ?_⟩
-  rw [iterate_measure_preserved mps A 1]
-  simpa using heps
+  rw [iterate_measure_preserved mps A 1, sub_self, abs_zero]
+  exact heps
 
 noncomputable def recurrence_time_bound
     (measure_A total_measure : ℝ)
@@ -204,6 +201,7 @@ theorem lyapunov_linear_map
     Real.log |a| := by
   unfold lyapunov_exponent_estimate
   rw [Real.log_pow]
+  have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   field_simp
 
 theorem stable_manifold_contraction
@@ -245,9 +243,6 @@ theorem pesin_zero_for_stable
   intro i _
   exact max_eq_left (le_of_lt (h i))
 
--- `Finset.sum_pos_of_ne_zero` is not a confirmed real lemma name; the
--- standard Mathlib lemma for "all nonneg, one strictly positive" is
--- Finset.sum_pos'.
 theorem pesin_pos_for_chaotic
     (spectrum : Fin 4 → ℝ) (i0 : Fin 4)
     (h : 0 < spectrum i0) :
