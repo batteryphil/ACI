@@ -1,3 +1,4 @@
+-- ACIManifold.lean
 import Mathlib.LinearAlgebra.Matrix.PosDef
 import Mathlib.LinearAlgebra.Projection
 import Mathlib.Analysis.InnerProductSpace.Basic
@@ -15,20 +16,11 @@ import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 
 open Matrix Finset TopologicalSpace
 
-/-!
-# ACI SOVEREIGN MANIFOLD: ABSOLUTE MATHEMATICAL ARCHITECTURE
-## Volume I: Constrained Dynamical Manifolds and Quotient Flow Invariance
--/
-
 namespace ACI_Sovereign
 
 variable (n : ℕ) (hn : 0 < n)
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 1: AMBIENT STATE SPACE AND CONSERVATION GEOMETRY
-═══════════════════════════════════════════════════════════
--/
+-- TIER 1: AMBIENT STATE SPACE AND CONSERVATION GEOMETRY
 
 def ones : Fin n → ℝ := fun _ => 1
 
@@ -51,11 +43,7 @@ theorem conservationSet_affine_closed (c : ℝ) (D₁ D₂ : Fin n → ℝ)
   rw [sum_add_distrib, ← mul_sum, ← mul_sum, h₁', h₂']
   ring
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 2: TANGENT BUNDLE STRUCTURE V₀
-═══════════════════════════════════════════════════════════
--/
+-- TIER 2: TANGENT BUNDLE STRUCTURE V₀
 
 def V0 : Submodule ℝ (Fin n → ℝ) where
   carrier   := { v | ∑ i, v i = 0 }
@@ -122,11 +110,7 @@ theorem V0_codim_one :
   rw [hrange, hker, hspace] at hrn
   omega
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 3: THE ACI PROJECTION OPERATOR P
-═══════════════════════════════════════════════════════════
--/
+-- TIER 3: THE ACI PROJECTION OPERATOR P
 
 noncomputable def P (v : Fin n → ℝ) : Fin n → ℝ :=
   fun i => v i - (∑ j, v j) / n
@@ -202,12 +186,8 @@ theorem P_annihilates_uniform (c : ℝ) :
   field_simp
   ring
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 4: THE MASTER DECOUPLING THEOREM
-## J_red = PWP (β and D* vanish under projection)
-═══════════════════════════════════════════════════════════
--/
+-- TIER 4: THE MASTER DECOUPLING THEOREM
+-- J_red = PWP (β and D* vanish under projection)
 
 noncomputable def J_full
     (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ))
@@ -233,11 +213,7 @@ theorem spectrum_beta_invariant
     P_linear n (J_full n W D_star₂ β₂ (P n v)) := by
   rw [J_red_decoupling n hn, J_red_decoupling n hn]
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 5: LYAPUNOV STABILITY ON THE CONSERVATION MANIFOLD
-═══════════════════════════════════════════════════════════
--/
+-- TIER 5: LYAPUNOV STABILITY ON THE CONSERVATION MANIFOLD
 
 noncomputable def lyapunov_candidate (D_star : Fin n → ℝ) (D : Fin n → ℝ) : ℝ :=
   (1 / 2) * ∑ i, (D i - D_star i) ^ 2
@@ -264,11 +240,7 @@ theorem lyapunov_zero_iff (D_star D : Fin n → ℝ) :
       linarith
   · intro h; subst h; simp
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 6: OPERATOR BOUNDEDNESS AND SPECTRAL CONTAINMENT
-═══════════════════════════════════════════════════════════
--/
+-- TIER 6: OPERATOR BOUNDEDNESS AND SPECTRAL CONTAINMENT
 
 def V0_stable (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) : Prop :=
   ∀ v, v ∈ V0 n → W v ∈ V0 n
@@ -285,11 +257,7 @@ theorem PWP_is_V0_stable (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) :
 def V0_neg_def (W : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)) : Prop :=
   ∀ v, v ∈ V0 n → v ≠ 0 → ∑ i, v i * W v i < 0
 
-/-!
-═══════════════════════════════════════════════════════════
-## TIER 7: ACI SYSTEM AUDIT RECORD
-═══════════════════════════════════════════════════════════
--/
+-- TIER 7: ACI SYSTEM AUDIT RECORD
 
 structure ACI_AuditVector where
   conservation_geometry : ℕ
