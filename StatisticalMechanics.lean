@@ -7,8 +7,6 @@ namespace StatisticalMechanics
 open Finset Real
 
 -- SECTION 1: PARTITION FUNCTION
--- Z(β) = Σ exp(-β E_i)
-
 noncomputable def partition_function
     (beta : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) : ℝ :=
@@ -38,7 +36,6 @@ theorem partition_function_ge_one
           (fun i _ => le_of_lt (Real.exp_pos (-beta * energies i)))
           (mem_univ i0)
 
--- Scaling: Z(β, E + c) = exp(-βc) Z(β, E)
 theorem partition_shift
     (beta c : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) :
@@ -55,8 +52,6 @@ theorem partition_shift
   rw [← Finset.mul_sum]
 
 -- SECTION 2: GIBBS PROBABILITY DISTRIBUTION
--- p_i = exp(-β E_i) / Z
-
 noncomputable def gibbs_prob
     (beta : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (i : Fin 7) : ℝ :=
@@ -91,8 +86,6 @@ theorem gibbs_sums_to_one
   exact div_self (partition_function_pos beta energies hbeta).ne'
 
 -- SECTION 3: FREE ENERGY
--- F = -kT log Z
-
 noncomputable def free_energy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) : ℝ :=
@@ -105,7 +98,6 @@ theorem free_energy_finite
     ∃ F : ℝ, F = free_energy beta k energies hbeta hk :=
   ⟨free_energy beta k energies hbeta hk, rfl⟩
 
--- Internal energy U = -∂(log Z)/∂β
 noncomputable def internal_energy
     (beta : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) : ℝ :=
@@ -113,8 +105,6 @@ noncomputable def internal_energy
     energies i * gibbs_prob beta energies hbeta i)
 
 -- SECTION 4: ENTROPY
--- S = -k Σ p_i log p_i
-
 noncomputable def gibbs_entropy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) : ℝ :=
@@ -125,11 +115,19 @@ noncomputable def gibbs_entropy
 theorem gibbs_entropy_nonneg
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) :
-    0 ≤ gibbs_entropy beta k energies hbeta hk :=
-  let hS := Finset.sum_nonpos (fun i _ =>
-    mul_nonpos_of_nonneg_of_nonneg (le_of_lt (gibbs_prob_pos beta energies hbeta i))
-      (Real.log_nonpos (le_of_lt (gibbs_prob_pos beta energies hbeta i)) (gibbs_prob_le_one beta energies hbeta i)))
-  mul_nonneg_of_nonpos_of_nonpos (neg_nonpos.mpr hk.le) hS
+    0 ≤ gibbs_entropy beta k energies hbeta hk := by
+  unfold gibbs_entropy
+  have h_sum_nonpos : univ.sum (fun i => gibbs_prob beta energies hbeta i * Real.log (gibbs_prob beta energies hbeta i)) ≤ 0 := by
+    apply Finset.sum_nonpos
+    intro i _
+    apply mul_nonpos_of_nonneg_of_nonneg
+    · exact le_of_lt (gibbs_prob_pos beta energies hbeta i)
+    · apply Real.log_nonpos
+      · exact le_of_lt (gibbs_prob_pos beta energies hbeta i)
+      · exact gibbs_prob_le_one beta energies hbeta i
+  apply mul_nonneg_of_nonpos_of_nonpos
+  · linarith
+  · exact h_sum_nonpos
 
 theorem uniform_max_entropy
     (beta k : ℝ) (hbeta : 0 < beta) (hk : 0 < k) :
@@ -139,17 +137,14 @@ theorem uniform_max_entropy
   ring_nf
   rw [Real.log_inv, Real.log_natCast]
 
--- SECTION 5: MAXWELL-BOLTZMANN DISTRIBUTION
-
+-- SECTION 5: MAXWELL-BOLTZMANN
 noncomputable def maxwell_boltzmann
-    (m k T v : ℝ)
-    (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) : ℝ :=
+    (m k T v : ℝ) (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) : ℝ :=
   Real.sqrt (m / (2 * Real.pi * k * T)) *
   Real.exp (-(m * v ^ 2) / (2 * k * T))
 
 theorem maxwell_boltzmann_pos
-    (m k T v : ℝ)
-    (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
+    (m k T v : ℝ) (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
     0 < maxwell_boltzmann m k T v hm hk hT := by
   unfold maxwell_boltzmann
   apply mul_pos
@@ -157,15 +152,13 @@ theorem maxwell_boltzmann_pos
   · exact Real.exp_pos _
 
 theorem maxwell_boltzmann_symmetric
-    (m k T v : ℝ)
-    (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
+    (m k T v : ℝ) (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
     maxwell_boltzmann m k T v hm hk hT =
     maxwell_boltzmann m k T (-v) hm hk hT := by
   unfold maxwell_boltzmann; ring_nf
 
 theorem maxwell_boltzmann_max_at_zero
-    (m k T v : ℝ)
-    (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
+    (m k T v : ℝ) (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
     maxwell_boltzmann m k T v hm hk hT ≤
     maxwell_boltzmann m k T 0 hm hk hT := by
   unfold maxwell_boltzmann
@@ -178,7 +171,6 @@ theorem maxwell_boltzmann_max_at_zero
   · positivity
 
 -- SECTION 6: THERMODYNAMIC LAWS
-
 structure ThermodynamicProcess where
   delta_U : ℝ
   Q       : ℝ
@@ -188,23 +180,17 @@ structure ThermodynamicProcess where
 theorem work_from_first_law (p : ThermodynamicProcess) :
     p.W = p.delta_U - p.Q := by linarith [p.first_law]
 
-noncomputable def carnot_efficiency
-    (T_hot T_cold : ℝ) : ℝ :=
+noncomputable def carnot_efficiency (T_hot T_cold : ℝ) : ℝ :=
   1 - T_cold / T_hot
 
-theorem carnot_efficiency_pos
-    (T_hot T_cold : ℝ)
-    (hh : 0 < T_hot) (hc : 0 < T_cold)
-    (h : T_cold < T_hot) :
+theorem carnot_efficiency_pos (T_hot T_cold : ℝ) (hh : 0 < T_hot) (hc : 0 < T_cold) (h : T_cold < T_hot) :
     0 < carnot_efficiency T_hot T_cold := by
   unfold carnot_efficiency
   rw [sub_pos]
   exact (div_lt_one hh).mpr h
 
 -- SECTION 7: PHASE TRANSITIONS
-
-theorem symmetry_breaking_minima
-    (a b : ℝ) (ha : a < 0) (hb : 0 < b) :
+theorem symmetry_breaking_minima (a b : ℝ) (ha : a < 0) (hb : 0 < b) :
     ∃ phi_min : ℝ, phi_min ^ 2 = -a / (2 * b) := by
   use Real.sqrt (-a / (2 * b))
   apply Real.sq_sqrt
@@ -212,8 +198,7 @@ theorem symmetry_breaking_minima
   · linarith
   · linarith
 
--- SECTION 8: AWM STATISTICAL MECHANICS BRIDGE
-
+-- SECTION 8: BRIDGE
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
   | E_Boundary | F_Diagnostics | G_Governance
@@ -230,32 +215,23 @@ structure DomainThermal where
   beta     : ℝ
   beta_pos : 0 < beta
 
-noncomputable def domain_partition
-    (dt : DomainThermal) : ℝ :=
-  Finset.univ.sum (fun d =>
-    Real.exp (-dt.beta * dt.energy d))
+noncomputable def domain_partition (dt : DomainThermal) : ℝ :=
+  Finset.univ.sum (fun d => Real.exp (-dt.beta * dt.energy d))
 
-noncomputable def domain_gibbs
-    (dt : DomainThermal) (d : Domain21) : ℝ :=
-  Real.exp (-dt.beta * dt.energy d) /
-  domain_partition dt
+noncomputable def domain_gibbs (dt : DomainThermal) (d : Domain21) : ℝ :=
+  Real.exp (-dt.beta * dt.energy d) / domain_partition dt
 
-theorem domain_gibbs_sum_one
-    (dt : DomainThermal) :
+theorem domain_gibbs_sum_one (dt : DomainThermal) :
     Finset.univ.sum (domain_gibbs dt) = 1 := by
   unfold domain_gibbs
   rw [← Finset.sum_div]
   exact div_self ((Finset.sum_pos (fun _ _ => Real.exp_pos _) Finset.univ_nonempty)).ne'
 
 -- SYSTEM LOCK
-
 structure StatMechLock where
-  Z_pos      : ∀ (beta : ℝ) (E : Fin 7 → ℝ) (hb : 0 < beta),
-                 0 < partition_function beta E hb
-  gibbs_sum  : ∀ (beta : ℝ) (E : Fin 7 → ℝ) (hb : 0 < beta),
-                 univ.sum (gibbs_prob beta E hb) = 1
-  dom_sum    : ∀ (dt : DomainThermal),
-                 Finset.univ.sum (domain_gibbs dt) = 1
+  Z_pos      : ∀ (beta : ℝ) (E : Fin 7 → ℝ) (hb : 0 < beta), 0 < partition_function beta E hb
+  gibbs_sum  : ∀ (beta : ℝ) (E : Fin 7 → ℝ) (hb : 0 < beta), univ.sum (gibbs_prob beta E hb) = 1
+  dom_sum    : ∀ (dt : DomainThermal), Finset.univ.sum (domain_gibbs dt) = 1
 
 def SMSLock : StatMechLock where
   Z_pos      := partition_function_pos
