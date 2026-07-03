@@ -1,7 +1,6 @@
 MyProject
 OptimalControl
 TopologicalDataAnalysis
-StatisticalMechanics
 ErgodicTheory
 ConvexAnalysis
 ControlTheory
