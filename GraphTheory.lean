@@ -3,7 +3,7 @@ import Mathlib
 
 namespace GraphTheory
 
-open Finset
+open Finset Matrix
 
 -- SECTION 1: GRAPHS AND BASIC PROPERTIES
 
@@ -26,118 +26,100 @@ theorem degree_lt_n (n : ℕ)
     (G : Graph n) (i : Fin n) :
     degree n G i < n := by
   unfold degree
-  calc (Finset.univ.filter
-        (fun j => G.adj i j = true)).card
-      ≤ Finset.univ.card :=
-        Finset.card_filter_le _ _
-    _ = n := Fintype.card_fin n
+  have hn0 : 0 < n := Nat.lt_of_le_of_lt (Nat.zero_le i.val) i.isLt
+  have hni : ∀ j ∈ Finset.univ.filter (fun j => G.adj i j = true), j ∈ Finset.univ.erase i := by
+    intro j hj
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hj
+    rw [Finset.mem_erase]
+    refine ⟨fun heq => ?_, Finset.mem_univ j⟩
+    subst heq
+    rw [G.irref] at hj
+    exact absurd hj (by decide)
+  calc (Finset.univ.filter (fun j => G.adj i j = true)).card
+      ≤ (Finset.univ.erase i).card := Finset.card_le_card hni
+    _ < n := by
+        rw [Finset.card_erase_of_mem (Finset.mem_univ i), Fintype.card_fin]
+        omega
 
--- Handshaking lemma. The original proof was vacuous — it "proved"
--- S + S = 2*S for the same S on both sides (always trivially true by
--- ring regardless of graph structure) and never actually established
--- 2 ∣ S. Rebuilt via genuine double-counting: split the full ordered-pair
+-- Handshaking lemma via genuine double-counting: split the full ordered-pair
 -- sum by i<j / i=j / i>j, note the diagonal contributes 0 by
--- irreflexivity, and use symmetry to biject the i>j part onto the i<j
--- part, giving total = 2 * (i<j part).
+-- irreflexivity, and use symmetry to biject the i>j part onto the i<j part.
 theorem handshaking (n : ℕ) (G : Graph n) :
     2 ∣ Finset.univ.sum (degree n G) := by
   classical
   unfold degree
   have hcard : ∀ i : Fin n, (Finset.univ.filter (fun j => G.adj i j = true)).card
-      = Finset.univ.sum (fun j => if G.adj i j = true then 1 else 0) := by
+      = Finset.univ.sum (fun j => if G.adj i j = true then (1:ℕ) else 0) := by
     intro i; rw [Finset.card_filter]
   simp_rw [hcard]
-  set T : ℕ := Finset.univ.sum (fun i => Finset.univ.sum (fun j =>
-    if G.adj i j = true then 1 else 0)) with hT
+  rw [← Finset.sum_product']
   set E : Finset (Fin n × Fin n) :=
-    (Finset.univ ×ˢ Finset.univ).filter (fun p => p.1 < p.2) with hE
-  have hTsum : T = (Finset.univ ×ˢ Finset.univ).sum
-      (fun p => if G.adj p.1 p.2 = true then 1 else 0) := by
-    rw [hT, Finset.sum_product]
-  have hsplit : (Finset.univ ×ˢ Finset.univ).sum
-      (fun p : Fin n × Fin n => if G.adj p.1 p.2 = true then 1 else 0) =
-      E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) +
-      (E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) +
-       (Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2)
-         |>.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0)) := by
-    have hpart : (Finset.univ ×ˢ Finset.univ : Finset (Fin n × Fin n)) =
-        E ∪ (E.image (fun p => (p.2, p.1))) ∪
-        (Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2) := by
-      ext ⟨a, b⟩
-      simp only [hE, Finset.mem_union, Finset.mem_filter, Finset.mem_product,
-        Finset.mem_univ, true_and, Finset.mem_image]
-      rcases lt_trichotomy a b with h | h | h
-      · exact ⟨fun _ => Or.inl (Or.inl h), fun _ => h⟩
-      · exact ⟨fun _ => Or.inr h, fun _ => h⟩
-      · exact ⟨fun _ => Or.inl (Or.inr ⟨(b, a), h.symm, rfl⟩), fun _ => h⟩
-    have hdisj1 : Disjoint E (E.image (fun p => (p.2, p.1))) := by
-      rw [Finset.disjoint_left]
-      rintro ⟨a, b⟩ ha hb
-      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
-        true_and] at ha
-      simp only [Finset.mem_image] at hb
-      obtain ⟨⟨c, d⟩, hcd, heq⟩ := hb
-      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
-        true_and] at hcd
-      simp only [Prod.mk.injEq] at heq
-      obtain ⟨rfl, rfl⟩ := heq
+      (Finset.univ ×ˢ Finset.univ).filter (fun p => p.1 < p.2) with hE
+  set D : Finset (Fin n × Fin n) :=
+      (Finset.univ ×ˢ Finset.univ).filter (fun p => p.1 = p.2) with hD
+  have hdiag : ∀ p ∈ D, (if G.adj p.1 p.2 = true then (1:ℕ) else 0) = 0 := by
+    intro p hp
+    simp only [hD, Finset.mem_filter] at hp
+    obtain ⟨_, heq⟩ := hp
+    simp [heq, G.irref]
+  have hpart : (Finset.univ ×ˢ Finset.univ : Finset (Fin n × Fin n)) =
+      E ∪ E.image (fun p => (p.2, p.1)) ∪ D := by
+    ext ⟨a, b⟩
+    simp only [hE, hD, Finset.mem_union, Finset.mem_filter, Finset.mem_product,
+      Finset.mem_univ, true_and, Finset.mem_image, Prod.mk.injEq]
+    rcases lt_trichotomy a b with h | h | h
+    · tauto
+    · tauto
+    · refine ⟨fun _ => Or.inl (Or.inr ⟨(b, a), ⟨h.symm, rfl, rfl⟩⟩), fun _ => h⟩
+  have hd1 : Disjoint E (E.image (fun p => (p.2, p.1))) := by
+    rw [Finset.disjoint_left]
+    rintro ⟨a, b⟩ ha hb
+    simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at ha
+    simp only [Finset.mem_image, Prod.mk.injEq] at hb
+    obtain ⟨⟨c, d⟩, hcd, hca, hdb⟩ := hb
+    simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hcd
+    omega
+  have hd2 : Disjoint (E ∪ E.image (fun p => (p.2, p.1))) D := by
+    rw [Finset.disjoint_left]
+    rintro ⟨a, b⟩ hab hd
+    simp only [hD, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hd
+    simp only [Finset.mem_union] at hab
+    rcases hab with h | h
+    · simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at h
       omega
-    have hdisj2 : Disjoint (E ∪ E.image (fun p => (p.2, p.1)))
-        ((Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2)) := by
-      rw [Finset.disjoint_left]
-      rintro ⟨a, b⟩ hab heq
-      simp only [Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
-        true_and] at heq
-      simp only [Finset.mem_union] at hab
-      rcases hab with h | h
-      · simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
-          true_and] at h
-        omega
-      · simp only [Finset.mem_image] at h
-        obtain ⟨⟨c, d⟩, hcd, heqp⟩ := h
-        simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
-          true_and] at hcd
-        simp only [Prod.mk.injEq] at heqp
-        obtain ⟨rfl, rfl⟩ := heqp
-        omega
-    rw [hpart, Finset.sum_union hdisj2, Finset.sum_union hdisj1]
-    have himg : (E.image (fun p => (p.2, p.1))).sum
-        (fun p => if G.adj p.1 p.2 = true then 1 else 0) =
-        E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) := by
-      rw [Finset.sum_image]
-      · apply Finset.sum_congr rfl
-        intro p _
-        simp [G.sym p.1 p.2]
-      · rintro ⟨a, b⟩ _ ⟨c, d⟩ _ heq
-        simp only [Prod.mk.injEq] at heq
-        simp [heq.1, heq.2]
-    rw [himg]
-    ring
-  have hdiag : (Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2)
-      |>.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) = 0 := by
-    apply Finset.sum_eq_zero
-    rintro ⟨a, b⟩ hab
-    simp only [Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
-      true_and] at hab
-    subst hab
-    simp [G.irref a]
-  rw [hTsum, hsplit, hdiag, add_zero] at hT
-  exact ⟨E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0), by rw [← hT]; ring⟩
+    · simp only [Finset.mem_image, Prod.mk.injEq] at h
+      obtain ⟨⟨c, d⟩, hcd, hca, hdb⟩ := h
+      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hcd
+      omega
+  have himg : (E.image (fun p => (p.2, p.1))).sum
+      (fun p => if G.adj p.1 p.2 = true then (1:ℕ) else 0) =
+      E.sum (fun p => if G.adj p.1 p.2 = true then (1:ℕ) else 0) := by
+    rw [Finset.sum_image (fun a _ b _ heq => by
+      simp only [Prod.mk.injEq] at heq
+      exact Prod.ext heq.2 heq.1)]
+    apply Finset.sum_congr rfl
+    intro p _
+    rw [G.sym]
+  rw [hpart, Finset.sum_union hd2, Finset.sum_union hd1, himg,
+      Finset.sum_eq_zero hdiag, add_zero]
+  exact ⟨E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0), by ring⟩
 
 -- SECTION 2: PATHS AND CONNECTIVITY
 
 def is_path (n : ℕ) (G : Graph n)
     (p : List (Fin n)) : Prop :=
-  p.Chain' (fun i j => G.adj i j = true)
+  List.IsChain (fun i j => G.adj i j = true) p
 
 theorem single_vertex_path (n : ℕ)
     (G : Graph n) (v : Fin n) :
     is_path n G [v] := by
-  unfold is_path; simp
+  unfold is_path
+  simp [List.IsChain]
 
 theorem empty_path (n : ℕ) (G : Graph n) :
     is_path n G [] := by
-  unfold is_path; simp
+  unfold is_path
+  simp [List.IsChain]
 
 def is_connected (n : ℕ) (G : Graph n) : Prop :=
   ∀ i j : Fin n, ∃ p : List (Fin n),
@@ -145,17 +127,20 @@ def is_connected (n : ℕ) (G : Graph n) : Prop :=
     p.head? = some i ∧
     p.getLast? = some j
 
-theorem complete_graph_connected (n : ℕ)
-    (hn : 1 < n) :
-    is_connected n ⟨
-      fun i j => decide (i ≠ j),
-      by intro i j; simp [ne_comm],
-      by intro i; simp⟩ := by
+def complete_graph (n : ℕ) : Graph n where
+  adj := fun i j => decide (i ≠ j)
+  sym := by intro i j; simp [ne_comm]
+  irref := by intro i; simp
+
+theorem complete_graph_connected (n : ℕ) (hn : 1 < n) :
+    is_connected n (complete_graph n) := by
   intro i j
-  exact ⟨[i, j],
-    by simp [is_path, List.Chain'],
-    by simp,
-    by simp⟩
+  by_cases h : i = j
+  · exact ⟨[i], single_vertex_path n (complete_graph n) i, by simp, by simp [h]⟩
+  · exact ⟨[i, j],
+      by unfold is_path; simp [List.IsChain, complete_graph, h],
+      by simp,
+      by simp⟩
 
 -- SECTION 3: TREES AND SPANNING TREES
 
@@ -197,13 +182,10 @@ def is_proper_coloring (n k : ℕ)
 theorem trivial_coloring (n : ℕ)
     (G : Graph n) (hn : 0 < n) :
     is_proper_coloring n n G id := by
-  intro i j hadj
-  intro heq
-  apply absurd G.irref
-  intro hirref
+  intro i j hadj heq
   have : i = j := heq
   subst this
-  rw [hirref i] at hadj
+  rw [G.irref i] at hadj
   exact absurd hadj (by decide)
 
 theorem chromatic_lb_one (n : ℕ)
@@ -304,13 +286,18 @@ noncomputable def expected_degree
     (n : ℕ) (p : ℝ) : ℝ :=
   (n - 1) * p
 
+-- The `n - 1` here is REAL (ℝ) subtraction, since n is coerced to ℝ before
+-- the whole expression is elaborated — not ℕ's truncated subtraction. The
+-- original proof chased a nonexistent Nat.sub_nonneg.mpr trying to reason
+-- about the wrong operation; the real fix reasons about the cast directly.
 theorem expected_degree_nonneg
     (n : ℕ) (p : ℝ)
     (hp : 0 ≤ p) (hn : 1 ≤ n) :
     0 ≤ expected_degree n p := by
   unfold expected_degree
   apply mul_nonneg _ hp
-  exact_mod_cast Nat.sub_nonneg.mpr hn
+  have h1 : (1:ℝ) ≤ (n:ℝ) := by exact_mod_cast hn
+  linarith
 
 noncomputable def connectivity_threshold
     (n : ℕ) (hn : 0 < n) : ℝ :=
@@ -343,18 +330,16 @@ def AWM_graph : Graph 21 where
             j.val = (i.val + 20) % 21)
   sym   := by
     intro i j
-    simp [Bool.decide_eq_decide]
+    simp only [decide_eq_decide]
     omega
   irref := by
     intro i
-    simp
+    simp only [decide_eq_false_iff_not]
     omega
 
 theorem AWM_degree (i : Fin 21) :
     degree 21 AWM_graph i = 2 := by
-  unfold degree AWM_graph
-  simp
-  decide
+  fin_cases i <;> decide
 
 theorem AWM_adj_sym :
     (adj_matrix 21 AWM_graph)ᵀ =
