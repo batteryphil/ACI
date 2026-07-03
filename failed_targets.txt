@@ -33,7 +33,6 @@ ProbabilityTheory
 HarmonicAnalysis
 NumericalAnalysis
 PartialDifferentialEquations
-GraphTheory
 InformationTheoryAdvanced
 OperatorTheory
 CodingTheory
