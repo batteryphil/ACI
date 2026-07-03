@@ -5,11 +5,8 @@ namespace GeneralRelativity
 
 open Finset Real
 
--- ============================================================
 -- SECTION 1: METRIC TENSOR
--- ============================================================
 
--- Metric tensor: symmetric, non-degenerate
 structure MetricTensor (n : ℕ) where
   g      : Matrix (Fin n) (Fin n) ℝ
   sym    : g.transpose = g
@@ -19,7 +16,6 @@ theorem metric_sym (n : ℕ)
     (M : MetricTensor n) :
     M.g.transpose = M.g := M.sym
 
--- Minkowski metric: η = diag(-1,1,1,1)
 def minkowski : MetricTensor 4 where
   g := Matrix.diagonal
     (fun i => match i with
@@ -37,19 +33,16 @@ theorem minkowski_det :
   simp [minkowski, Matrix.det_diagonal]
   norm_num
 
--- Line element: ds² = g_μν dx^μ dx^ν
+-- `Matrix.dotProduct` confirmed fabricated (same bug already found in
+-- LinearAlgebra.lean earlier this session) — real form is the bare
+-- top-level `dotProduct`.
 noncomputable def line_element (n : ℕ)
     (M : MetricTensor n)
     (dx : Fin n → ℝ) : ℝ :=
-  Matrix.dotProduct dx (M.g.mulVec dx)
+  dotProduct dx (M.g.mulVec dx)
 
--- ============================================================
 -- SECTION 2: CHRISTOFFEL SYMBOLS
--- ============================================================
 
--- Christoffel symbols: connection coefficients
--- Γ^λ_μν = ½ g^λσ (∂_μ g_σν + ∂_ν g_σμ - ∂_σ g_μν)
--- In our discrete proxy:
 noncomputable def christoffel_proxy
     (n : ℕ) (g : Fin n → Fin n → ℝ)
     (lambda mu nu : Fin n) : ℝ :=
@@ -64,19 +57,14 @@ theorem christoffel_sym (n : ℕ)
   unfold christoffel_proxy
   congr 1; linarith [hg mu nu]
 
--- Geodesic equation proxy
 theorem geodesic_proxy (n : ℕ)
     (x : Fin n → ℝ) :
     ∃ accel : Fin n → ℝ,
       ∀ i, accel i = 0 ∨ True :=
   ⟨fun _ => 0, fun _ => Or.inl rfl⟩
 
--- ============================================================
 -- SECTION 3: RIEMANN CURVATURE TENSOR
--- ============================================================
 
--- Riemann tensor proxy: R^ρ_σμν
--- Measures non-commutativity of covariant derivatives
 noncomputable def riemann_proxy (n : ℕ)
     (Gamma : Fin n → Fin n → Fin n → ℝ)
     (rho sigma mu nu : Fin n) : ℝ :=
@@ -89,14 +77,12 @@ theorem riemann_antisym (n : ℕ)
     -riemann_proxy n Gamma rho sigma nu mu := by
   unfold riemann_proxy; ring
 
--- Ricci tensor: R_μν = R^ρ_μρν
 noncomputable def ricci_tensor (n : ℕ)
     (R : Fin n → Fin n → Fin n → Fin n → ℝ)
     (mu nu : Fin n) : ℝ :=
   Finset.univ.sum (fun rho =>
     R rho mu rho nu)
 
--- Ricci scalar: R = g^μν R_μν
 noncomputable def ricci_scalar (n : ℕ)
     (g_inv : Fin n → Fin n → ℝ)
     (Ric : Fin n → Fin n → ℝ) : ℝ :=
@@ -104,18 +90,14 @@ noncomputable def ricci_scalar (n : ℕ)
     Finset.univ.sum (fun nu =>
       g_inv mu nu * Ric mu nu))
 
--- ============================================================
 -- SECTION 4: EINSTEIN FIELD EQUATIONS
--- ============================================================
 
--- Einstein tensor: G_μν = R_μν - ½ g_μν R
 noncomputable def einstein_tensor (n : ℕ)
     (Ric : Fin n → Fin n → ℝ)
     (g : Fin n → Fin n → ℝ)
     (R : ℝ) (mu nu : Fin n) : ℝ :=
   Ric mu nu - (1/2) * g mu nu * R
 
--- Stress-energy tensor proxy
 structure StressEnergy (n : ℕ) where
   T     : Fin n → Fin n → ℝ
   T_sym : ∀ mu nu, T mu nu = T nu mu
@@ -125,21 +107,16 @@ theorem stress_energy_diag_nonneg (n : ℕ)
     (SE : StressEnergy n) (mu : Fin n) :
     0 ≤ SE.T mu mu := SE.T_nn mu
 
--- Einstein equations: G_μν = 8π T_μν
 def einstein_eq (n : ℕ)
     (G T : Fin n → Fin n → ℝ) : Prop :=
   ∀ mu nu, G mu nu = 8 * Real.pi * T mu nu
 
--- Conservation of stress-energy: ∇_μ T^μν = 0
 theorem conservation_proxy (n : ℕ)
     (T : Fin n → Fin n → ℝ) :
     True := trivial
 
--- ============================================================
 -- SECTION 5: SCHWARZSCHILD SOLUTION
--- ============================================================
 
--- Schwarzschild radius: r_s = 2GM/c²
 noncomputable def schwarzschild_radius
     (G M c : ℝ) : ℝ :=
   2 * G * M / c ^ 2
@@ -153,11 +130,12 @@ theorem schwarzschild_pos
   · exact mul_pos (mul_pos (by norm_num) hG) hM
   · exact pow_pos hc 2
 
--- Gravitational redshift
 noncomputable def gravitational_redshift
     (r r_s : ℝ) (hr : r_s < r) : ℝ :=
   Real.sqrt (1 - r_s / r)
 
+-- `div_lt_one_of_lt` confirmed fabricated (same bug as CodingTheory
+-- earlier this session). Real lemma is the iff form `div_lt_one`.
 theorem redshift_pos
     (r r_s : ℝ) (hr_s : 0 ≤ r_s)
     (hr : r_s < r) :
@@ -165,22 +143,23 @@ theorem redshift_pos
   unfold gravitational_redshift
   apply Real.sqrt_pos_of_pos
   rw [sub_pos]
-  exact div_lt_one_of_lt hr (by linarith)
+  exact (div_lt_one (by linarith)).mpr hr
 
+-- `Real.sqrt_le_one` is a plain Iff (√x ≤ 1 ↔ x ≤ 1) with no arguments —
+-- the original `apply` followed by two bullet proofs did not match this
+-- signature at all. Real usage is `.mpr` with a single proof.
 theorem redshift_le_one
     (r r_s : ℝ) (hr_s : 0 ≤ r_s)
     (hr : r_s < r) :
     gravitational_redshift r r_s hr ≤ 1 := by
   unfold gravitational_redshift
-  apply Real.sqrt_le_one
-  · linarith [div_nonneg hr_s (by linarith)]
-  · linarith [div_nonneg hr_s (by linarith)]
+  apply Real.sqrt_le_one.mpr
+  have hr0 : (0:ℝ) ≤ r := by linarith
+  have := div_nonneg hr_s hr0
+  linarith
 
--- ============================================================
 -- SECTION 6: GRAVITATIONAL WAVES
--- ============================================================
 
--- Gravitational wave strain proxy
 noncomputable def GW_strain
     (h0 f t : ℝ) : ℝ :=
   h0 * Real.cos (2 * Real.pi * f * t)
@@ -197,19 +176,14 @@ theorem GW_strain_bounded
           (Real.abs_cos_le_one _) hh0
     _ = h0 := mul_one _
 
--- Quadrupole formula proxy
 theorem quadrupole_nonneg
     (P : ℝ) (hP : 0 ≤ P) : 0 ≤ P := hP
 
--- LIGO sensitivity proxy
 theorem LIGO_sensitivity_proxy :
     ∃ h : ℝ, h = 1e-21 := ⟨1e-21, rfl⟩
 
--- ============================================================
 -- SECTION 7: COSMOLOGY
--- ============================================================
 
--- Friedmann equation: H² = 8πGρ/3
 noncomputable def hubble_parameter
     (G rho : ℝ)
     (hG : 0 < G) (hrho : 0 ≤ rho) : ℝ :=
@@ -221,11 +195,9 @@ theorem hubble_nonneg
     0 ≤ hubble_parameter G rho hG hrho := by
   unfold hubble_parameter; positivity
 
--- Scale factor a(t) > 0
 theorem scale_factor_pos
     (a : ℝ) (ha : 0 < a) : 0 < a := ha
 
--- Cosmological constant
 noncomputable def dark_energy_density
     (Lambda : ℝ) : ℝ :=
   Lambda / (8 * Real.pi)
@@ -236,15 +208,11 @@ theorem dark_energy_nonneg
   unfold dark_energy_density
   apply div_nonneg hL; positivity
 
--- Cosmic microwave background proxy
 theorem CMB_temp_pos :
     (0 : ℝ) < 2.725 := by norm_num
 
--- ============================================================
 -- SECTION 8: BLACK HOLE THERMODYNAMICS
--- ============================================================
 
--- Hawking temperature: T = ℏc³/(8πGMk_B)
 noncomputable def hawking_temp
     (hbar c G M k_B : ℝ)
     (hG : 0 < G) (hM : 0 < M)
@@ -252,6 +220,11 @@ noncomputable def hawking_temp
     (hhbar : 0 < hbar) : ℝ :=
   hbar * c ^ 3 / (8 * Real.pi * G * M * k_B)
 
+-- The original's deeply nested `apply mul_pos` chain with 5 bullets is a
+-- real risk (bullet-to-subgoal mapping for a left-associated 5-factor
+-- product is easy to get wrong without a compiler). Rebuilt via
+-- positivity, which uses the local hypotheses (hG, hM, hk, etc.)
+-- automatically and needs no manual association bookkeeping.
 theorem hawking_temp_pos
     (hbar c G M k_B : ℝ)
     (hG : 0 < G) (hM : 0 < M)
@@ -260,19 +233,8 @@ theorem hawking_temp_pos
     0 < hawking_temp hbar c G M k_B
       hG hM hc hk hhbar := by
   unfold hawking_temp
-  apply div_pos
-  · exact mul_pos hhbar (pow_pos hc 3)
-  · apply mul_pos
-    · apply mul_pos
-      · apply mul_pos
-        · apply mul_pos
-          · positivity
-          · exact Real.pi_pos
-        · exact hG
-      · exact hM
-    · exact hk
+  positivity
 
--- Bekenstein-Hawking entropy: S = A/4
 noncomputable def BH_entropy
     (A : ℝ) (hA : 0 ≤ A) : ℝ :=
   A / 4
@@ -283,13 +245,10 @@ theorem BH_entropy_nonneg
   unfold BH_entropy
   exact div_nonneg hA (by norm_num)
 
--- Area theorem: BH area never decreases
 theorem area_theorem (A1 A2 : ℝ)
     (h : A1 ≤ A2) : A1 ≤ A2 := h
 
--- ============================================================
 -- SECTION 9: AWM GR BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -300,19 +259,21 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain metric: 21-dimensional
+-- `nondegenerate := by simp` risked relying on simp implicitly knowing
+-- Matrix.det_one and one_ne_zero — made the unfolding explicit instead.
 noncomputable def domain_metric :
     MetricTensor 21 where
   g    := 1
   sym  := by simp
-  nondegenerate := by simp
+  nondegenerate := by
+    rw [Matrix.det_one]
+    norm_num
 
 theorem domain_metric_sym :
     (domain_metric).g.transpose =
     (domain_metric).g :=
   domain_metric.sym
 
--- Domain Schwarzschild radius
 noncomputable def domain_rs :=
   schwarzschild_radius 1 21 1
 
@@ -321,7 +282,6 @@ theorem domain_rs_pos :
   schwarzschild_pos 1 21 1
     (by norm_num) (by norm_num) (by norm_num)
 
--- Domain Hawking temperature
 noncomputable def domain_T_hawking :=
   hawking_temp 1 1 1 21 1
     (by norm_num) (by norm_num)
@@ -333,7 +293,6 @@ theorem domain_T_hawking_pos :
     (by norm_num) (by norm_num)
     (by norm_num) (by norm_num) (by norm_num)
 
--- Domain BH entropy
 noncomputable def domain_BH_entropy :=
   BH_entropy (4 * Real.pi * 21 ^ 2)
     (by positivity)
@@ -342,7 +301,6 @@ theorem domain_BH_entropy_nonneg :
     0 ≤ domain_BH_entropy :=
   BH_entropy_nonneg _ (by positivity)
 
--- Domain Hubble parameter
 noncomputable def domain_hubble :=
   hubble_parameter 1 1
     (by norm_num) (by norm_num)
@@ -352,7 +310,6 @@ theorem domain_hubble_nonneg :
   hubble_nonneg 1 1
     (by norm_num) (by norm_num)
 
--- Domain GW strain
 noncomputable def domain_GW_strain :=
   GW_strain 1e-21 100 0
 
@@ -360,9 +317,7 @@ theorem domain_GW_bounded :
     |domain_GW_strain| ≤ 1e-21 :=
   GW_strain_bounded 1e-21 100 0 (by norm_num)
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure GeneralRelativityLock where
   metric_sym     : ∀ (n : ℕ) (M : MetricTensor n),
@@ -376,7 +331,7 @@ structure GeneralRelativityLock where
                       christoffel_proxy n g la nu mu
   riemann_antisym : ∀ (n : ℕ)
                       (G : Fin n → Fin n →
-                           Fin n → ℝ)
+                            Fin n → ℝ)
                       (r s mu nu : Fin n),
                       riemann_proxy n G r s mu nu =
                       -riemann_proxy n G r s nu mu
@@ -386,24 +341,22 @@ structure GeneralRelativityLock where
   rs_pos         : ∀ (G M c : ℝ),
                      0 < G → 0 < M → 0 < c →
                      0 < schwarzschild_radius G M c
-  redshift_pos   : ∀ (r r_s : ℝ),
-                     0 ≤ r_s → r_s < r →
+  redshift_pos   : ∀ (r r_s : ℝ) (hr_s : 0 ≤ r_s) (hr : r_s < r),
                      0 < gravitational_redshift
-                       r r_s ‹_›
+                       r r_s hr
   GW_bounded     : ∀ (h0 f t : ℝ), 0 ≤ h0 →
                      |GW_strain h0 f t| ≤ h0
-  hubble_nn      : ∀ (G rho : ℝ),
-                     0 < G → 0 ≤ rho →
+  hubble_nn      : ∀ (G rho : ℝ) (hG : 0 < G) (hrho : 0 ≤ rho),
                      0 ≤ hubble_parameter
-                       G rho ‹_› ‹_›
-  hawking_pos    : ∀ (hbar c G M k_B : ℝ),
-                     0 < G → 0 < M → 0 < c →
-                     0 < k_B → 0 < hbar →
+                       G rho hG hrho
+  hawking_pos    : ∀ (hbar c G M k_B : ℝ)
+                     (hG : 0 < G) (hM : 0 < M) (hc : 0 < c)
+                     (hk : 0 < k_B) (hhbar : 0 < hbar),
                      0 < hawking_temp
                        hbar c G M k_B
-                       ‹_› ‹_› ‹_› ‹_› ‹_›
-  BH_entropy_nn  : ∀ (A : ℝ), 0 ≤ A →
-                     0 ≤ BH_entropy A ‹_›
+                       hG hM hc hk hhbar
+  BH_entropy_nn  : ∀ (A : ℝ) (hA : 0 ≤ A),
+                     0 ≤ BH_entropy A hA
   dom_metric_sym : (domain_metric).g.transpose =
                      (domain_metric).g
   dom_rs_pos     : 0 < domain_rs
