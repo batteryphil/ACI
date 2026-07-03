@@ -121,8 +121,11 @@ noncomputable def simple_integral (n : ℕ) (m : MeasureDef n)
 -- Both theorems below are stated over a finite index set (Fin n), so the
 -- real, honest proof is via continuity of finite sums (tendsto_finsetSum)
 -- rather than the general measure-theoretic MCT/DCT machinery, which is not
--- needed here. The hf_mono/hg/hdom hypotheses are kept in the statements to
--- preserve the intended shape but are genuinely unused in a finite-sum proof.
+-- needed here. simple_integral requires nonnegativity of its integrand, so
+-- dominated_convergence takes that as an explicit hypothesis (hf_nn) rather
+-- than trying to derive it from domination alone: |f| ≤ g does not imply
+-- f ≥ 0. The hf_mono/hg/hdom hypotheses are kept to preserve the intended
+-- shape but are genuinely unused in a finite-sum proof.
 
 theorem monotone_convergence (n : ℕ) (m : MeasureDef n)
     (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i) (_hf_mono : ∀ k i, f k i ≤ f (k+1) i)
@@ -135,11 +138,11 @@ theorem monotone_convergence (n : ℕ) (m : MeasureDef n)
   exact (hf_lim i).mul_const (m.mu {i})
 
 theorem dominated_convergence (n : ℕ) (m : MeasureDef n)
-    (f : ℕ → Fin n → ℝ) (g : Fin n → ℝ) (_hg : ∀ i, 0 ≤ g i) (hdom : ∀ k i, |f k i| ≤ g i)
+    (f : ℕ → Fin n → ℝ) (hf_nn : ∀ k i, 0 ≤ f k i)
+    (g : Fin n → ℝ) (_hg : ∀ i, 0 ≤ g i) (_hdom : ∀ k i, |f k i| ≤ g i)
     (f_lim : Fin n → ℝ) (hf_lim : ∀ i, Tendsto (fun k => f k i) atTop (𝓝 (f_lim i))) :
-    Tendsto (fun k => simple_integral n m (f k) (fun i => le_trans (abs_nonneg (f k i)) (hdom k i))) atTop
-      (𝓝 (simple_integral n m f_lim
-        (fun i => ge_of_tendsto' (hf_lim i) (fun k => le_trans (abs_nonneg (f k i)) (hdom k i))))) := by
+    Tendsto (fun k => simple_integral n m (f k) (hf_nn k)) atTop
+      (𝓝 (simple_integral n m f_lim (fun i => ge_of_tendsto' (hf_lim i) (fun k => hf_nn k i)))) := by
   unfold simple_integral
   apply tendsto_finsetSum
   intro i _
@@ -213,7 +216,6 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
     have hne : dm1.prob d ≠ 0 := (h1pos d).ne'
     have heq : dm1.prob d * (dm2.prob d / dm1.prob d - 1) = dm2.prob d - dm1.prob d := by
       field_simp
-      ring
     linarith [hmul, heq]
   have hsum : Finset.univ.sum (fun d => dm1.prob d * Real.log (dm2.prob d / dm1.prob d)) ≤
       Finset.univ.sum (fun d => dm2.prob d - dm1.prob d) :=
@@ -227,6 +229,7 @@ theorem domain_KL_nonneg (dm1 dm2 : DomainMeasure)
     have hlogflip : Real.log (dm2.prob d / dm1.prob d) = -Real.log (dm1.prob d / dm2.prob d) := by
       rw [← inv_div, Real.log_inv]
     rw [hlogflip]
+    ring
   rw [hflip] at hsum
   linarith [hsum]
 
