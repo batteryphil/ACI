@@ -5,9 +5,7 @@ namespace CryptographyTheory
 
 open Finset Nat
 
--- ============================================================
 -- SECTION 1: NUMBER THEORY FOUNDATIONS
--- ============================================================
 
 theorem gcd_comm (a b : ℕ) :
     Nat.gcd a b = Nat.gcd b a :=
@@ -25,28 +23,39 @@ theorem coprime_iff (a b : ℕ) :
     Nat.Coprime a b ↔ Nat.gcd a b = 1 :=
   Iff.rfl
 
--- Euler's totient
 theorem totient_pos (n : ℕ) (hn : 0 < n) :
     0 < n.totient :=
   Nat.totient_pos hn
 
--- Fermat's little theorem
+-- Real Fermat's Little Theorem in Mathlib is stated over ZMod p, not as a
+-- direct Nat.mod bridging lemma. `Nat.Prime.pow_mod_prime` does not exist
+-- (confirmed absent) — rebuilt using the real ZMod.pow_card_sub_one_eq_one
+-- and bridging back to ℕ via ModEq.
 theorem fermat_little (p : ℕ) (hp : p.Prime)
     (a : ℕ) (ha : ¬p ∣ a) :
-    a ^ (p - 1) % p = 1 :=
-  Nat.Prime.pow_mod_prime hp ha
+    a ^ (p - 1) % p = 1 := by
+  haveI : Fact p.Prime := ⟨hp⟩
+  have hane : (a : ZMod p) ≠ 0 := by
+    rwa [Ne, ZMod.natCast_zmod_eq_zero_iff_dvd]
+  have h := ZMod.pow_card_sub_one_eq_one hane
+  rw [← Nat.cast_pow] at h
+  have hmod : a ^ (p - 1) ≡ 1 [MOD p] := (ZMod.natCast_eq_natCast_iff _ _ _).mp h
+  have hp1 : (1:ℕ) % p = 1 := Nat.mod_eq_of_lt hp.one_lt
+  unfold Nat.ModEq at hmod
+  rwa [hp1] at hmod
 
--- Extended Euclidean algorithm proxy
+-- `Nat.gcd_eq_gcd_ab` states a*gcdA+b*gcdB = gcd, but the goal wants
+-- u*a+v*b (multiplication order swapped) — not defeq without explicit
+-- mul_comm, since * is not syntactically commutative.
 theorem bezout (a b : ℕ) :
     ∃ u v : ℤ,
-      u * a + v * b = Nat.gcd a b :=
-  ⟨_, _, (Nat.gcd_eq_gcd_ab a b).symm⟩
+      u * a + v * b = Nat.gcd a b := by
+  refine ⟨Nat.gcdA a b, Nat.gcdB a b, ?_⟩
+  rw [mul_comm (Nat.gcdA a b : ℤ), mul_comm (Nat.gcdB a b : ℤ)]
+  exact (Nat.gcd_eq_gcd_ab a b).symm
 
--- ============================================================
 -- SECTION 2: RSA CRYPTOSYSTEM
--- ============================================================
 
--- RSA modulus: n = p * q
 def RSA_modulus (p q : ℕ)
     (hp : p.Prime) (hq : q.Prime) : ℕ :=
   p * q
@@ -56,40 +65,38 @@ theorem RSA_modulus_pos (p q : ℕ)
     0 < RSA_modulus p q hp hq :=
   Nat.mul_pos hp.pos hq.pos
 
--- Euler totient of RSA modulus
+-- `Nat.totient_prime_pow_mul_prime_pow` does not exist. Rebuilt using the
+-- standard, confirmed-real combination: totient is multiplicative over
+-- coprime factors, and the totient of a prime is p-1.
 theorem RSA_totient (p q : ℕ)
     (hp : p.Prime) (hq : q.Prime)
     (hpq : p ≠ q) :
-    (p * q).totient = (p - 1) * (q - 1) :=
-  Nat.totient_prime_pow_mul_prime_pow
-    hp hq hpq 1 1 |>.trans (by simp)
+    (p * q).totient = (p - 1) * (q - 1) := by
+  have hcop : Nat.Coprime p q := (Nat.coprime_primes hp hq).mpr hpq
+  rw [Nat.totient_mul hcop, Nat.totient_prime hp, Nat.totient_prime hq]
 
--- RSA correctness proxy
 theorem RSA_correct_proxy (e d n : ℕ)
     (h : e * d % n = 1) :
     e * d % n = 1 := h
 
--- RSA key size positive
+-- `Nat.pos_pow_of_pos` confirmed fabricated (same bug as
+-- NumberTheoryCore/SetTheory/CodingTheory earlier this session). Real
+-- lemma for base 2 is Nat.two_pow_pos.
 theorem RSA_key_size_pos (bits : ℕ)
     (h : 0 < bits) :
     0 < 2 ^ bits :=
-  Nat.pos_pow_of_pos bits (by norm_num)
+  Nat.two_pow_pos bits
 
--- ============================================================
 -- SECTION 3: DISCRETE LOGARITHM
--- ============================================================
 
--- Discrete log problem proxy
 def DLP_instance (g p a : ℕ) : Prop :=
   ∃ x : ℕ, g ^ x % p = a
 
--- Diffie-Hellman key exchange proxy
 theorem DH_shared_secret (g p a b : ℕ) :
     (g ^ a % p) ^ b % p =
     (g ^ b % p) ^ a % p := by
   simp [Nat.pow_mod, Nat.mul_comm a b]
 
--- Order of element in group proxy
 def order_divides (g n k : ℕ) : Prop :=
   g ^ k % n = 1
 
@@ -98,40 +105,31 @@ theorem order_pos_proxy (g n : ℕ)
     ∃ k : ℕ, 0 < k ∧ g ^ k % n ≤ n :=
   ⟨1, Nat.one_pos, Nat.mod_lt _ (by omega)⟩
 
--- Baby-step giant-step complexity proxy
 theorem BSGS_complexity (p : ℕ) :
     Nat.sqrt p ≤ p :=
   Nat.sqrt_le_self p
 
--- ============================================================
 -- SECTION 4: ELLIPTIC CURVE CRYPTOGRAPHY
--- ============================================================
 
--- Weierstrass form: y² = x³ + ax + b
 structure EllipticCurve (p : ℕ) where
-  a b : ZMod p
+  a : ZMod p
+  b : ZMod p
   disc : 4 * a^3 + 27 * b^2 ≠ 0
 
--- Point on curve proxy
 def on_curve (p : ℕ) (E : EllipticCurve p)
     (x y : ZMod p) : Prop :=
   y^2 = x^3 + E.a * x + E.b
 
--- Point at infinity (identity)
 def ec_infinity : Option (ℤ × ℤ) := none
 
 theorem ec_identity_is_none :
     ec_infinity = none := rfl
 
--- ECC key size vs RSA proxy
 theorem ECC_efficiency_proxy (bits : ℕ) :
     bits ≤ bits * 3 := by omega
 
--- ============================================================
 -- SECTION 5: HASH FUNCTIONS
--- ============================================================
 
--- Collision resistance proxy
 def collision_resistant
     (H : ℕ → ℕ) : Prop :=
   ∀ x y, H x = H y → x = y ∨ True
@@ -141,7 +139,6 @@ theorem trivial_collision_resistant
     collision_resistant H :=
   fun _ _ _ => Or.inr trivial
 
--- Birthday paradox threshold
 noncomputable def birthday_threshold
     (n : ℕ) : ℝ :=
   Real.sqrt (2 * n * Real.log 2)
@@ -153,7 +150,6 @@ theorem birthday_threshold_pos (n : ℕ)
   apply Real.sqrt_pos_of_pos
   positivity
 
--- Hash output length
 def hash_security_bits (output_bits : ℕ) : ℕ :=
   output_bits / 2
 
@@ -161,11 +157,8 @@ theorem hash_security_nonneg (b : ℕ) :
     0 ≤ hash_security_bits b :=
   Nat.zero_le _
 
--- ============================================================
 -- SECTION 6: SYMMETRIC CRYPTOGRAPHY
--- ============================================================
 
--- Block cipher proxy
 def block_cipher_secure
     (key_bits block_bits : ℕ)
     (hk : 128 ≤ key_bits) : Prop :=
@@ -173,27 +166,22 @@ def block_cipher_secure
 
 theorem AES_secure_proxy :
     block_cipher_secure 128 128
-      (by norm_num) :=
-  by norm_num
+      (by norm_num) := by
+  unfold block_cipher_secure
+  norm_num
 
--- Stream cipher: XOR with keystream
 theorem XOR_involutive (a b : Bool) :
     xor (xor a b) b = a := by
   cases a <;> cases b <;> simp
 
--- One-time pad: perfect secrecy proxy
 theorem OTP_perfect_secrecy :
     True := trivial
 
--- Key schedule proxy
 theorem key_schedule_nonneg (rounds : ℕ) :
     0 ≤ rounds := Nat.zero_le _
 
--- ============================================================
 -- SECTION 7: PUBLIC KEY INFRASTRUCTURE
--- ============================================================
 
--- Digital signature proxy
 structure DigitalSignature where
   sign   : ℕ → ℕ → ℕ
   verify : ℕ → ℕ → ℕ → Bool
@@ -208,7 +196,6 @@ theorem sig_correct_proxy
     True :=
   DS.correct sk pk msg
 
--- Certificate chain proxy
 def cert_chain_valid (depth : ℕ) : Prop :=
   0 ≤ depth
 
@@ -216,40 +203,31 @@ theorem cert_chain_nonneg (d : ℕ) :
     cert_chain_valid d :=
   Nat.zero_le d
 
--- PKI trust anchor proxy
 theorem trust_anchor_proxy :
     ∃ n : ℕ, 0 < n := ⟨1, Nat.one_pos⟩
 
--- ============================================================
 -- SECTION 8: POST-QUANTUM CRYPTOGRAPHY
--- ============================================================
 
--- Lattice problem proxy: shortest vector
 def SVP_hardness_proxy (n : ℕ) : Prop :=
   0 < n
 
 theorem SVP_nonneg (n : ℕ) (hn : 0 < n) :
     SVP_hardness_proxy n := hn
 
--- Learning with errors proxy
 def LWE_instance (n q : ℕ) : Prop :=
   0 < q
 
 theorem LWE_nonneg (n q : ℕ) (hq : 0 < q) :
     LWE_instance n q := hq
 
--- NTRU proxy
 theorem NTRU_proxy (n : ℕ) :
     0 < 2 ^ n :=
-  Nat.pos_pow_of_pos n (by norm_num)
+  Nat.two_pow_pos n
 
--- Hash-based signatures proxy
 theorem hash_sig_proxy (n : ℕ) :
     0 ≤ n := Nat.zero_le n
 
--- ============================================================
 -- SECTION 9: AWM CRYPTOGRAPHY BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -260,22 +238,18 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain as RSA prime proxy
 theorem domain_count_prime_factored :
     21 = 3 * 7 := by norm_num
 
--- Domain totient
 theorem domain_totient :
     (21 : ℕ).totient = 12 := by
   native_decide
 
--- Domain DH proxy
 theorem domain_DH (g : ℕ) :
     (g ^ 21 % 23) ^ 7 % 23 =
     (g ^ 7 % 23) ^ 21 % 23 := by
   simp [Nat.pow_mod, Nat.mul_comm]
 
--- Domain birthday threshold
 noncomputable def domain_birthday :=
   birthday_threshold 21
 
@@ -283,22 +257,18 @@ theorem domain_birthday_pos :
     0 < domain_birthday :=
   birthday_threshold_pos 21 (by norm_num)
 
--- Domain hash security
 def domain_hash_security : ℕ :=
   hash_security_bits 256
 
 theorem domain_hash_pos :
     0 < domain_hash_security := by
-  unfold domain_hash_security
-    hash_security_bits
+  unfold domain_hash_security hash_security_bits
   norm_num
 
--- Domain LWE
 theorem domain_LWE :
     LWE_instance 21 23 := by
   unfold LWE_instance; norm_num
 
--- Domain signature proxy
 def domain_sig : DigitalSignature where
   sign   := fun sk msg => sk + msg
   verify := fun pk msg sig =>
@@ -311,9 +281,7 @@ theorem domain_sig_correct (sk pk msg : ℕ) :
     True :=
   domain_sig.correct sk pk msg
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure CryptographyTheoryLock where
   gcd_comm       : ∀ a b : ℕ,
@@ -323,9 +291,8 @@ structure CryptographyTheoryLock where
   fermat         : ∀ (p : ℕ), p.Prime →
                      ∀ a : ℕ, ¬p ∣ a →
                      a ^ (p - 1) % p = 1
-  RSA_mod_pos    : ∀ (p q : ℕ),
-                     p.Prime → q.Prime →
-                     0 < RSA_modulus p q ‹_› ‹_›
+  RSA_mod_pos    : ∀ (p q : ℕ) (hp : p.Prime) (hq : q.Prime),
+                     0 < RSA_modulus p q hp hq
   DH_correct     : ∀ g p a b : ℕ,
                      (g ^ a % p) ^ b % p =
                      (g ^ b % p) ^ a % p
