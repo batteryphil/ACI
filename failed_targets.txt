@@ -35,7 +35,6 @@ NumericalAnalysis
 PartialDifferentialEquations
 InformationTheoryAdvanced
 OperatorTheory
-QuantumFieldTheory
 NuclearPhysics
 CondensedMatterPhysics
 PlasmaPhysics
