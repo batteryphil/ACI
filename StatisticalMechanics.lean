@@ -152,7 +152,6 @@ theorem uniform_max_entropy
     gibbs_entropy beta k energies hbeta hk =
     k * Real.log 7 := by
   simp [gibbs_entropy, gibbs_prob, partition_function]
-  ring_nf
 
 -- SECTION 5: MAXWELL-BOLTZMANN DISTRIBUTION
 -- f(v) = √(m/2πkT) exp(-mv²/2kT)
