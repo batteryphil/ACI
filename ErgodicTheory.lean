@@ -132,24 +132,27 @@ theorem partition_entropy_nonneg
         (fun j _ => le_of_lt (hpos j)) (mem_univ i)
       linarith [hsum]
 
-theorem uniform_max_partition_entropy :
-    let probs := fun (_ : Fin 7) => (1 : ℝ) / 7
-    partition_entropy probs
-      (by intro i; norm_num)
-      (by simp [Finset.sum_const, Finset.card_univ]) =
-    Real.log 7 := by
-  show partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7) _ _ = Real.log 7
+-- Restated with named hypotheses (matching every other theorem in this
+-- file) instead of embedded anonymous `by` proof terms inside the type
+-- signature. Those embedded terms are elaborated as part of the
+-- theorem's TYPE before the tactic body even runs, and are the most
+-- likely real source of the persistent CharZero/simp failures across
+-- prior rounds, since every prior fix only touched the proof body.
+theorem uniform_max_partition_entropy
+    (hpos : ∀ i : Fin 7, (0:ℝ) < (1:ℝ)/7)
+    (hsum : (univ : Finset (Fin 7)).sum (fun _ => (1:ℝ)/7) = 1) :
+    partition_entropy (fun (_ : Fin 7) => (1:ℝ)/7) hpos hsum = Real.log 7 := by
   unfold partition_entropy
   have hcard : (Finset.univ : Finset (Fin 7)).card = 7 := by
     simp
-  have hsum : (univ : Finset (Fin 7)).sum
+  have hsum2 : (univ : Finset (Fin 7)).sum
       (fun _ : Fin 7 => (1:ℝ)/7 * Real.log ((1:ℝ)/7))
       = (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
     rw [Finset.sum_const, hcard]
     show (7:ℕ) • ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) = (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7))
     rw [nsmul_eq_mul]
     norm_num
-  rw [hsum]
+  rw [hsum2]
   have hlog : Real.log ((1:ℝ)/7) = -Real.log 7 := by
     rw [one_div, Real.log_inv]
   rw [hlog]
@@ -209,10 +212,9 @@ theorem lyapunov_linear_map
       (fun k => pow_pos ha k) =
     Real.log |a| := by
   unfold lyapunov_exponent_estimate
-  rw [Real.log_pow]
-  show (n:ℝ) * Real.log |a| / n = Real.log |a|
   have hnz : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
-  field_simp
+  rw [Real.log_pow]
+  field_simp [hnz]
 
 theorem stable_manifold_contraction
     (lambda delta0 : ℝ)
