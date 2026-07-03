@@ -25,28 +25,24 @@ theorem coprime_iff (a b : ℕ) :
 
 theorem totient_pos (n : ℕ) (hn : 0 < n) :
     0 < n.totient :=
-  Nat.totient_pos hn
+  Nat.totient_pos.mpr hn
 
--- Real Fermat's Little Theorem in Mathlib is stated over ZMod p, not as a
--- direct Nat.mod bridging lemma. `Nat.Prime.pow_mod_prime` does not exist
--- (confirmed absent) — rebuilt using the real ZMod.pow_card_sub_one_eq_one
--- and bridging back to ℕ via ModEq.
 theorem fermat_little (p : ℕ) (hp : p.Prime)
     (a : ℕ) (ha : ¬p ∣ a) :
     a ^ (p - 1) % p = 1 := by
   haveI : Fact p.Prime := ⟨hp⟩
   have hane : (a : ZMod p) ≠ 0 := by
-    rwa [Ne, ZMod.natCast_zmod_eq_zero_iff_dvd]
+    rw [Ne, CharP.cast_eq_zero_iff (ZMod p) p]
+    exact ha
   have h := ZMod.pow_card_sub_one_eq_one hane
   rw [← Nat.cast_pow] at h
+  have h1 : ((1:ℕ) : ZMod p) = 1 := Nat.cast_one
+  rw [← h1] at h
   have hmod : a ^ (p - 1) ≡ 1 [MOD p] := (ZMod.natCast_eq_natCast_iff _ _ _).mp h
   have hp1 : (1:ℕ) % p = 1 := Nat.mod_eq_of_lt hp.one_lt
   unfold Nat.ModEq at hmod
   rwa [hp1] at hmod
 
--- `Nat.gcd_eq_gcd_ab` states a*gcdA+b*gcdB = gcd, but the goal wants
--- u*a+v*b (multiplication order swapped) — not defeq without explicit
--- mul_comm, since * is not syntactically commutative.
 theorem bezout (a b : ℕ) :
     ∃ u v : ℤ,
       u * a + v * b = Nat.gcd a b := by
@@ -65,9 +61,6 @@ theorem RSA_modulus_pos (p q : ℕ)
     0 < RSA_modulus p q hp hq :=
   Nat.mul_pos hp.pos hq.pos
 
--- `Nat.totient_prime_pow_mul_prime_pow` does not exist. Rebuilt using the
--- standard, confirmed-real combination: totient is multiplicative over
--- coprime factors, and the totient of a prime is p-1.
 theorem RSA_totient (p q : ℕ)
     (hp : p.Prime) (hq : q.Prime)
     (hpq : p ≠ q) :
@@ -79,9 +72,6 @@ theorem RSA_correct_proxy (e d n : ℕ)
     (h : e * d % n = 1) :
     e * d % n = 1 := h
 
--- `Nat.pos_pow_of_pos` confirmed fabricated (same bug as
--- NumberTheoryCore/SetTheory/CodingTheory earlier this session). Real
--- lemma for base 2 is Nat.two_pow_pos.
 theorem RSA_key_size_pos (bits : ℕ)
     (h : 0 < bits) :
     0 < 2 ^ bits :=
@@ -95,15 +85,16 @@ def DLP_instance (g p a : ℕ) : Prop :=
 theorem DH_shared_secret (g p a b : ℕ) :
     (g ^ a % p) ^ b % p =
     (g ^ b % p) ^ a % p := by
-  simp [Nat.pow_mod, Nat.mul_comm a b]
+  rw [← Nat.pow_mod, ← Nat.pow_mod, ← pow_mul, ← pow_mul, mul_comm a b]
 
 def order_divides (g n k : ℕ) : Prop :=
   g ^ k % n = 1
 
 theorem order_pos_proxy (g n : ℕ)
     (hn : 1 < n) :
-    ∃ k : ℕ, 0 < k ∧ g ^ k % n ≤ n :=
-  ⟨1, Nat.one_pos, Nat.mod_lt _ (by omega)⟩
+    ∃ k : ℕ, 0 < k ∧ g ^ k % n ≤ n := by
+  refine ⟨1, Nat.one_pos, ?_⟩
+  exact le_of_lt (Nat.mod_lt _ (by omega))
 
 theorem BSGS_complexity (p : ℕ) :
     Nat.sqrt p ≤ p :=
@@ -248,7 +239,7 @@ theorem domain_totient :
 theorem domain_DH (g : ℕ) :
     (g ^ 21 % 23) ^ 7 % 23 =
     (g ^ 7 % 23) ^ 21 % 23 := by
-  simp [Nat.pow_mod, Nat.mul_comm]
+  rw [← Nat.pow_mod, ← Nat.pow_mod, ← pow_mul, ← pow_mul, mul_comm 21 7]
 
 noncomputable def domain_birthday :=
   birthday_threshold 21
