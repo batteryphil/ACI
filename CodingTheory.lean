@@ -5,9 +5,7 @@ namespace CodingTheory
 
 open Finset
 
--- ============================================================
 -- SECTION 1: LINEAR CODES
--- ============================================================
 
 structure LinearCode (n k : ℕ) where
   generator : Matrix (Fin k) (Fin n) (ZMod 2)
@@ -18,20 +16,14 @@ def codeword (n k : ℕ) (C : LinearCode n k)
     (m : Fin k → ZMod 2) : Fin n → ZMod 2 :=
   C.generator.vecMul m
 
--- Parity check: H * c = 0 for all codewords
 theorem parity_check (n k : ℕ)
     (C : LinearCode n k)
     (m : Fin k → ZMod 2) :
     C.parity.mulVec (codeword n k C m) = 0 := by
   unfold codeword
-  simp only [Matrix.mulVec_vecMul]
-  have h : C.parity * C.generator.transpose = 0 :=
-    C.orthogonal
-  have : (C.parity * C.generator.transpose).mulVec m = 0 := by
-    rw [h]; simp [Matrix.zero_mulVec]
-  rwa [Matrix.mulVec_mulVec] at this
+  rw [Matrix.mulVec_vecMul, C.orthogonal]
+  simp [Matrix.zero_mulVec]
 
--- Minimum distance
 def min_distance (n k : ℕ)
     (C : LinearCode n k) : ℕ :=
   Finset.univ.inf' Finset.univ_nonempty
@@ -43,7 +35,6 @@ theorem min_distance_nonneg (n k : ℕ)
     0 ≤ min_distance n k C :=
   Nat.zero_le _
 
--- Rate of code
 noncomputable def code_rate
     (n k : ℕ) (hn : 0 < n) : ℝ :=
   (k : ℝ) / n
@@ -60,9 +51,7 @@ theorem code_rate_le_one (n k : ℕ)
   rw [div_le_one (by positivity)]
   exact_mod_cast hkn
 
--- ============================================================
 -- SECTION 2: HAMMING CODES
--- ============================================================
 
 def hamming_n (r : ℕ) : ℕ := 2^r - 1
 def hamming_k (r : ℕ) : ℕ := 2^r - 1 - r
@@ -76,15 +65,13 @@ theorem hamming_error_correction :
 
 theorem hamming_perfect_proxy (r : ℕ) :
     0 < 2 ^ r :=
-  Nat.pos_pow_of_pos r (by norm_num)
+  Nat.two_pow_pos r
 
 theorem hamming_singleton (r : ℕ) (hr : 1 ≤ r) :
     3 ≤ hamming_n r + 1 := by
   unfold hamming_n; omega
 
--- ============================================================
 -- SECTION 3: CYCLIC CODES
--- ============================================================
 
 def cyclic_shift (n : ℕ) (hn : 0 < n)
     (c : Fin n → ZMod 2) : Fin n → ZMod 2 :=
@@ -107,9 +94,7 @@ theorem gen_poly_degree_nonneg (n k : ℕ)
 theorem BCH_distance_proxy (d : ℕ) :
     d ≤ d := le_refl d
 
--- ============================================================
 -- SECTION 4: REED-SOLOMON CODES
--- ============================================================
 
 def RS_min_distance (n k : ℕ) : ℕ := n - k + 1
 
@@ -129,9 +114,7 @@ theorem RS_corrects (n k : ℕ) (h : k ≤ n) :
     (n - k) / 2 := by
   unfold RS_min_distance; omega
 
--- ============================================================
 -- SECTION 5: LDPC CODES
--- ============================================================
 
 structure TannerGraph (n m : ℕ) where
   edges        : Fin m → Finset (Fin n)
@@ -153,9 +136,7 @@ theorem LDPC_capacity_proxy
 theorem gallager_bound_proxy (n : ℕ) :
     0 ≤ n := Nat.zero_le n
 
--- ============================================================
 -- SECTION 6: TURBO AND POLAR CODES
--- ============================================================
 
 def interleaver_size (n : ℕ) : ℕ := n
 
@@ -176,16 +157,14 @@ theorem bhattacharyya_le_one (p : ℝ)
     bhattacharyya p hp0 hp1 ≤ 1 := by
   unfold bhattacharyya
   nlinarith [Real.sq_sqrt
-    (mul_nonneg hp0 (by linarith)),
+    (mul_nonneg hp0 (by linarith : (0:ℝ) ≤ 1 - p)),
     Real.sqrt_nonneg (p * (1-p))]
 
 theorem polarization_proxy (n : ℕ) :
     0 < 2 ^ n :=
-  Nat.pos_pow_of_pos n (by norm_num)
+  Nat.two_pow_pos n
 
--- ============================================================
 -- SECTION 7: BOUNDS IN CODING THEORY
--- ============================================================
 
 theorem singleton_bound (n k d : ℕ)
     (h : k ≤ n) :
@@ -205,9 +184,7 @@ theorem EB_bound_proxy (rate : ℝ)
 theorem johnson_bound (n d : ℕ) (h : 0 < d) :
     0 < d := h
 
--- ============================================================
 -- SECTION 8: NETWORK CODING
--- ============================================================
 
 noncomputable def network_capacity
     (min_cut : ℝ) (h : 0 ≤ min_cut) : ℝ :=
@@ -223,11 +200,9 @@ theorem max_flow_proxy
 
 theorem RLNC_proxy (q n : ℕ)
     (hq : 1 < q) :
-    0 < q := Nat.lt_of_lt_pred hq
+    0 < q := by omega
 
--- ============================================================
 -- SECTION 9: AWM CODING THEORY BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -283,9 +258,7 @@ theorem hamming_covers_AWM :
     hamming_n 5 = 31 := by
   unfold hamming_n; norm_num
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure CodingTheoryLock where
   rate_nn        : ∀ (n k : ℕ) (hn : 0 < n),
@@ -298,15 +271,15 @@ structure CodingTheoryLock where
   RS_singleton   : ∀ (n k : ℕ), k ≤ n →
                      RS_min_distance n k =
                      n - k + 1
-  bhatt_nn       : ∀ (p : ℝ), 0 ≤ p → p ≤ 1 →
-                     0 ≤ bhattacharyya p ‹_› ‹_›
-  bhatt_le1      : ∀ (p : ℝ), 0 ≤ p → p ≤ 1 →
-                     bhattacharyya p ‹_› ‹_› ≤ 1
+  bhatt_nn       : ∀ (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1),
+                     0 ≤ bhattacharyya p hp0 hp1
+  bhatt_le1      : ∀ (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1),
+                     bhattacharyya p hp0 hp1 ≤ 1
   hamming_pos    : ∀ r : ℕ, 0 < r →
                      0 < hamming_n r
   polar_pos      : ∀ n : ℕ, 0 < 2 ^ n
-  net_cap_nn     : ∀ (mc : ℝ), 0 ≤ mc →
-                     0 ≤ network_capacity mc ‹_›
+  net_cap_nn     : ∀ (mc : ℝ) (h : 0 ≤ mc),
+                     0 ≤ network_capacity mc h
   AWM_d_pos      : 0 < AWM_code_d
   AWM_rate_nn    : 0 ≤ code_rate 21 14
                      (by norm_num)
