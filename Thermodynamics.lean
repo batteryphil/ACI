@@ -5,11 +5,8 @@ namespace Thermodynamics
 
 open Finset Real
 
--- ============================================================
 -- SECTION 1: LAWS OF THERMODYNAMICS
--- ============================================================
 
--- First law: ΔU = Q - W
 def first_law (U Q W : ℝ) : Prop :=
   U = Q - W
 
@@ -17,7 +14,6 @@ theorem first_law_energy_conservation
     (Q W : ℝ) :
     first_law (Q - W) Q W := rfl
 
--- Second law: entropy never decreases
 def second_law (S1 S2 : ℝ) : Prop :=
   S1 ≤ S2
 
@@ -31,13 +27,11 @@ theorem second_law_transitive
     second_law S1 S3 :=
   le_trans h12 h23
 
--- Third law: entropy → 0 as T → 0
 theorem third_law_proxy
     (S : ℝ → ℝ)
     (hS : ∀ T, 0 ≤ S T) :
     0 ≤ S 0 := hS 0
 
--- Zeroth law: thermal equilibrium
 def thermal_equilibrium (T1 T2 : ℝ) : Prop :=
   T1 = T2
 
@@ -49,21 +43,16 @@ theorem zeroth_law_transitive
   unfold thermal_equilibrium at *
   linarith
 
--- ============================================================
 -- SECTION 2: THERMODYNAMIC POTENTIALS
--- ============================================================
 
--- Internal energy
 noncomputable def internal_energy
     (T S p V mu N : ℝ) : ℝ :=
   T * S - p * V + mu * N
 
--- Helmholtz free energy: F = U - TS
 noncomputable def helmholtz_free_energy
     (U T S : ℝ) : ℝ :=
   U - T * S
 
--- Gibbs free energy: G = H - TS
 noncomputable def gibbs_free_energy
     (H T S : ℝ) : ℝ :=
   H - T * S
@@ -74,7 +63,6 @@ theorem gibbs_nonneg_at_equilibrium
     0 ≤ gibbs_free_energy H T S := by
   unfold gibbs_free_energy; linarith
 
--- Enthalpy: H = U + pV
 noncomputable def enthalpy
     (U p V : ℝ) : ℝ :=
   U + p * V
@@ -86,16 +74,12 @@ theorem enthalpy_nonneg
   unfold enthalpy
   linarith [mul_nonneg hp hV]
 
--- Maxwell relations proxy
 theorem maxwell_relation_proxy
     (T S p V : ℝ) :
     True := trivial
 
--- ============================================================
 -- SECTION 3: IDEAL GAS
--- ============================================================
 
--- Ideal gas law: pV = nRT
 def ideal_gas_law
     (p V n R T : ℝ) : Prop :=
   p * V = n * R * T
@@ -106,7 +90,6 @@ theorem ideal_gas_pressure_pos
     0 < n * R * T :=
   mul_pos (mul_pos hn hR) hT
 
--- Internal energy of ideal gas: U = n Cv T
 noncomputable def ideal_gas_energy
     (n Cv T : ℝ) : ℝ :=
   n * Cv * T
@@ -118,7 +101,6 @@ theorem ideal_gas_energy_nonneg
   unfold ideal_gas_energy
   exact mul_nonneg (mul_nonneg hn hCv) hT
 
--- Equipartition theorem: E = f/2 * kT
 noncomputable def equipartition_energy
     (f k T : ℝ) : ℝ :=
   f / 2 * k * T
@@ -131,11 +113,8 @@ theorem equipartition_nonneg
   apply mul_nonneg (mul_nonneg _ hk) hT
   exact div_nonneg hf (by norm_num)
 
--- ============================================================
 -- SECTION 4: ENTROPY
--- ============================================================
 
--- Boltzmann entropy: S = k ln(Ω)
 noncomputable def boltzmann_entropy
     (k Omega : ℝ) (hOmega : 0 < Omega) : ℝ :=
   k * Real.log Omega
@@ -149,7 +128,6 @@ theorem boltzmann_entropy_nonneg
   apply mul_nonneg hk
   exact Real.log_nonneg hOmega
 
--- Gibbs entropy: S = -k Σ p_i ln(p_i)
 noncomputable def gibbs_entropy (n : ℕ)
     (k : ℝ) (p : Fin n → ℝ)
     (hp : ∀ i, 0 ≤ p i) : ℝ :=
@@ -175,7 +153,6 @@ theorem gibbs_entropy_nonneg (n : ℕ)
       (fun j _ => hp j) (Finset.mem_univ i)
     linarith [hsum]
 
--- Entropy of mixing
 noncomputable def entropy_of_mixing (n : ℕ)
     (k : ℝ) (x : Fin n → ℝ)
     (hx : ∀ i, 0 < x i) : ℝ :=
@@ -201,11 +178,8 @@ theorem entropy_mixing_nonneg (n : ℕ)
     (Finset.mem_univ i)
   linarith [hsum]
 
--- ============================================================
 -- SECTION 5: HEAT ENGINES
--- ============================================================
 
--- Carnot efficiency: η = 1 - T_cold/T_hot
 noncomputable def carnot_efficiency
     (T_hot T_cold : ℝ)
     (hT : 0 < T_cold)
@@ -227,9 +201,8 @@ theorem carnot_efficiency_lt_one
     (hTh : T_cold < T_hot) :
     carnot_efficiency T_hot T_cold hT hTh < 1 := by
   unfold carnot_efficiency
-  linarith [div_pos hT (by linarith)]
+  linarith [div_pos hT (by linarith : (0:ℝ) < T_hot)]
 
--- COP of refrigerator
 noncomputable def refrigerator_COP
     (T_hot T_cold : ℝ)
     (hT : 0 < T_cold)
@@ -245,11 +218,8 @@ theorem refrigerator_COP_pos
   apply div_pos hT
   linarith
 
--- ============================================================
 -- SECTION 6: PHASE TRANSITIONS
--- ============================================================
 
--- Clausius-Clapeyron equation proxy
 noncomputable def clausius_clapeyron
     (L T dV : ℝ) (hT : 0 < T)
     (hdV : 0 < dV) : ℝ :=
@@ -262,29 +232,27 @@ theorem CC_pos (L T dV : ℝ)
   unfold clausius_clapeyron
   exact div_pos hL (mul_pos hT hdV)
 
--- Latent heat nonneg
 theorem latent_heat_nonneg
     (L : ℝ) (hL : 0 ≤ L) : 0 ≤ L := hL
 
--- Triple point uniqueness proxy
 theorem triple_point_proxy :
     ∃ T p : ℝ, 0 < T ∧ 0 < p :=
   ⟨273.16, 611.73, by norm_num, by norm_num⟩
 
--- Order parameter nonneg
 theorem order_param_nonneg
     (phi : ℝ) (h : 0 ≤ phi) : 0 ≤ phi := h
 
--- ============================================================
 -- SECTION 7: STATISTICAL THERMODYNAMICS
--- ============================================================
 
--- Partition function: Z = Σ exp(-βE_i)
 noncomputable def partition_function (n : ℕ)
     (beta : ℝ) (E : Fin n → ℝ) : ℝ :=
   Finset.univ.sum (fun i =>
     Real.exp (-beta * E i))
 
+-- `Fintype.card_pos_iff.mp hn` needs `hn : 0 < Fintype.card (Fin n)`, but
+-- the actual `hn` has type `0 < n` — not syntactically identical even
+-- though propositionally equal. Rebuilt via a direct, unambiguous
+-- Finset.Nonempty witness instead of relying on that defeq.
 theorem partition_function_pos (n : ℕ)
     (hn : 0 < n) (beta : ℝ)
     (E : Fin n → ℝ) :
@@ -292,10 +260,8 @@ theorem partition_function_pos (n : ℕ)
   unfold partition_function
   apply Finset.sum_pos
   · intro i _; exact Real.exp_pos _
-  · exact Finset.univ_nonempty_iff.mpr
-      (Fintype.card_pos_iff.mp hn)
+  · exact ⟨⟨0, hn⟩, Finset.mem_univ _⟩
 
--- Free energy from partition function
 noncomputable def free_energy_stat (n : ℕ)
     (beta : ℝ) (hbeta : 0 < beta)
     (E : Fin n → ℝ) (hn : 0 < n) : ℝ :=
@@ -308,40 +274,31 @@ theorem free_energy_finite (n : ℕ)
       hbeta E hn :=
   ⟨_, rfl⟩
 
--- Average energy: <E> = -∂ln(Z)/∂β
 theorem avg_energy_proxy (n : ℕ)
     (hn : 0 < n) (beta : ℝ)
     (E : Fin n → ℝ) :
     0 < partition_function n beta E :=
   partition_function_pos n hn beta E
 
--- ============================================================
 -- SECTION 8: IRREVERSIBLE THERMODYNAMICS
--- ============================================================
 
--- Entropy production rate nonneg
 theorem entropy_production_nonneg
     (sigma : ℝ) (h : 0 ≤ sigma) :
     0 ≤ sigma := h
 
--- Onsager reciprocal relations proxy
 theorem onsager_proxy
     (L11 L12 L21 L22 : ℝ)
     (h : L12 = L21) :
     L12 = L21 := h
 
--- Dissipation function nonneg
 theorem dissipation_nonneg
     (Phi : ℝ) (h : 0 ≤ Phi) :
     0 ≤ Phi := h
 
--- GENERIC framework proxy
 theorem GENERIC_proxy (E S : ℝ → ℝ) :
     True := trivial
 
--- ============================================================
 -- SECTION 9: AWM THERMODYNAMICS BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -352,7 +309,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain partition function
 noncomputable def domain_Z : ℝ :=
   partition_function 21 1
     (fun i => (i.val : ℝ))
@@ -363,7 +319,6 @@ theorem domain_Z_pos :
     (by norm_num) 1
     (fun i => (i.val : ℝ))
 
--- Domain Gibbs entropy
 noncomputable def domain_gibbs_entropy : ℝ :=
   gibbs_entropy 21 1
     (fun _ => 1/21)
@@ -377,7 +332,6 @@ theorem domain_gibbs_nonneg :
     (by simp [Finset.sum_const,
               Finset.card_fin]; norm_num)
 
--- Domain Carnot efficiency
 noncomputable def domain_carnot :=
   carnot_efficiency 1000 300
     (by norm_num) (by norm_num)
@@ -392,7 +346,6 @@ theorem domain_carnot_lt_one :
   carnot_efficiency_lt_one 1000 300
     (by norm_num) (by norm_num)
 
--- Domain enthalpy
 noncomputable def domain_enthalpy :=
   enthalpy 1 1 21
 
@@ -401,7 +354,6 @@ theorem domain_enthalpy_nonneg :
   enthalpy_nonneg 1 1 21
     (by norm_num) (by norm_num) (by norm_num)
 
--- Domain Boltzmann entropy
 noncomputable def domain_boltzmann :=
   boltzmann_entropy 1 21 (by norm_num)
 
@@ -410,9 +362,7 @@ theorem domain_boltzmann_nonneg :
   boltzmann_entropy_nonneg 1 21
     (by norm_num) (by norm_num)
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure ThermodynamicsLock where
   first_law      : ∀ Q W : ℝ,
@@ -436,19 +386,17 @@ structure ThermodynamicsLock where
                      0 ≤ boltzmann_entropy k Omega
                        (by linarith)
   gibbs_nn       : ∀ (n : ℕ) (k : ℝ)
-                     (p : Fin n → ℝ),
-                     0 ≤ k →
-                     (∀ i, 0 ≤ p i) →
-                     Finset.univ.sum p = 1 →
-                     0 ≤ gibbs_entropy n k p ‹_›
-  carnot_pos     : ∀ (Th Tc : ℝ),
-                     0 < Tc → Tc < Th →
-                     0 < carnot_efficiency
-                       Th Tc ‹_› ‹_›
-  carnot_lt1     : ∀ (Th Tc : ℝ),
-                     0 < Tc → Tc < Th →
-                     carnot_efficiency
-                       Th Tc ‹_› ‹_› < 1
+                     (p : Fin n → ℝ)
+                     (hk : 0 ≤ k)
+                     (hp : ∀ i, 0 ≤ p i)
+                     (hsum : Finset.univ.sum p = 1),
+                     0 ≤ gibbs_entropy n k p hp
+  carnot_pos     : ∀ (Th Tc : ℝ)
+                     (hT : 0 < Tc) (hTh : Tc < Th),
+                     0 < carnot_efficiency Th Tc hT hTh
+  carnot_lt1     : ∀ (Th Tc : ℝ)
+                     (hT : 0 < Tc) (hTh : Tc < Th),
+                     carnot_efficiency Th Tc hT hTh < 1
   part_fn_pos    : ∀ (n : ℕ), 0 < n →
                      ∀ (beta : ℝ)
                        (E : Fin n → ℝ),
