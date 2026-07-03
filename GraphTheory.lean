@@ -38,12 +38,9 @@ theorem degree_lt_n (n : ℕ)
   calc (Finset.univ.filter (fun j => G.adj i j = true)).card
       ≤ (Finset.univ.erase i).card := Finset.card_le_card hni
     _ < n := by
-        rw [Finset.card_erase_of_mem (Finset.mem_univ i), Fintype.card_fin]
+        rw [Finset.card_erase_of_mem (Finset.mem_univ i), Finset.card_univ, Fintype.card_fin]
         omega
 
--- Handshaking lemma via genuine double-counting: split the full ordered-pair
--- sum by i<j / i=j / i>j, note the diagonal contributes 0 by
--- irreflexivity, and use symmetry to biject the i>j part onto the i<j part.
 theorem handshaking (n : ℕ) (G : Graph n) :
     2 ∣ Finset.univ.sum (degree n G) := by
   classical
@@ -70,14 +67,17 @@ theorem handshaking (n : ℕ) (G : Graph n) :
     rcases lt_trichotomy a b with h | h | h
     · tauto
     · tauto
-    · refine ⟨fun _ => Or.inl (Or.inr ⟨(b, a), ⟨h.symm, rfl, rfl⟩⟩), fun _ => h⟩
+    · refine ⟨fun _ => Or.inl (Or.inr ⟨(b, a), ⟨h, rfl, rfl⟩⟩), fun _ => h⟩
   have hd1 : Disjoint E (E.image (fun p => (p.2, p.1))) := by
     rw [Finset.disjoint_left]
     rintro ⟨a, b⟩ ha hb
     simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at ha
-    simp only [Finset.mem_image, Prod.mk.injEq] at hb
-    obtain ⟨⟨c, d⟩, hcd, hca, hdb⟩ := hb
-    simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hcd
+    simp only [Finset.mem_image] at hb
+    obtain ⟨p, hp, heq⟩ := hb
+    simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hp
+    have h1 : p.2 = a := ((Prod.mk.injEq _ _ _ _).mp heq).1
+    have h2 : p.1 = b := ((Prod.mk.injEq _ _ _ _).mp heq).2
+    rw [h1, h2] at hp
     omega
   have hd2 : Disjoint (E ∪ E.image (fun p => (p.2, p.1))) D := by
     rw [Finset.disjoint_left]
@@ -87,16 +87,20 @@ theorem handshaking (n : ℕ) (G : Graph n) :
     rcases hab with h | h
     · simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at h
       omega
-    · simp only [Finset.mem_image, Prod.mk.injEq] at h
-      obtain ⟨⟨c, d⟩, hcd, hca, hdb⟩ := h
-      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hcd
+    · simp only [Finset.mem_image] at h
+      obtain ⟨p, hp, heq⟩ := h
+      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ, true_and] at hp
+      have h1 : p.2 = a := ((Prod.mk.injEq _ _ _ _).mp heq).1
+      have h2 : p.1 = b := ((Prod.mk.injEq _ _ _ _).mp heq).2
+      rw [h1, h2] at hp
       omega
   have himg : (E.image (fun p => (p.2, p.1))).sum
       (fun p => if G.adj p.1 p.2 = true then (1:ℕ) else 0) =
       E.sum (fun p => if G.adj p.1 p.2 = true then (1:ℕ) else 0) := by
     rw [Finset.sum_image (fun a _ b _ heq => by
-      simp only [Prod.mk.injEq] at heq
-      exact Prod.ext heq.2 heq.1)]
+      have h1 := ((Prod.mk.injEq _ _ _ _).mp heq).1
+      have h2 := ((Prod.mk.injEq _ _ _ _).mp heq).2
+      exact Prod.ext h2 h1)]
     apply Finset.sum_congr rfl
     intro p _
     rw [G.sym]
@@ -114,12 +118,12 @@ theorem single_vertex_path (n : ℕ)
     (G : Graph n) (v : Fin n) :
     is_path n G [v] := by
   unfold is_path
-  simp [List.IsChain]
+  simp
 
 theorem empty_path (n : ℕ) (G : Graph n) :
     is_path n G [] := by
   unfold is_path
-  simp [List.IsChain]
+  simp
 
 def is_connected (n : ℕ) (G : Graph n) : Prop :=
   ∀ i j : Fin n, ∃ p : List (Fin n),
@@ -138,7 +142,7 @@ theorem complete_graph_connected (n : ℕ) (hn : 1 < n) :
   by_cases h : i = j
   · exact ⟨[i], single_vertex_path n (complete_graph n) i, by simp, by simp [h]⟩
   · exact ⟨[i, j],
-      by unfold is_path; simp [List.IsChain, complete_graph, h],
+      by unfold is_path; simp [complete_graph, h],
       by simp,
       by simp⟩
 
@@ -246,7 +250,7 @@ theorem laplacian_sym (n : ℕ)
         Matrix.sub_apply,
         Matrix.diagonal_apply,
         G.sym]
-  split_ifs <;> simp
+  split_ifs <;> first | simp_all | rfl
 
 theorem spectral_gap_nonneg (n : ℕ)
     (eigenvalues : Fin n → ℝ)
@@ -267,7 +271,9 @@ def is_matching (n : ℕ) (G : Graph n)
 theorem empty_matching (n : ℕ)
     (G : Graph n) :
     is_matching n G ∅ := by
-  constructor <;> simp
+  constructor
+  · simp
+  · simp
 
 theorem konig_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
@@ -286,10 +292,6 @@ noncomputable def expected_degree
     (n : ℕ) (p : ℝ) : ℝ :=
   (n - 1) * p
 
--- The `n - 1` here is REAL (ℝ) subtraction, since n is coerced to ℝ before
--- the whole expression is elaborated — not ℕ's truncated subtraction. The
--- original proof chased a nonexistent Nat.sub_nonneg.mpr trying to reason
--- about the wrong operation; the real fix reasons about the cast directly.
 theorem expected_degree_nonneg
     (n : ℕ) (p : ℝ)
     (hp : 0 ≤ p) (hn : 1 ≤ n) :
