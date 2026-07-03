@@ -34,7 +34,7 @@ theorem partition_function_ge_one
         nlinarith [hbeta]
     _ ≤ univ.sum (fun i => Real.exp (-beta * energies i)) :=
         Finset.single_le_sum
-          (fun i _ => le_of_lt (Real.exp_pos _))
+          (fun i _ => le_of_lt (Real.exp_pos (-beta * energies i)))
           (mem_univ i0)
 
 -- Scaling: Z(β, E + c) = exp(-βc) Z(β, E)
@@ -45,9 +45,13 @@ theorem partition_shift
     Real.exp (-beta * c) *
     partition_function beta energies hbeta := by
   unfold partition_function
+  have step : ∀ i, Real.exp (-beta * (energies i + c)) =
+      Real.exp (-beta * c) * Real.exp (-beta * energies i) := by
+    intro i
+    rw [← Real.exp_add]
+    ring_nf
+  simp_rw [step]
   rw [← Finset.mul_sum]
-  congr 1; ext i
-  rw [← Real.exp_add]; ring_nf
 
 -- SECTION 2: GIBBS PROBABILITY DISTRIBUTION
 -- p_i = exp(-β E_i) / Z
@@ -72,8 +76,9 @@ theorem gibbs_prob_le_one
   unfold gibbs_prob
   apply div_le_one_of_le₀ _ (le_of_lt
     (partition_function_pos beta energies hbeta))
+  unfold partition_function
   exact Finset.single_le_sum
-    (fun j _ => le_of_lt (Real.exp_pos _))
+    (fun j _ => le_of_lt (Real.exp_pos (-beta * energies j)))
     (mem_univ i)
 
 theorem gibbs_sums_to_one
@@ -99,8 +104,6 @@ theorem free_energy_finite
     ∃ F : ℝ, F = free_energy beta k energies hbeta hk :=
   ⟨free_energy beta k energies hbeta hk, rfl⟩
 
--- F decreases as temperature increases (β decreases)
--- ΔF = -ΔT · S where S ≥ 0
 -- Internal energy U = -∂(log Z)/∂β
 noncomputable def internal_energy
     (beta : ℝ) (energies : Fin 7 → ℝ)
@@ -118,28 +121,37 @@ theorem internal_energy_is_weighted_avg
 -- SECTION 4: ENTROPY
 -- S = -k Σ p_i log p_i
 
+-- `let` inside a lambda's body causes elaboration friction downstream
+-- (the goal displays as an unreduced let-expression). Removed in favor of
+-- direct application, matching every other def in this file.
 noncomputable def gibbs_entropy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) : ℝ :=
   -k * univ.sum (fun i =>
-    let p := gibbs_prob beta energies hbeta i
-    p * Real.log p)
+    gibbs_prob beta energies hbeta i *
+    Real.log (gibbs_prob beta energies hbeta i))
 
--- Entropy nonneg: each p log p ≤ 0 for p ∈ (0,1]
+-- The original tried `apply mul_nonneg (le_of_lt hk)` against a goal of
+-- shape `0 ≤ -k * S`, but mul_nonneg's conclusion pattern is `0 ≤ a * b`
+-- with `a` unified to `-k`, not `k` — passing a proof of `0 ≤ k` cannot
+-- unify with that. Rebuilt via an explicit product hint for nlinarith
+-- instead of trying to force mul_nonneg's shape to match.
 theorem gibbs_entropy_nonneg
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) :
     0 ≤ gibbs_entropy beta k energies hbeta hk := by
   unfold gibbs_entropy
-  apply mul_nonneg (le_of_lt hk)
-  apply neg_nonneg.mpr
-  apply Finset.sum_nonpos
-  intro i _
-  apply mul_nonpos_of_nonneg_of_nonpos
-  · exact le_of_lt (gibbs_prob_pos beta energies hbeta i)
-  · apply Real.log_nonpos
+  have hS : univ.sum (fun i =>
+      gibbs_prob beta energies hbeta i *
+      Real.log (gibbs_prob beta energies hbeta i)) ≤ 0 := by
+    apply Finset.sum_nonpos
+    intro i _
+    apply mul_nonpos_of_nonneg_of_nonpos
     · exact le_of_lt (gibbs_prob_pos beta energies hbeta i)
-    · exact gibbs_prob_le_one beta energies hbeta i
+    · apply Real.log_nonpos
+      · exact le_of_lt (gibbs_prob_pos beta energies hbeta i)
+      · exact gibbs_prob_le_one beta energies hbeta i
+  nlinarith [mul_nonneg hk.le (neg_nonneg.mpr hS)]
 
 -- Maximum entropy at uniform distribution
 theorem uniform_max_entropy
@@ -150,7 +162,6 @@ theorem uniform_max_entropy
   simp [gibbs_entropy, gibbs_prob, partition_function]
   ring_nf
   rw [Real.log_inv, Real.log_natCast]
-  ring
 
 -- SECTION 5: MAXWELL-BOLTZMANN DISTRIBUTION
 -- f(v) = √(m/2πkT) exp(-mv²/2kT)
@@ -177,6 +188,11 @@ theorem maxwell_boltzmann_symmetric
     maxwell_boltzmann m k T (-v) hm hk hT := by
   unfold maxwell_boltzmann; ring_nf
 
+-- `nlinarith` cannot reason about division directly (the negated
+-- hypothesis it produced was itself a division inequality, unresolvable
+-- without clearing denominators). Rebuilt by computing the RHS exponent
+-- to exactly 0 first, then bounding the LHS exponent via a sign lemma on
+-- division instead of asking nlinarith to handle the fractions directly.
 theorem maxwell_boltzmann_max_at_zero
     (m k T v : ℝ)
     (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
@@ -185,11 +201,14 @@ theorem maxwell_boltzmann_max_at_zero
   unfold maxwell_boltzmann
   apply mul_le_mul_of_nonneg_left _ (Real.sqrt_nonneg _)
   apply Real.exp_le_exp.mpr
-  nlinarith [sq_nonneg v, mul_pos hk hT]
+  have h0 : -(m * (0:ℝ) ^ 2) / (2 * k * T) = 0 := by simp
+  rw [h0]
+  apply div_nonpos_of_nonpos_of_nonneg
+  · nlinarith [sq_nonneg v]
+  · positivity
 
 -- SECTION 6: THERMODYNAMIC LAWS
 
--- First law: ΔU = Q + W
 structure ThermodynamicProcess where
   delta_U : ℝ
   Q       : ℝ
@@ -202,14 +221,12 @@ theorem first_law_holds (p : ThermodynamicProcess) :
 theorem work_from_first_law (p : ThermodynamicProcess) :
     p.W = p.delta_U - p.Q := by linarith [p.first_law]
 
--- Second law: entropy of isolated system never decreases
 def second_law_satisfied (dS : ℝ) : Prop := 0 ≤ dS
 
 theorem second_law_irreversible (dS : ℝ)
     (h : 0 < dS) : second_law_satisfied dS :=
   le_of_lt h
 
--- Carnot efficiency: η = 1 - T_cold/T_hot
 noncomputable def carnot_efficiency
     (T_hot T_cold : ℝ) : ℝ :=
   1 - T_cold / T_hot
@@ -222,6 +239,8 @@ theorem carnot_efficiency_lt_one
   unfold carnot_efficiency
   linarith [div_pos hc hh]
 
+-- `div_lt_one_of_lt` confirmed nonexistent by the compiler. The real
+-- lemma is the iff form `div_lt_one`.
 theorem carnot_efficiency_pos
     (T_hot T_cold : ℝ)
     (hh : 0 < T_hot) (hc : 0 < T_cold)
@@ -229,15 +248,13 @@ theorem carnot_efficiency_pos
     0 < carnot_efficiency T_hot T_cold := by
   unfold carnot_efficiency
   rw [sub_pos]
-  exact div_lt_one_of_lt h hh.le
+  exact (div_lt_one hh).mpr h
 
--- Third law: entropy → 0 as T → 0
 theorem third_law_limit (S_0 : ℝ) (h : S_0 = 0) :
     S_0 = 0 := h
 
 -- SECTION 7: PHASE TRANSITIONS
 
--- Order parameter: φ = 0 (disordered), φ ≠ 0 (ordered)
 def is_ordered (phi : ℝ) : Prop := phi ≠ 0
 
 def is_disordered (phi : ℝ) : Prop := phi = 0
@@ -246,7 +263,6 @@ theorem ordered_or_disordered (phi : ℝ) :
     is_ordered phi ∨ is_disordered phi :=
   (eq_or_ne phi 0).symm.imp id id
 
--- Landau free energy: F = a φ² + b φ⁴
 noncomputable def landau_free_energy
     (a b phi : ℝ) : ℝ :=
   a * phi ^ 2 + b * phi ^ 4
@@ -261,7 +277,6 @@ theorem landau_minimum_at_zero_when_a_pos
     0 ≤ landau_free_energy a b phi := by
   unfold landau_free_energy; positivity
 
--- Symmetry breaking: minima at ±√(-a/2b) when a < 0
 theorem symmetry_breaking_minima
     (a b : ℝ) (ha : a < 0) (hb : 0 < b) :
     ∃ phi_min : ℝ, phi_min ^ 2 = -a / (2 * b) := by
@@ -282,7 +297,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Each domain has a thermal energy level
+instance : Nonempty Domain21 := ⟨Domain21.A_Energy⟩
+
 structure DomainThermal where
   energy   : Domain21 → ℝ
   beta     : ℝ
@@ -318,7 +334,6 @@ theorem domain_gibbs_pos
     0 < domain_gibbs dt d :=
   div_pos (Real.exp_pos _) (domain_partition_pos dt)
 
--- Thermal equilibrium: all domains at same temperature
 def thermal_equilibrium (dt : DomainThermal) : Prop :=
   ∀ d1 d2 : Domain21,
     domain_gibbs dt d1 = domain_gibbs dt d2 ↔
@@ -359,4 +374,3 @@ def SMSLock : StatMechLock where
   dom_sum    := domain_gibbs_sum_one
 
 end StatisticalMechanics
-
