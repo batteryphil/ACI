@@ -137,7 +137,8 @@ theorem gibbs_entropy_nonneg
     · apply Real.log_nonpos
       · exact le_of_lt (gibbs_prob_pos beta energies hbeta i)
       · exact gibbs_prob_le_one beta energies hbeta i
-  apply mul_nonneg_of_nonpos_of_nonpos (neg_nonneg.mpr hk.le) hS
+  have hnegk : -k ≤ 0 := neg_nonneg.mpr hk.le
+  exact mul_nonneg_of_nonpos_of_nonpos hnegk hS
 
 theorem uniform_max_entropy
     (beta k : ℝ) (hbeta : 0 < beta) (hk : 0 < k) :
