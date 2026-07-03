@@ -5,9 +5,7 @@ namespace GraphTheory
 
 open Finset
 
--- ============================================================
 -- SECTION 1: GRAPHS AND BASIC PROPERTIES
--- ============================================================
 
 structure Graph (n : ℕ) where
   adj   : Fin n → Fin n → Bool
@@ -29,38 +27,104 @@ theorem degree_lt_n (n : ℕ)
     degree n G i < n := by
   unfold degree
   calc (Finset.univ.filter
-          (fun j => G.adj i j = true)).card
+        (fun j => G.adj i j = true)).card
       ≤ Finset.univ.card :=
         Finset.card_filter_le _ _
     _ = n := Fintype.card_fin n
 
--- Handshaking lemma
-theorem handshaking (n : ℕ)
-    (G : Graph n) :
+-- Handshaking lemma. The original proof was vacuous — it "proved"
+-- S + S = 2*S for the same S on both sides (always trivially true by
+-- ring regardless of graph structure) and never actually established
+-- 2 ∣ S. Rebuilt via genuine double-counting: split the full ordered-pair
+-- sum by i<j / i=j / i>j, note the diagonal contributes 0 by
+-- irreflexivity, and use symmetry to biject the i>j part onto the i<j
+-- part, giving total = 2 * (i<j part).
+theorem handshaking (n : ℕ) (G : Graph n) :
     2 ∣ Finset.univ.sum (degree n G) := by
+  classical
   unfold degree
-  have : Finset.univ.sum
-      (fun i => (Finset.univ.filter
-        (fun j => G.adj i j = true)).card) =
-      Finset.univ.sum
-      (fun j => (Finset.univ.filter
-        (fun i => G.adj i j = true)).card) :=
-    Finset.sum_comm' (by intro i j; simp [G.sym])
-  have hsum : Finset.univ.sum
-      (fun i => (Finset.univ.filter
-        (fun j => G.adj i j = true)).card) +
-      Finset.univ.sum
-      (fun i => (Finset.univ.filter
-        (fun j => G.adj i j = true)).card) =
-      2 * Finset.univ.sum
-        (fun i => (Finset.univ.filter
-          (fun j => G.adj i j = true)).card) := by
+  have hcard : ∀ i : Fin n, (Finset.univ.filter (fun j => G.adj i j = true)).card
+      = Finset.univ.sum (fun j => if G.adj i j = true then 1 else 0) := by
+    intro i; rw [Finset.card_filter]
+  simp_rw [hcard]
+  set T : ℕ := Finset.univ.sum (fun i => Finset.univ.sum (fun j =>
+    if G.adj i j = true then 1 else 0)) with hT
+  set E : Finset (Fin n × Fin n) :=
+    (Finset.univ ×ˢ Finset.univ).filter (fun p => p.1 < p.2) with hE
+  have hTsum : T = (Finset.univ ×ˢ Finset.univ).sum
+      (fun p => if G.adj p.1 p.2 = true then 1 else 0) := by
+    rw [hT, Finset.sum_product]
+  have hsplit : (Finset.univ ×ˢ Finset.univ).sum
+      (fun p : Fin n × Fin n => if G.adj p.1 p.2 = true then 1 else 0) =
+      E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) +
+      (E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) +
+       (Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2)
+         |>.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0)) := by
+    have hpart : (Finset.univ ×ˢ Finset.univ : Finset (Fin n × Fin n)) =
+        E ∪ (E.image (fun p => (p.2, p.1))) ∪
+        (Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2) := by
+      ext ⟨a, b⟩
+      simp only [hE, Finset.mem_union, Finset.mem_filter, Finset.mem_product,
+        Finset.mem_univ, true_and, Finset.mem_image]
+      rcases lt_trichotomy a b with h | h | h
+      · exact ⟨fun _ => Or.inl (Or.inl h), fun _ => h⟩
+      · exact ⟨fun _ => Or.inr h, fun _ => h⟩
+      · exact ⟨fun _ => Or.inl (Or.inr ⟨(b, a), h.symm, rfl⟩), fun _ => h⟩
+    have hdisj1 : Disjoint E (E.image (fun p => (p.2, p.1))) := by
+      rw [Finset.disjoint_left]
+      rintro ⟨a, b⟩ ha hb
+      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
+        true_and] at ha
+      simp only [Finset.mem_image] at hb
+      obtain ⟨⟨c, d⟩, hcd, heq⟩ := hb
+      simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
+        true_and] at hcd
+      simp only [Prod.mk.injEq] at heq
+      obtain ⟨rfl, rfl⟩ := heq
+      omega
+    have hdisj2 : Disjoint (E ∪ E.image (fun p => (p.2, p.1)))
+        ((Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2)) := by
+      rw [Finset.disjoint_left]
+      rintro ⟨a, b⟩ hab heq
+      simp only [Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
+        true_and] at heq
+      simp only [Finset.mem_union] at hab
+      rcases hab with h | h
+      · simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
+          true_and] at h
+        omega
+      · simp only [Finset.mem_image] at h
+        obtain ⟨⟨c, d⟩, hcd, heqp⟩ := h
+        simp only [hE, Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
+          true_and] at hcd
+        simp only [Prod.mk.injEq] at heqp
+        obtain ⟨rfl, rfl⟩ := heqp
+        omega
+    rw [hpart, Finset.sum_union hdisj2, Finset.sum_union hdisj1]
+    have himg : (E.image (fun p => (p.2, p.1))).sum
+        (fun p => if G.adj p.1 p.2 = true then 1 else 0) =
+        E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) := by
+      rw [Finset.sum_image]
+      · apply Finset.sum_congr rfl
+        intro p _
+        simp [G.sym p.1 p.2]
+      · rintro ⟨a, b⟩ _ ⟨c, d⟩ _ heq
+        simp only [Prod.mk.injEq] at heq
+        simp [heq.1, heq.2]
+    rw [himg]
     ring
-  exact ⟨_, hsum.symm⟩
+  have hdiag : (Finset.univ ×ˢ Finset.univ).filter (fun p : Fin n × Fin n => p.1 = p.2)
+      |>.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0) = 0 := by
+    apply Finset.sum_eq_zero
+    rintro ⟨a, b⟩ hab
+    simp only [Finset.mem_filter, Finset.mem_product, Finset.mem_univ,
+      true_and] at hab
+    subst hab
+    simp [G.irref a]
+  rw [hTsum, hsplit, hdiag, add_zero] at hT
+  exact ⟨E.sum (fun p => if G.adj p.1 p.2 = true then 1 else 0), by rw [← hT]; ring⟩
 
--- ============================================================
 -- SECTION 2: PATHS AND CONNECTIVITY
--- ============================================================
 
 def is_path (n : ℕ) (G : Graph n)
     (p : List (Fin n)) : Prop :=
@@ -81,7 +145,6 @@ def is_connected (n : ℕ) (G : Graph n) : Prop :=
     p.head? = some i ∧
     p.getLast? = some j
 
--- Complete graph is connected
 theorem complete_graph_connected (n : ℕ)
     (hn : 1 < n) :
     is_connected n ⟨
@@ -94,9 +157,7 @@ theorem complete_graph_connected (n : ℕ)
     by simp,
     by simp⟩
 
--- ============================================================
 -- SECTION 3: TREES AND SPANNING TREES
--- ============================================================
 
 def is_acyclic (n : ℕ) (G : Graph n) : Prop :=
   ∀ p : List (Fin n),
@@ -107,17 +168,14 @@ def is_acyclic (n : ℕ) (G : Graph n) : Prop :=
 def is_tree (n : ℕ) (G : Graph n) : Prop :=
   is_connected n G ∧ is_acyclic n G
 
--- Tree has n-1 edges
 theorem tree_edges_proxy (n : ℕ) (hn : 0 < n) :
     n - 1 ≤ n := Nat.sub_le n 1
 
--- Prüfer sequence: bijection with labeled trees
 theorem prufer_count (n : ℕ) (hn : 2 ≤ n) :
     n ^ (n - 2) ≥ 1 := by
   apply Nat.one_le_pow
   omega
 
--- Minimum spanning tree proxy
 theorem MST_nonneg (n : ℕ)
     (weights : Fin n → Fin n → ℝ)
     (hnn : ∀ i j, 0 ≤ weights i j) :
@@ -128,9 +186,7 @@ theorem MST_nonneg (n : ℕ)
   apply Finset.sum_nonneg; intro j _
   exact hnn i j
 
--- ============================================================
 -- SECTION 4: GRAPH COLORING
--- ============================================================
 
 def is_proper_coloring (n k : ℕ)
     (G : Graph n)
@@ -141,49 +197,43 @@ def is_proper_coloring (n k : ℕ)
 theorem trivial_coloring (n : ℕ)
     (G : Graph n) (hn : 0 < n) :
     is_proper_coloring n n G id := by
-  intro i j _
-  simp [Function.Injective.ne
-    (fun a b h => Fin.ext h)]
+  intro i j hadj
+  intro heq
+  apply absurd G.irref
+  intro hirref
+  have : i = j := heq
+  subst this
+  rw [hirref i] at hadj
+  exact absurd hadj (by decide)
 
--- Chromatic number lower bound
 theorem chromatic_lb_one (n : ℕ)
     (G : Graph n) (hn : 0 < n) :
     1 ≤ n := hn
 
--- Brook's theorem proxy
 theorem brooks_proxy (n k : ℕ)
     (hk : 0 < k) :
     0 < k := hk
 
--- Four color theorem proxy
 theorem four_color_proxy :
     ∃ k : ℕ, k = 4 := ⟨4, rfl⟩
 
--- ============================================================
 -- SECTION 5: PLANAR GRAPHS
--- ============================================================
 
--- Euler's formula: V - E + F = 2
 theorem euler_formula_proxy
     (V E F : ℤ)
     (h : V - E + F = 2) :
     V - E + F = 2 := h
 
--- Planar graph edge bound
 theorem planar_edge_bound
     (V E : ℕ) (hV : 3 ≤ V)
     (h : E ≤ 3 * V - 6) :
     E ≤ 3 * V := by omega
 
--- Kuratowski's theorem proxy
 theorem kuratowski_proxy :
     ∃ n : ℕ, n = 5 := ⟨5, rfl⟩
 
--- ============================================================
 -- SECTION 6: SPECTRAL GRAPH THEORY
--- ============================================================
 
--- Adjacency matrix
 noncomputable def adj_matrix (n : ℕ)
     (G : Graph n) :
     Matrix (Fin n) (Fin n) ℝ :=
@@ -197,7 +247,6 @@ theorem adj_matrix_sym (n : ℕ)
   simp [adj_matrix, Matrix.transpose_apply,
         G.sym]
 
--- Laplacian matrix: L = D - A
 noncomputable def laplacian_matrix (n : ℕ)
     (G : Graph n) :
     Matrix (Fin n) (Fin n) ℝ :=
@@ -217,16 +266,13 @@ theorem laplacian_sym (n : ℕ)
         G.sym]
   split_ifs <;> simp
 
--- Spectral gap nonneg
 theorem spectral_gap_nonneg (n : ℕ)
     (eigenvalues : Fin n → ℝ)
     (hnn : ∀ i, 0 ≤ eigenvalues i) :
     0 ≤ Finset.univ.sum eigenvalues :=
   Finset.sum_nonneg (fun i _ => hnn i)
 
--- ============================================================
 -- SECTION 7: MATCHING AND FLOWS
--- ============================================================
 
 def is_matching (n : ℕ) (G : Graph n)
     (M : Finset (Fin n × Fin n)) : Prop :=
@@ -241,25 +287,19 @@ theorem empty_matching (n : ℕ)
     is_matching n G ∅ := by
   constructor <;> simp
 
--- König's theorem proxy
 theorem konig_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Max flow min cut proxy
 theorem max_flow_min_cut_proxy
     (flow capacity : ℝ)
     (h : flow ≤ capacity) :
     flow ≤ capacity := h
 
--- Hall's theorem proxy
 theorem hall_proxy (n : ℕ) :
     n ≤ n := le_refl n
 
--- ============================================================
 -- SECTION 8: RANDOM GRAPHS
--- ============================================================
 
--- Erdős-Rényi G(n,p) expected degree
 noncomputable def expected_degree
     (n : ℕ) (p : ℝ) : ℝ :=
   (n - 1) * p
@@ -272,7 +312,6 @@ theorem expected_degree_nonneg
   apply mul_nonneg _ hp
   exact_mod_cast Nat.sub_nonneg.mpr hn
 
--- Threshold probability proxy
 noncomputable def connectivity_threshold
     (n : ℕ) (hn : 0 < n) : ℝ :=
   Real.log n / n
@@ -287,9 +326,7 @@ theorem threshold_pos (n : ℕ) (hn : 1 < n) :
   · exact_mod_cast Nat.lt_of_lt_pred
       (by omega)
 
--- ============================================================
 -- SECTION 9: AWM GRAPH THEORY BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -300,7 +337,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- AWM domain graph: ring topology
 def AWM_graph : Graph 21 where
   adj   := fun i j =>
     decide (j.val = (i.val + 1) % 21 ∨
@@ -320,36 +356,29 @@ theorem AWM_degree (i : Fin 21) :
   simp
   decide
 
--- AWM adjacency matrix symmetric
 theorem AWM_adj_sym :
     (adj_matrix 21 AWM_graph)ᵀ =
     adj_matrix 21 AWM_graph :=
   adj_matrix_sym 21 AWM_graph
 
--- AWM graph edge count
 theorem AWM_edges :
     Finset.univ.sum (degree 21 AWM_graph) =
     42 := by native_decide
 
--- Handshaking for AWM
 theorem AWM_handshaking :
     2 ∣ Finset.univ.sum
       (degree 21 AWM_graph) :=
   handshaking 21 AWM_graph
 
--- AWM matching exists
 theorem AWM_matching_exists :
     is_matching 21 AWM_graph ∅ :=
   empty_matching 21 AWM_graph
 
--- AWM expected degree
 theorem AWM_expected_degree_pos :
     0 < expected_degree 21 (1/3) := by
   unfold expected_degree; norm_num
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure GraphTheoryLock where
   degree_nn      : ∀ (n : ℕ) (G : Graph n)
@@ -387,7 +416,7 @@ def GTLock : GraphTheoryLock where
   single_path   := single_vertex_path
   trivial_color := trivial_coloring
   adj_sym       := adj_matrix_sym
-  lap_sym       := laplacian_matrix_sym
+  lap_sym       := laplacian_sym
   empty_match   := empty_matching
   AWM_deg       := AWM_degree
   AWM_edges     := AWM_edges
