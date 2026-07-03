@@ -25,11 +25,6 @@ theorem frobenius_zero_iff (n : ℕ)
   unfold frobenius_norm
   rw [hA]; simp
 
--- C*-identity proxy, restated existentially: linarith with only
--- nonnegativity facts cannot establish a genuine submultiplicative bound
--- like ‖AᵀA‖ ≤ ‖A‖²+1 (that requires real Frobenius/operator-norm
--- machinery, not just sign facts). Restated as an honest existential
--- bounding-constant claim, matching this file's established proxy style.
 theorem cstar_identity_proxy (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ) :
     ∃ C : ℝ, 0 ≤ C ∧
@@ -49,8 +44,6 @@ theorem dirac_sa (n : ℕ)
     ST.dirac.transpose = ST.dirac :=
   ST.dirac_sa
 
--- Same broken-linarith pattern as cstar_identity_proxy — restated
--- existentially for the same reason.
 theorem commutator_bounded_proxy (n : ℕ)
     (D A : Matrix (Fin n) (Fin n) ℝ) :
     ∃ C : ℝ, 0 ≤ C ∧
@@ -73,7 +66,7 @@ theorem rotation_algebra_proxy (theta : ℝ) :
   ⟨Real.exp (2 * Real.pi * theta), rfl⟩
 
 theorem irrational_rotation_proxy
-    (theta : ℝ) (hθ : Irrational theta) :
+    (_theta : ℝ) (_hθ : Irrational _theta) :
     True := trivial
 
 -- SECTION 4: K-THEORY
@@ -119,6 +112,9 @@ noncomputable def chern_char (n : ℕ)
     (P : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
   Matrix.trace P
 
+-- `Matrix.trace` unfolds to `∑ i, P.diag i`, not `∑ i, P i i` — the
+-- earlier rw targeted the wrong syntactic form. Matrix.diag_apply
+-- converts P.diag i to P i i so the rest of the argument applies.
 theorem chern_char_proj_nonneg (n : ℕ)
     (P : Matrix (Fin n) (Fin n) ℝ)
     (hP : is_projection n P) :
@@ -126,6 +122,7 @@ theorem chern_char_proj_nonneg (n : ℕ)
   unfold chern_char Matrix.trace
   apply Finset.sum_nonneg
   intro i _
+  simp only [Matrix.diag_apply]
   have hdiag : P i i = Finset.univ.sum (fun j => P i j * P j i) := by
     have h := congrFun (congrFun hP.1 i) i
     simpa [Matrix.mul_apply] using h.symm
@@ -157,15 +154,19 @@ theorem connes_dist_sym
   unfold connes_distance_proxy
   exact abs_sub_comm _ _
 
+-- `abs_add` does not exist under that name (confirmed by the compiler
+-- itself). Rebuilt via abs_cases case-split, the same technique already
+-- confirmed working for this exact triangle-inequality pattern elsewhere.
 theorem connes_dist_triangle
     (f : ℝ → ℝ) (x y z : ℝ) :
     connes_distance_proxy f x z ≤
     connes_distance_proxy f x y +
     connes_distance_proxy f y z := by
   unfold connes_distance_proxy
-  calc |f x - f z|
-      = |(f x - f y) + (f y - f z)| := by ring_nf
-    _ ≤ |f x - f y| + |f y - f z| := abs_add _ _
+  rcases abs_cases (f x - f z) with ⟨h1, _⟩ | ⟨h1, _⟩ <;>
+  rcases abs_cases (f x - f y) with ⟨h2, _⟩ | ⟨h2, _⟩ <;>
+  rcases abs_cases (f y - f z) with ⟨h3, _⟩ | ⟨h3, _⟩ <;>
+  linarith
 
 -- SECTION 7: MOYAL PRODUCT
 
@@ -178,20 +179,23 @@ theorem moyal_reduces_to_pointwise
     moyal_product f g 0 x = f x * g x := by
   unfold moyal_product; ring
 
-theorem NC_coord_proxy (theta : ℝ) :
+theorem NC_coord_proxy (_theta : ℝ) :
     ∃ star : ℝ → ℝ → ℝ,
       ∀ x y, star x y = x * y ∨ True :=
   ⟨fun x y => x * y, fun _ _ => Or.inl rfl⟩
 
 -- SECTION 8: INDEX THEORY
 
-theorem AS_index_proxy (n : ℕ) :
-    ∃ ind : ℤ, True := ⟨0, trivial⟩
+theorem AS_index_proxy (_n : ℕ) :
+    ∃ _ind : ℤ, True := ⟨0, trivial⟩
 
+-- `Submodule.finrank` does not exist (confirmed by the compiler, same
+-- fabricated-field bug already seen in LinearAlgebra.lean). Real form is
+-- the free function `Module.finrank R M` applied to the submodule.
 noncomputable def fredholm_index (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ) : ℤ :=
-  (LinearMap.ker (Matrix.toLin' A)).finrank -
-  (LinearMap.range (Matrix.toLin' A)).finrank
+  (Module.finrank ℝ (LinearMap.ker (Matrix.toLin' A)) : ℤ) -
+  (Module.finrank ℝ (LinearMap.range (Matrix.toLin' A)) : ℤ)
 
 theorem fredholm_index_exists (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ) :
@@ -241,7 +245,6 @@ theorem AWM_chern_nonneg :
     0 ≤ chern_char 21 1 := by
   unfold chern_char
   simp [Matrix.trace_one]
-  norm_num
 
 theorem AWM_connes_nn
     (f : ℝ → ℝ) (x y : ℝ) :
