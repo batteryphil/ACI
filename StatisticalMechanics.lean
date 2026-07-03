@@ -1,4 +1,3 @@
--- StatisticalMechanics.lean
 import Mathlib
 
 namespace StatisticalMechanics
@@ -94,9 +93,9 @@ theorem gibbs_sums_to_one
 
 noncomputable def free_energy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
-    (hbeta : 0 < beta) (hk : 0 < k) : ℝ :=
+    (_ : 0 < beta) (_ : 0 < k) : ℝ :=
   -(1 / (beta * k)) *
-  Real.log (partition_function beta energies hbeta)
+  Real.log (partition_function beta energies _)
 
 theorem free_energy_finite
     (beta k : ℝ) (energies : Fin 7 → ℝ)
@@ -121,9 +120,6 @@ theorem internal_energy_is_weighted_avg
 -- SECTION 4: ENTROPY
 -- S = -k Σ p_i log p_i
 
--- `let` inside a lambda's body causes elaboration friction downstream
--- (the goal displays as an unreduced let-expression). Removed in favor of
--- direct application, matching every other def in this file.
 noncomputable def gibbs_entropy
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) : ℝ :=
@@ -131,11 +127,6 @@ noncomputable def gibbs_entropy
     gibbs_prob beta energies hbeta i *
     Real.log (gibbs_prob beta energies hbeta i))
 
--- The original tried `apply mul_nonneg (le_of_lt hk)` against a goal of
--- shape `0 ≤ -k * S`, but mul_nonneg's conclusion pattern is `0 ≤ a * b`
--- with `a` unified to `-k`, not `k` — passing a proof of `0 ≤ k` cannot
--- unify with that. Rebuilt via an explicit product hint for nlinarith
--- instead of trying to force mul_nonneg's shape to match.
 theorem gibbs_entropy_nonneg
     (beta k : ℝ) (energies : Fin 7 → ℝ)
     (hbeta : 0 < beta) (hk : 0 < k) :
@@ -153,18 +144,15 @@ theorem gibbs_entropy_nonneg
       · exact gibbs_prob_le_one beta energies hbeta i
   nlinarith [mul_nonneg hk.le (neg_nonneg.mpr hS)]
 
--- Maximum entropy at uniform distribution
 theorem uniform_max_entropy
     (beta k : ℝ) (hbeta : 0 < beta) (hk : 0 < k) :
-    let energies := fun (_ : Fin 7) => (0 : ℝ)
-    gibbs_entropy beta k energies hbeta hk =
+    gibbs_entropy beta k (fun _ => (0 : ℝ)) hbeta hk =
     k * Real.log 7 := by
   simp [gibbs_entropy, gibbs_prob, partition_function]
   ring_nf
   rw [Real.log_inv, Real.log_natCast]
 
 -- SECTION 5: MAXWELL-BOLTZMANN DISTRIBUTION
--- f(v) = √(m/2πkT) exp(-mv²/2kT)
 
 noncomputable def maxwell_boltzmann
     (m k T v : ℝ)
@@ -188,11 +176,6 @@ theorem maxwell_boltzmann_symmetric
     maxwell_boltzmann m k T (-v) hm hk hT := by
   unfold maxwell_boltzmann; ring_nf
 
--- `nlinarith` cannot reason about division directly (the negated
--- hypothesis it produced was itself a division inequality, unresolvable
--- without clearing denominators). Rebuilt by computing the RHS exponent
--- to exactly 0 first, then bounding the LHS exponent via a sign lemma on
--- division instead of asking nlinarith to handle the fractions directly.
 theorem maxwell_boltzmann_max_at_zero
     (m k T v : ℝ)
     (hm : 0 < m) (hk : 0 < k) (hT : 0 < T) :
@@ -239,8 +222,6 @@ theorem carnot_efficiency_lt_one
   unfold carnot_efficiency
   linarith [div_pos hc hh]
 
--- `div_lt_one_of_lt` confirmed nonexistent by the compiler. The real
--- lemma is the iff form `div_lt_one`.
 theorem carnot_efficiency_pos
     (T_hot T_cold : ℝ)
     (hh : 0 < T_hot) (hc : 0 < T_cold)
@@ -250,8 +231,7 @@ theorem carnot_efficiency_pos
   rw [sub_pos]
   exact (div_lt_one hh).mpr h
 
-theorem third_law_limit (S_0 : ℝ) (h : S_0 = 0) :
-    S_0 = 0 := h
+theorem third_law_limit (S_0 : ℝ) (h : S_0 = 0) : S_0 = 0 := h
 
 -- SECTION 7: PHASE TRANSITIONS
 
@@ -268,12 +248,12 @@ noncomputable def landau_free_energy
   a * phi ^ 2 + b * phi ^ 4
 
 theorem landau_nonneg_b_pos_a_pos
-    (a b phi : ℝ) (ha : 0 ≤ a) (hb : 0 < b) :
+    (a b phi : ℝ) (_ : 0 ≤ a) (_ : 0 < b) :
     0 ≤ landau_free_energy a b phi := by
   unfold landau_free_energy; positivity
 
 theorem landau_minimum_at_zero_when_a_pos
-    (a b phi : ℝ) (ha : 0 < a) (hb : 0 < b) :
+    (a b phi : ℝ) (_ : 0 < a) (_ : 0 < b) :
     0 ≤ landau_free_energy a b phi := by
   unfold landau_free_energy; positivity
 
@@ -374,3 +354,4 @@ def SMSLock : StatMechLock where
   dom_sum    := domain_gibbs_sum_one
 
 end StatisticalMechanics
+
