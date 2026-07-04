@@ -12,7 +12,7 @@ noncomputable def pontryagin_H (f L : ℝ → ℝ → ℝ) (x u p : ℝ) : ℝ :
 
 theorem pontryagin_H_linear_in_p (f L : ℝ → ℝ → ℝ) (x u p q : ℝ) :
     pontryagin_H f L x u (p + q) = pontryagin_H f L x u p + pontryagin_H f L x u q := by
-  unfold pontryagin_H; field_simp; ring
+  unfold pontryagin_H; ring
 
 theorem pontryagin_H_zero_cost (f : ℝ → ℝ → ℝ) (x u p : ℝ) :
     pontryagin_H f (fun _ _ => 0) x u p = p * f x u := by
@@ -68,7 +68,7 @@ theorem riccati_feedback_neg (P B R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
   have hBP : 0 < B * P := mul_pos hB hP
-  exact div_neg_of_pos hBP hR
+  exact neg_div_of_pos hBP hR
 
 theorem riccati_feedback_zero_at_equilibrium (B R : ℝ) (hR : 0 < R) :
     riccati_feedback 0 B R hR = 0 := by unfold riccati_feedback; simp
@@ -79,9 +79,8 @@ noncomputable def closed_loop_dynamics (A B P R x : ℝ) (hR : 0 < R) : ℝ :=
 theorem closed_loop_stable (A B P R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B)
     (hA : A < B ^ 2 * P / R) : closed_loop_dynamics A B P R 1 hR < A := by
   unfold closed_loop_dynamics riccati_feedback
-  have hpos : 0 < R := hR
   field_simp
-  linarith
+  nlinarith
 
 -- ============================================================
 -- SECTION 4: BELLMAN PRINCIPLE OF OPTIMALITY
