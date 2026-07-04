@@ -6,7 +6,6 @@ open Finset Real
 
 -- ============================================================
 -- SECTION 1: PONTRYAGIN HAMILTONIAN
--- H(x, u, p) = p·f(x,u) - L(x,u)
 -- ============================================================
 noncomputable def pontryagin_H (f L : ℝ → ℝ → ℝ) (x u p : ℝ) : ℝ := p * f x u - L x u
 
@@ -18,11 +17,11 @@ theorem pontryagin_H_zero_cost (f : ℝ → ℝ → ℝ) (x u p : ℝ) :
     pontryagin_H f (fun _ _ => 0) x u p = p * f x u := by
   unfold pontryagin_H; ring
 
--- Costate equation: dp/dt = -∂H/∂x
+-- Costate equation
 noncomputable def costate_update (f L : ℝ → ℝ → ℝ) (x u p eps : ℝ) : ℝ :=
   -(pontryagin_H f L (x + eps) u p - pontryagin_H f L x u p) / eps
 
--- Maximum principle: u* maximizes H over u
+-- Maximum principle
 def satisfies_maximum_principle (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ) : Prop :=
   ∀ u : ℝ, pontryagin_H f L x u p ≤ pontryagin_H f L x u_star p
 
@@ -32,9 +31,7 @@ theorem max_principle_at_optimum (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ)
 
 -- ============================================================
 -- SECTION 2: LQR COST FUNCTION
--- J = ∫ (Q x² + R u²) dt
 -- ============================================================
-
 noncomputable def LQR_cost (Q R x u : ℝ) : ℝ := Q * x ^ 2 + R * u ^ 2
 
 theorem LQR_cost_nonneg (Q R x u : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ R) : 0 ≤ LQR_cost Q R x u := by
@@ -46,9 +43,15 @@ theorem LQR_cost_zero_iff (Q R x u : ℝ) (hQ : 0 < Q) (hR : 0 < R) :
   · intro h
     have h1 : 0 ≤ Q * x^2 := mul_nonneg (le_of_lt hQ) (sq_nonneg x)
     have h2 : 0 ≤ R * u^2 := mul_nonneg (le_of_lt hR) (sq_nonneg u)
-    constructor
-    · nlinarith
-    · nlinarith
+    have hx : x = 0 := by
+      apply (sq_eq_zero_iff x).mp
+      apply (mul_eq_zero_of_pos_left (le_of_lt hQ)).mp
+      nlinarith
+    have hu : u = 0 := by
+      apply (sq_eq_zero_iff u).mp
+      apply (mul_eq_zero_of_pos_left (le_of_lt hR)).mp
+      nlinarith
+    exact ⟨hx, hu⟩
   · rintro ⟨hx, hu⟩; simp [hx, hu]
 
 theorem LQR_cost_symmetric (Q R : ℝ) (x u : ℝ) : LQR_cost Q R x u = LQR_cost Q R (-x) (-u) := by
@@ -61,14 +64,12 @@ theorem LQR_cost_quadratic_scaling (Q R x u c : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ 
 -- ============================================================
 -- SECTION 3: RICCATI EQUATION
 -- ============================================================
-
 noncomputable def riccati_feedback (P B R : ℝ) (hR : 0 < R) : ℝ := -(B * P) / R
 
 theorem riccati_feedback_neg (P B R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B) :
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
-  have hBP : 0 < B * P := mul_pos hB hP
-  exact neg_div_of_pos hBP hR
+  exact div_neg_of_pos (mul_pos hB hP) hR
 
 theorem riccati_feedback_zero_at_equilibrium (B R : ℝ) (hR : 0 < R) :
     riccati_feedback 0 B R hR = 0 := by unfold riccati_feedback; simp
@@ -80,12 +81,11 @@ theorem closed_loop_stable (A B P R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B
     (hA : A < B ^ 2 * P / R) : closed_loop_dynamics A B P R 1 hR < A := by
   unfold closed_loop_dynamics riccati_feedback
   field_simp
-  nlinarith
+  linarith
 
 -- ============================================================
--- SECTION 4: BELLMAN PRINCIPLE OF OPTIMALITY
+-- SECTION 4: BELLMAN PRINCIPLE
 -- ============================================================
-
 noncomputable def value_function_decomp (V : ℝ → ℝ) (x0 x1 stage_cost : ℝ) : Prop := V x0 = stage_cost + V x1
 
 theorem bellman_principle (V : ℝ → ℝ) (x0 x1 stage_cost : ℝ) (h : value_function_decomp V x0 x1 stage_cost) :
@@ -100,9 +100,8 @@ theorem value_function_lyapunov (V : ℝ → ℝ) (_ : V 0 = 0) (_ : ∀ x, 0 �
     ∀ x u stage : ℝ, 0 ≤ stage → value_function_decomp V x (x + u) stage → V (x + u) ≤ V x := hVdec
 
 -- ============================================================
--- SECTION 5: HAMILTON-JACOBI-BELLMAN EQUATION
+-- SECTION 5: HJB EQUATION
 -- ============================================================
-
 noncomputable def HJB_residual (V : ℝ → ℝ) (f L : ℝ → ℝ → ℝ) (x u dV_dx : ℝ) : ℝ := dV_dx * f x u + L x u
 
 theorem HJB_nonneg_at_min (V : ℝ → ℝ) (f L : ℝ → ℝ → ℝ) (x u_star dV_dx : ℝ) (hL : 0 ≤ L x u_star)
@@ -113,16 +112,15 @@ def satisfies_HJB (V : ℝ → ℝ) (f L : ℝ → ℝ → ℝ) (dV_dx : ℝ →
   ∀ x : ℝ, ∃ u_star : ℝ, HJB_residual V f L x u_star (dV_dx x) = 0
 
 -- ============================================================
--- SECTION 6: TRANSVERSALITY CONDITIONS
+-- SECTION 6: TRANSVERSALITY
 -- ============================================================
-
 def terminal_transversality (p_T terminal_cost_gradient : ℝ) : Prop := p_T = terminal_cost_gradient
 
 theorem transversality_free_endpoint (p_T : ℝ) (h : terminal_transversality p_T 0) : p_T = 0 := h
 theorem transversality_fixed_endpoint (p_T lambda : ℝ) (h : terminal_transversality p_T lambda) : p_T = lambda := h
 
 -- ============================================================
--- SECTION 7: DISCRETE-TIME OPTIMAL CONTROL
+-- SECTION 7: DISCRETE-TIME CONTROL
 -- ============================================================
 noncomputable def discrete_value (V_next : ℝ → ℝ) (f L : ℝ → ℝ → ℝ) (x u : ℝ) : ℝ := L x u + V_next (f x u)
 
@@ -138,7 +136,7 @@ theorem accumulated_cost_nonneg (L : ℝ → ℝ → ℝ) (traj ctrl : ℕ → �
   unfold accumulated_cost; apply Finset.sum_nonneg; intro k _; exact hL k
 
 -- ============================================================
--- SECTION 8: AWM OPTIMAL CONTROL BRIDGE
+-- SECTION 8: AWM BRIDGE
 -- ============================================================
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural | E_Boundary | F_Diagnostics | G_Governance
@@ -163,7 +161,6 @@ theorem system_LQR_zero_at_rest (w : DomainControlWeights) : system_LQR_cost w (
 -- ============================================================
 -- SYSTEM LOCK
 -- ============================================================
-
 structure OptimalControlLock where
   LQR_nn      : ∀ (Q R x u : ℝ), 0 ≤ Q → 0 ≤ R → 0 ≤ LQR_cost Q R x u
   bellman     : ∀ (V : ℝ → ℝ) (x0 x1 sc : ℝ), value_function_decomp V x0 x1 sc → V x0 - V x1 = sc
