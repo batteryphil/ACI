@@ -34,25 +34,21 @@ noncomputable def costate_update
     pontryagin_H f L x u p) / eps
 
 -- Maximum principle: u* maximizes H over u
-def satisfies_maximum_principle
-    (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ) : Prop :=
+def satisfies_maximum_principle                                                        (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ) : Prop :=
   ∀ u : ℝ,
     pontryagin_H f L x u p ≤
     pontryagin_H f L x u_star p
-
-theorem max_principle_at_optimum
+                                                                                   theorem max_principle_at_optimum
     (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ)
     (h : satisfies_maximum_principle f L x p u_star) :
     ∀ u, pontryagin_H f L x u p ≤
          pontryagin_H f L x u_star p := h
 
--- ============================================================
--- SECTION 2: LQR COST FUNCTION
+-- ============================================================                    -- SECTION 2: LQR COST FUNCTION
 -- J = ∫ (Q x² + R u²) dt
 -- ============================================================
 
-noncomputable def LQR_cost (Q R x u : ℝ) : ℝ :=
-  Q * x ^ 2 + R * u ^ 2
+noncomputable def LQR_cost (Q R x u : ℝ) : ℝ :=                                      Q * x ^ 2 + R * u ^ 2
 
 theorem LQR_cost_nonneg (Q R x u : ℝ)
     (hQ : 0 ≤ Q) (hR : 0 ≤ R) :
@@ -66,21 +62,19 @@ theorem LQR_cost_zero_iff (Q R x u : ℝ)
   constructor
   · intro h
     constructor
-    · nlinarith [sq_nonneg x, sq_nonneg u]
-    · nlinarith [sq_nonneg x, sq_nonneg u]
+    · linarith [sq_nonneg x, sq_nonneg u, le_of_lt hQ, le_of_lt hR]
+    · linarith [sq_nonneg x, sq_nonneg u, le_of_lt hQ, le_of_lt hR]
   · rintro ⟨hx, hu⟩; simp [hx, hu]
 
 theorem LQR_cost_symmetric (Q R : ℝ) (x u : ℝ) :
-    LQR_cost Q R x u = LQR_cost Q R (-x) (-u) := by
-  unfold LQR_cost; ring
+    LQR_cost Q R x u = LQR_cost Q R (-x) (-u) := by                                  unfold LQR_cost; ring
 
 theorem LQR_cost_quadratic_scaling
     (Q R x u c : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ R) :
     LQR_cost Q R (c * x) (c * u) =
     c ^ 2 * LQR_cost Q R x u := by
   unfold LQR_cost; ring
-
--- ============================================================
+                                                                                   -- ============================================================
 -- SECTION 3: RICCATI EQUATION
 -- P' + PA + A'P - PBR⁻¹B'P + Q = 0
 -- Feedback gain: K = R⁻¹B'P
@@ -95,17 +89,13 @@ theorem riccati_feedback_neg
     (hP : 0 < P) (hB : 0 < B) :
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
-  apply neg_of_neg_div_pos hR
-  positivity
+  apply neg_div_pos_of_pos_of_pos (mul_pos hB hP) hR
 
-theorem riccati_feedback_zero_at_equilibrium
-    (B R : ℝ) (hR : 0 < R) :
-    riccati_feedback 0 B R hR = 0 := by
-  unfold riccati_feedback; simp
+theorem riccati_feedback_zero_at_equilibrium                                           (B R : ℝ) (hR : 0 < R) :
+    riccati_feedback 0 B R hR = 0 := by                                              unfold riccati_feedback; simp
 
 -- Closed-loop dynamics: x' = (A - BK)x
-noncomputable def closed_loop_dynamics
-    (A B P R x : ℝ) (hR : 0 < R) : ℝ :=
+noncomputable def closed_loop_dynamics                                                 (A B P R x : ℝ) (hR : 0 < R) : ℝ :=
   A * x + B * riccati_feedback P B R hR * x
 
 theorem closed_loop_stable
@@ -114,7 +104,7 @@ theorem closed_loop_stable
     (hA : A < B ^ 2 * P / R) :
     closed_loop_dynamics A B P R 1 hR < A := by
   unfold closed_loop_dynamics riccati_feedback
-  nlinarith [sq_pos_of_pos hB]
+  ring; linarith
 
 -- ============================================================
 -- SECTION 4: BELLMAN PRINCIPLE OF OPTIMALITY
@@ -280,15 +270,14 @@ structure OptimalControlLock where
                   value_function_decomp V x0 x1 sc →
                   V x0 - V x1 = sc
   riccati_neg : ∀ (P B R : ℝ) (hR : 0 < R),
-                  0 < P → 0 < B →
-                  riccati_feedback P B R hR < 0
+                  0 < P → 0 < B → riccati_feedback P B R hR < 0
   acc_nn      : ∀ (L : ℝ → ℝ → ℝ) (x u : ℕ → ℝ) (N : ℕ),
                   (∀ k, 0 ≤ L (x k) (u k)) →
                   0 ≤ accumulated_cost L x u N
   sys_nn      : ∀ (w : DomainControlWeights)
                   (s i : Domain21 → ℝ),
                   0 ≤ system_LQR_cost w s i
-
+                  
 def OCLock : OptimalControlLock where
   LQR_nn      := fun Q R x u hQ hR =>
                    LQR_cost_nonneg Q R x u hQ hR
@@ -302,4 +291,4 @@ def OCLock : OptimalControlLock where
                    system_LQR_cost_nonneg w s i
 
 end OptimalControl
--- Force CI trigger: Re-verifying module
+
