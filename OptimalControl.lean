@@ -11,17 +11,17 @@ noncomputable def pontryagin_H (f L : ℝ → ℝ → ℝ) (x u p : ℝ) : ℝ :
 
 theorem pontryagin_H_linear_in_p (f L : ℝ → ℝ → ℝ) (x u p q : ℝ) :
     pontryagin_H f L x u (p + q) = pontryagin_H f L x u p + pontryagin_H f L x u q := by
-  unfold pontryagin_H; ring
+  unfold pontryagin_H; field_simp; ring1
 
 theorem pontryagin_H_zero_cost (f : ℝ → ℝ → ℝ) (x u p : ℝ) :
     pontryagin_H f (fun _ _ => 0) x u p = p * f x u := by
   unfold pontryagin_H; ring
 
--- Costate equation
+-- Costate equation: dp/dt = -∂H/∂x
 noncomputable def costate_update (f L : ℝ → ℝ → ℝ) (x u p eps : ℝ) : ℝ :=
   -(pontryagin_H f L (x + eps) u p - pontryagin_H f L x u p) / eps
 
--- Maximum principle
+-- Maximum principle: u* maximizes H over u
 def satisfies_maximum_principle (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ) : Prop :=
   ∀ u : ℝ, pontryagin_H f L x u p ≤ pontryagin_H f L x u_star p
 
@@ -41,17 +41,9 @@ theorem LQR_cost_zero_iff (Q R x u : ℝ) (hQ : 0 < Q) (hR : 0 < R) :
     LQR_cost Q R x u = 0 ↔ x = 0 ∧ u = 0 := by
   unfold LQR_cost; constructor
   · intro h
-    have h1 : 0 ≤ Q * x^2 := mul_nonneg (le_of_lt hQ) (sq_nonneg x)
-    have h2 : 0 ≤ R * u^2 := mul_nonneg (le_of_lt hR) (sq_nonneg u)
-    have hx : x = 0 := by
-      apply (sq_eq_zero_iff x).mp
-      apply (mul_eq_zero_of_pos_left (le_of_lt hQ)).mp
-      nlinarith
-    have hu : u = 0 := by
-      apply (sq_eq_zero_iff u).mp
-      apply (mul_eq_zero_of_pos_left (le_of_lt hR)).mp
-      nlinarith
-    exact ⟨hx, hu⟩
+    have hx : x^2 = 0 := by nlinarith [h, show 0 ≤ Q*x^2 by positivity, show 0 ≤ R*u^2 by positivity]
+    have hu : u^2 = 0 := by nlinarith [h, show 0 ≤ Q*x^2 by positivity, show 0 ≤ R*u^2 by positivity]
+    exact ⟨(sq_eq_zero_iff x).mp hx, (sq_eq_zero_iff u).mp hu⟩
   · rintro ⟨hx, hu⟩; simp [hx, hu]
 
 theorem LQR_cost_symmetric (Q R : ℝ) (x u : ℝ) : LQR_cost Q R x u = LQR_cost Q R (-x) (-u) := by
@@ -69,7 +61,7 @@ noncomputable def riccati_feedback (P B R : ℝ) (hR : 0 < R) : ℝ := -(B * P) 
 theorem riccati_feedback_neg (P B R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B) :
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
-  exact div_neg_of_pos (mul_pos hB hP) hR
+  apply neg_div_of_pos (mul_pos hB hP) hR
 
 theorem riccati_feedback_zero_at_equilibrium (B R : ℝ) (hR : 0 < R) :
     riccati_feedback 0 B R hR = 0 := by unfold riccati_feedback; simp
@@ -81,7 +73,7 @@ theorem closed_loop_stable (A B P R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B
     (hA : A < B ^ 2 * P / R) : closed_loop_dynamics A B P R 1 hR < A := by
   unfold closed_loop_dynamics riccati_feedback
   field_simp
-  linarith
+  nlinarith
 
 -- ============================================================
 -- SECTION 4: BELLMAN PRINCIPLE
@@ -112,7 +104,7 @@ def satisfies_HJB (V : ℝ → ℝ) (f L : ℝ → ℝ → ℝ) (dV_dx : ℝ →
   ∀ x : ℝ, ∃ u_star : ℝ, HJB_residual V f L x u_star (dV_dx x) = 0
 
 -- ============================================================
--- SECTION 6: TRANSVERSALITY
+-- SECTION 6: TRANSVERSALITY CONDITIONS
 -- ============================================================
 def terminal_transversality (p_T terminal_cost_gradient : ℝ) : Prop := p_T = terminal_cost_gradient
 
