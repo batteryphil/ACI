@@ -11,17 +11,18 @@ noncomputable def pontryagin_H (f L : ℝ → ℝ → ℝ) (x u p : ℝ) : ℝ :
 
 theorem pontryagin_H_linear_in_p (f L : ℝ → ℝ → ℝ) (x u p q : ℝ) :
     pontryagin_H f L x u (p + q) = pontryagin_H f L x u p + pontryagin_H f L x u q := by
-  unfold pontryagin_H; field_simp; ring1
+  unfold pontryagin_H
+  rw [add_mul, sub_add_eq_sub_sub]
+  simp
 
 theorem pontryagin_H_zero_cost (f : ℝ → ℝ → ℝ) (x u p : ℝ) :
     pontryagin_H f (fun _ _ => 0) x u p = p * f x u := by
-  unfold pontryagin_H; ring
+  unfold pontryagin_H
+  simp
 
--- Costate equation: dp/dt = -∂H/∂x
 noncomputable def costate_update (f L : ℝ → ℝ → ℝ) (x u p eps : ℝ) : ℝ :=
   -(pontryagin_H f L (x + eps) u p - pontryagin_H f L x u p) / eps
 
--- Maximum principle: u* maximizes H over u
 def satisfies_maximum_principle (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ) : Prop :=
   ∀ u : ℝ, pontryagin_H f L x u p ≤ pontryagin_H f L x u_star p
 
@@ -35,19 +36,24 @@ theorem max_principle_at_optimum (f L : ℝ → ℝ → ℝ) (x p u_star : ℝ)
 noncomputable def LQR_cost (Q R x u : ℝ) : ℝ := Q * x ^ 2 + R * u ^ 2
 
 theorem LQR_cost_nonneg (Q R x u : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ R) : 0 ≤ LQR_cost Q R x u := by
-  unfold LQR_cost; positivity
+  unfold LQR_cost
+  exact add_nonneg (mul_nonneg hQ (sq_nonneg x)) (mul_nonneg hR (sq_nonneg u))
 
 theorem LQR_cost_zero_iff (Q R x u : ℝ) (hQ : 0 < Q) (hR : 0 < R) :
     LQR_cost Q R x u = 0 ↔ x = 0 ∧ u = 0 := by
-  unfold LQR_cost; constructor
+  unfold LQR_cost
+  constructor
   · intro h
-    have hx : x^2 = 0 := by nlinarith [h, show 0 ≤ Q*x^2 by positivity, show 0 ≤ R*u^2 by positivity]
-    have hu : u^2 = 0 := by nlinarith [h, show 0 ≤ Q*x^2 by positivity, show 0 ≤ R*u^2 by positivity]
-    exact ⟨(sq_eq_zero_iff x).mp hx, (sq_eq_zero_iff u).mp hu⟩
-  · rintro ⟨hx, hu⟩; simp [hx, hu]
+    have h1 : 0 ≤ Q * x ^ 2 := mul_nonneg (le_of_lt hQ) (sq_nonneg x)
+    have h2 : 0 ≤ R * u ^ 2 := mul_nonneg (le_of_lt hR) (sq_nonneg u)
+    have hx : x^2 = 0 := by linarith [h, h1, h2]
+    have hu : u^2 = 0 := by linarith [h, h1, h2]
+    rw [sq_eq_zero] at hx hu
+    exact ⟨hx, hu⟩
+  · rintro ⟨rfl, rfl⟩; simp
 
 theorem LQR_cost_symmetric (Q R : ℝ) (x u : ℝ) : LQR_cost Q R x u = LQR_cost Q R (-x) (-u) := by
-  unfold LQR_cost; ring
+  unfold LQR_cost; simp
 
 theorem LQR_cost_quadratic_scaling (Q R x u c : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ R) :
     LQR_cost Q R (c * x) (c * u) = c ^ 2 * LQR_cost Q R x u := by
@@ -61,7 +67,7 @@ noncomputable def riccati_feedback (P B R : ℝ) (hR : 0 < R) : ℝ := -(B * P) 
 theorem riccati_feedback_neg (P B R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B) :
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
-  apply neg_div_of_pos (mul_pos hB hP) hR
+  apply neg_div_pos_of_pos (mul_pos hB hP) hR
 
 theorem riccati_feedback_zero_at_equilibrium (B R : ℝ) (hR : 0 < R) :
     riccati_feedback 0 B R hR = 0 := by unfold riccati_feedback; simp
@@ -73,7 +79,7 @@ theorem closed_loop_stable (A B P R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B
     (hA : A < B ^ 2 * P / R) : closed_loop_dynamics A B P R 1 hR < A := by
   unfold closed_loop_dynamics riccati_feedback
   field_simp
-  nlinarith
+  linarith [hA]
 
 -- ============================================================
 -- SECTION 4: BELLMAN PRINCIPLE
@@ -104,9 +110,9 @@ def satisfies_HJB (V : ℝ → ℝ) (f L : ℝ → ℝ → ℝ) (dV_dx : ℝ →
   ∀ x : ℝ, ∃ u_star : ℝ, HJB_residual V f L x u_star (dV_dx x) = 0
 
 -- ============================================================
--- SECTION 6: TRANSVERSALITY CONDITIONS
+-- SECTION 6: TRANSVERSALITY
 -- ============================================================
-def terminal_transversality (p_T terminal_cost_gradient : ℝ) : Prop := p_T = terminal_cost_gradient
+def terminal_transversality (p_T lambda : ℝ) : Prop := p_T = lambda
 
 theorem transversality_free_endpoint (p_T : ℝ) (h : terminal_transversality p_T 0) : p_T = 0 := h
 theorem transversality_fixed_endpoint (p_T lambda : ℝ) (h : terminal_transversality p_T lambda) : p_T = lambda := h
@@ -150,9 +156,6 @@ theorem system_LQR_cost_nonneg (w : DomainControlWeights) (states inputs : Domai
 theorem system_LQR_zero_at_rest (w : DomainControlWeights) : system_LQR_cost w (fun _ => 0) (fun _ => 0) = 0 := by
   unfold system_LQR_cost LQR_cost; simp
 
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 structure OptimalControlLock where
   LQR_nn      : ∀ (Q R x u : ℝ), 0 ≤ Q → 0 ≤ R → 0 ≤ LQR_cost Q R x u
   bellman     : ∀ (V : ℝ → ℝ) (x0 x1 sc : ℝ), value_function_decomp V x0 x1 sc → V x0 - V x1 = sc
