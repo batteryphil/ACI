@@ -302,3 +302,4 @@ def OCLock : OptimalControlLock where
                    system_LQR_cost_nonneg w s i
 
 end OptimalControl
+-- Force CI trigger: Re-verifying module
