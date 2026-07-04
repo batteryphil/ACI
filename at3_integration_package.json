@@ -1,0 +1,15 @@
+{
+  "suite": "AT3",
+  "timestamp": 1783150736.460243,
+  "primary_unresolved_core": [
+    "LogicModelTheory"
+  ],
+  "files_to_track_locally": [
+    "ACI_Governance_Root.lean",
+    "ACI_System_Kernel.lean",
+    "ACI_Terminal_Axioms.lean",
+    "Bridge.lean",
+    "Synaptic_Weights.lean"
+  ],
+  "total_targets_flagged": 64
+}
