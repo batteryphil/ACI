@@ -1,4 +1,3 @@
--- OptimalTransport.lean
 import Mathlib
 
 namespace OptimalTransport
@@ -7,10 +6,8 @@ open Finset Real
 
 -- ============================================================
 -- SECTION 1: TRANSPORT COST
--- c(x,y) = cost of moving mass from x to y
 -- ============================================================
 
--- Cost matrix for finite transport
 noncomputable def transport_cost_matrix
     (n m : ℕ) (c : Fin n → Fin m → ℝ)
     (plan : Fin n → Fin m → ℝ) : ℝ :=
@@ -28,7 +25,6 @@ theorem transport_cost_nonneg
   apply Finset.sum_nonneg; intro j _
   exact mul_nonneg (hc i j) (hp i j)
 
--- Squared Euclidean cost: c(x,y) = |x-y|²
 noncomputable def sq_cost (x y : ℝ) : ℝ :=
   (x - y) ^ 2
 
@@ -46,7 +42,6 @@ theorem sq_cost_symm (x y : ℝ) :
     sq_cost x y = sq_cost y x := by
   unfold sq_cost; ring
 
--- L1 cost: c(x,y) = |x-y|
 noncomputable def l1_cost (x y : ℝ) : ℝ :=
   |x - y|
 
@@ -66,7 +61,6 @@ theorem l1_cost_triangle (x y z : ℝ) :
 
 -- ============================================================
 -- SECTION 2: TRANSPORT PLANS
--- Marginal constraints: Σ_j π(i,j) = μ(i), Σ_i π(i,j) = ν(j)
 -- ============================================================
 
 structure TransportPlan (n m : ℕ) where
@@ -92,20 +86,22 @@ theorem plan_mass_conserved
     _ = univ.sum tp.nu := by
           congr 1; ext j; exact tp.col_marg j
 
+-- FIX: `Finset.sum_pos_of_ne_zero` could not be independently verified
+-- (no network access here) — replaced with `Finset.sum_pos'`, which
+-- matches the exact ingredients already in hand (pointwise nonneg +
+-- one strict-positive witness) without converting hmu to a ≠0 form.
 theorem plan_total_mass_pos
     (n m : ℕ) (tp : TransportPlan n m)
     (i0 : Fin n) (hmu : 0 < tp.mu i0) :
     0 < univ.sum tp.mu := by
-  apply Finset.sum_pos_of_ne_zero
+  apply Finset.sum_pos'
   · intro i _; exact tp.mu_nn i
-  · exact ⟨i0, mem_univ _, hmu.ne'⟩
+  · exact ⟨i0, mem_univ _, hmu⟩
 
 -- ============================================================
 -- SECTION 3: WASSERSTEIN DISTANCE
--- W_p(μ,ν) = (inf_π ∫ c(x,y) dπ)^{1/p}
 -- ============================================================
 
--- 1-Wasserstein for discrete measures
 noncomputable def wasserstein1_discrete
     (n : ℕ) (mu nu : Fin n → ℝ)
     (positions : Fin n → ℝ) : ℝ :=
@@ -129,27 +125,25 @@ theorem wasserstein1_symm
   congr 1; ext i
   rw [abs_sub_comm]
 
--- 2-Wasserstein lower bound via mean difference
-theorem wasserstein2_mean_bound
+-- FIX (Rule 6): the previous statement
+-- `(Σ(mu-nu)*pos)² ≤ Σ(mu+nu)*pos²` is FALSE — counterexample:
+-- n=2, mu=(1,0), nu=(0,1), positions=(1,-1) gives LHS=4, RHS=2.
+-- It also relied on an unverifiable lemma name
+-- (`Finset.inner_mul_le_norm_sq_mul_norm_sq`). Replaced with the
+-- honest, unconditionally true statement: plain discrete
+-- Cauchy-Schwarz, which needs no hmu/hnu hypotheses at all.
+theorem wasserstein2_cauchy_schwarz_bound
     (n : ℕ) (mu nu : Fin n → ℝ)
-    (positions : Fin n → ℝ)
-    (hmu : univ.sum mu = 1)
-    (hnu : univ.sum nu = 1) :
+    (positions : Fin n → ℝ) :
     (univ.sum (fun i => (mu i - nu i) * positions i)) ^ 2 ≤
-    univ.sum (fun i => (mu i + nu i) *
-      (positions i) ^ 2) := by
-  nlinarith [Finset.inner_mul_le_norm_sq_mul_norm_sq
-    univ (fun i => Real.sqrt (mu i + nu i) * (mu i - nu i))
-    (fun i => Real.sqrt (mu i + nu i) * positions i),
-    Finset.sum_nonneg (fun i _ =>
-      mul_nonneg (by positivity) (sq_nonneg (positions i)))]
+    (univ.sum (fun i => (mu i - nu i) ^ 2)) *
+    (univ.sum (fun i => (positions i) ^ 2)) :=
+  Finset.sum_mul_sq_le_sq_mul_sq univ (fun i => mu i - nu i) positions
 
 -- ============================================================
 -- SECTION 4: KANTOROVICH DUALITY
--- W_1 = sup_{f Lipschitz, |f|≤1} ∫f dμ - ∫f dν
 -- ============================================================
 
--- Kantorovich potential pair
 structure KantorovichPotentials where
   f g   : ℝ → ℝ
   dual  : ∀ x y : ℝ, f x + g y ≤ l1_cost x y
@@ -160,7 +154,6 @@ theorem kantorovich_weak_duality
     kp.f x + kp.g y ≤ l1_cost x y :=
   kp.dual x y
 
--- Optimal potentials: f(x) = -g(x) for symmetric cost
 theorem symmetric_potentials
     (f : ℝ → ℝ)
     (hf : ∀ x y, f x - f y ≤ l1_cost x y) :
@@ -173,7 +166,6 @@ theorem symmetric_potentials
     have h := hf x y
     linarith [abs_nonneg (x - y)]
 
--- Duality gap is zero at optimum
 theorem duality_gap_zero
     (W cost : ℝ)
     (h_primal : cost ≥ W)
@@ -182,7 +174,6 @@ theorem duality_gap_zero
 
 -- ============================================================
 -- SECTION 5: BRENIER MAP
--- Optimal map for quadratic cost is gradient of convex function
 -- ============================================================
 
 structure BrenierMap where
@@ -199,7 +190,6 @@ theorem brenier_potential_convex
     t * bm.potential x + (1-t) * bm.potential y :=
   bm.convex x y t ht0 ht1
 
--- Gradient of convex function is monotone
 theorem brenier_gradient_monotone
     (bm : BrenierMap) (x y : ℝ)
     (hx : ∀ z, bm.potential x +
@@ -212,17 +202,14 @@ theorem brenier_gradient_monotone
   have h2 := hy x
   nlinarith
 
--- Identity map is optimal when μ = ν
 theorem identity_optimal_same_measure
     (x : ℝ) : sq_cost x x = 0 := by
   unfold sq_cost; ring
 
 -- ============================================================
 -- SECTION 6: SINKHORN ALGORITHM
--- Entropic regularization: W_ε = inf_π ∫c dπ + ε KL(π||μ⊗ν)
 -- ============================================================
 
--- Regularized cost
 noncomputable def sinkhorn_cost
     (c eps : ℝ) (kl_div : ℝ)
     (heps : 0 < eps) : ℝ :=
@@ -233,7 +220,6 @@ theorem sinkhorn_cost_ge_transport
     c ≤ sinkhorn_cost c eps kl heps := by
   unfold sinkhorn_cost; linarith [mul_nonneg heps.le hkl]
 
--- Sinkhorn iteration: u ← μ / (K v), v ← ν / (Kᵀ u)
 noncomputable def kernel_entry
     (c eps x y : ℝ) (heps : 0 < eps) : ℝ :=
   Real.exp (-c / eps)
@@ -251,7 +237,6 @@ theorem kernel_entry_bounded
   apply Real.exp_le_one_of_nonpos
   exact neg_nonpos.mpr (div_nonneg hc heps.le)
 
--- Sinkhorn convergence: iterates contract
 theorem sinkhorn_contraction
     (u1 u2 : ℝ) (K : ℝ) (hK : 0 < K) :
     |Real.log u1 - Real.log u2| ≤
@@ -259,10 +244,8 @@ theorem sinkhorn_contraction
 
 -- ============================================================
 -- SECTION 7: GEODESICS IN WASSERSTEIN SPACE
--- McCann interpolation: ρ_t = ((1-t)id + tT)_# μ
 -- ============================================================
 
--- Linear interpolation between positions
 noncomputable def mccann_interpolation
     (x y t : ℝ) : ℝ :=
   (1 - t) * x + t * y
@@ -280,7 +263,6 @@ theorem mccann_convex_in_t (x y t : ℝ)
     mccann_interpolation x y t =
     (1 - t) * x + t * y := rfl
 
--- Geodesic cost decreases along path
 theorem geodesic_cost_convex
     (x y t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
     sq_cost x (mccann_interpolation x y t) ≤
@@ -288,7 +270,6 @@ theorem geodesic_cost_convex
   unfold sq_cost mccann_interpolation
   nlinarith [sq_nonneg (x - y), sq_nonneg t]
 
--- Triangle inequality for Wasserstein
 theorem wasserstein_triangle
     (W12 W23 W13 : ℝ)
     (h12 : 0 ≤ W12) (h23 : 0 ≤ W23)
@@ -297,7 +278,6 @@ theorem wasserstein_triangle
 
 -- ============================================================
 -- SECTION 8: AWM OPTIMAL TRANSPORT BRIDGE
--- Mass transport between domain margin distributions
 -- ============================================================
 
 inductive Domain21 : Type where
@@ -309,7 +289,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Margin distribution across 21 domains
 structure MarginDistribution where
   weights  : Domain21 → ℝ
   wt_pos   : ∀ d, 0 < weights d
@@ -319,7 +298,6 @@ theorem margin_dist_all_pos
     (md : MarginDistribution) (d : Domain21) :
     0 < md.weights d := md.wt_pos d
 
--- Transport cost between two margin distributions
 noncomputable def margin_transport_cost
     (md1 md2 : MarginDistribution)
     (priorities : Domain21 → ℝ) : ℝ :=
@@ -335,7 +313,6 @@ theorem margin_transport_nonneg
   apply Finset.sum_nonneg; intro d _
   exact mul_nonneg (sq_cost_nonneg _ _) (sq_nonneg _)
 
--- Zero cost when distributions match
 theorem margin_transport_zero_same
     (md : MarginDistribution)
     (priorities : Domain21 → ℝ) :
@@ -343,7 +320,6 @@ theorem margin_transport_zero_same
   unfold margin_transport_cost sq_cost
   simp
 
--- Interpolating between margin distributions
 noncomputable def margin_interpolation
     (md1 md2 : MarginDistribution)
     (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1)
@@ -360,7 +336,6 @@ theorem margin_interpolation_pos
   have h2 := md2.wt_pos d
   nlinarith
 
--- Wasserstein distance between margin states
 noncomputable def margin_wasserstein
     (md1 md2 : MarginDistribution) : ℝ :=
   Real.sqrt (univ.sum (fun d =>
@@ -385,7 +360,6 @@ theorem margin_wasserstein_symm
   congr 1; apply Finset.sum_congr rfl
   intro d _; ring
 
--- Optimal rebalancing: move mass to equalize margins
 theorem equalization_reduces_cost
     (md1 md2 : MarginDistribution)
     (priorities : Domain21 → ℝ)
@@ -397,24 +371,19 @@ theorem equalization_reduces_cost
 
 -- ============================================================
 -- SECTION 9: KANTOROVICH-RUBINSTEIN THEOREM
--- W_1(μ,ν) = sup_{Lip(f)≤1} ∫f dμ - ∫f dν
 -- ============================================================
 
--- 1-Lipschitz function
 def is_1_lipschitz (f : ℝ → ℝ) : Prop :=
   ∀ x y : ℝ, |f x - f y| ≤ |x - y|
 
--- Identity is 1-Lipschitz
 theorem id_is_1_lipschitz :
     is_1_lipschitz id := by
   intro x y; simp
 
--- Constant functions are 1-Lipschitz
 theorem const_1_lipschitz (c : ℝ) :
     is_1_lipschitz (fun _ => c) := by
   intro x y; simp
 
--- Composition with contraction preserves Lipschitz
 theorem lipschitz_contraction
     (f : ℝ → ℝ) (k : ℝ) (hk : |k| ≤ 1)
     (hf : is_1_lipschitz f) :
@@ -428,7 +397,6 @@ theorem lipschitz_contraction
     _ = |f x - f y| := one_mul _
     _ ≤ |x - y| := hf x y
 
--- KR duality lower bound
 theorem KR_lower_bound
     (f : ℝ → ℝ) (hf : is_1_lipschitz f)
     (mu nu : ℝ → ℝ) (W : ℝ)
@@ -489,4 +457,3 @@ def OTLock : OptimalTransportLock where
   interp_pos      := margin_interpolation_pos
 
 end OptimalTransport
-
