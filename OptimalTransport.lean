@@ -4,10 +4,6 @@ namespace OptimalTransport
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: TRANSPORT COST
--- ============================================================
-
 noncomputable def transport_cost_matrix
     (n m : ℕ) (c : Fin n → Fin m → ℝ)
     (plan : Fin n → Fin m → ℝ) : ℝ :=
@@ -56,12 +52,7 @@ theorem l1_cost_zero_iff (x y : ℝ) :
 theorem l1_cost_triangle (x y z : ℝ) :
     l1_cost x z ≤ l1_cost x y + l1_cost y z := by
   unfold l1_cost
-  calc |x - z| = |x - y + (y - z)| := by ring_nf
-    _ ≤ |x - y| + |y - z| := abs_add _ _
-
--- ============================================================
--- SECTION 2: TRANSPORT PLANS
--- ============================================================
+  exact abs_sub_le x y z
 
 structure TransportPlan (n m : ℕ) where
   plan     : Fin n → Fin m → ℝ
@@ -86,10 +77,6 @@ theorem plan_mass_conserved
     _ = univ.sum tp.nu := by
           congr 1; ext j; exact tp.col_marg j
 
--- FIX: `Finset.sum_pos_of_ne_zero` could not be independently verified
--- (no network access here) — replaced with `Finset.sum_pos'`, which
--- matches the exact ingredients already in hand (pointwise nonneg +
--- one strict-positive witness) without converting hmu to a ≠0 form.
 theorem plan_total_mass_pos
     (n m : ℕ) (tp : TransportPlan n m)
     (i0 : Fin n) (hmu : 0 < tp.mu i0) :
@@ -97,10 +84,6 @@ theorem plan_total_mass_pos
   apply Finset.sum_pos'
   · intro i _; exact tp.mu_nn i
   · exact ⟨i0, mem_univ _, hmu⟩
-
--- ============================================================
--- SECTION 3: WASSERSTEIN DISTANCE
--- ============================================================
 
 noncomputable def wasserstein1_discrete
     (n : ℕ) (mu nu : Fin n → ℝ)
@@ -125,13 +108,6 @@ theorem wasserstein1_symm
   congr 1; ext i
   rw [abs_sub_comm]
 
--- FIX (Rule 6): the previous statement
--- `(Σ(mu-nu)*pos)² ≤ Σ(mu+nu)*pos²` is FALSE — counterexample:
--- n=2, mu=(1,0), nu=(0,1), positions=(1,-1) gives LHS=4, RHS=2.
--- It also relied on an unverifiable lemma name
--- (`Finset.inner_mul_le_norm_sq_mul_norm_sq`). Replaced with the
--- honest, unconditionally true statement: plain discrete
--- Cauchy-Schwarz, which needs no hmu/hnu hypotheses at all.
 theorem wasserstein2_cauchy_schwarz_bound
     (n : ℕ) (mu nu : Fin n → ℝ)
     (positions : Fin n → ℝ) :
@@ -139,10 +115,6 @@ theorem wasserstein2_cauchy_schwarz_bound
     (univ.sum (fun i => (mu i - nu i) ^ 2)) *
     (univ.sum (fun i => (positions i) ^ 2)) :=
   Finset.sum_mul_sq_le_sq_mul_sq univ (fun i => mu i - nu i) positions
-
--- ============================================================
--- SECTION 4: KANTOROVICH DUALITY
--- ============================================================
 
 structure KantorovichPotentials where
   f g   : ℝ → ℝ
@@ -154,7 +126,7 @@ theorem kantorovich_weak_duality
     kp.f x + kp.g y ≤ l1_cost x y :=
   kp.dual x y
 
-theorem symmetric_potentials
+def symmetric_potentials
     (f : ℝ → ℝ)
     (hf : ∀ x y, f x - f y ≤ l1_cost x y) :
     KantorovichPotentials where
@@ -162,19 +134,13 @@ theorem symmetric_potentials
   g := fun y => -f y
   dual := by
     intro x y
-    unfold l1_cost
-    have h := hf x y
-    linarith [abs_nonneg (x - y)]
+    simpa [sub_eq_add_neg] using hf x y
 
 theorem duality_gap_zero
     (W cost : ℝ)
     (h_primal : cost ≥ W)
     (h_dual : W ≥ cost) :
-    W = cost := le_antisymm h_dual h_primal
-
--- ============================================================
--- SECTION 5: BRENIER MAP
--- ============================================================
+    W = cost := le_antisymm h_primal h_dual
 
 structure BrenierMap where
   potential : ℝ → ℝ
@@ -206,10 +172,6 @@ theorem identity_optimal_same_measure
     (x : ℝ) : sq_cost x x = 0 := by
   unfold sq_cost; ring
 
--- ============================================================
--- SECTION 6: SINKHORN ALGORITHM
--- ============================================================
-
 noncomputable def sinkhorn_cost
     (c eps : ℝ) (kl_div : ℝ)
     (heps : 0 < eps) : ℝ :=
@@ -234,17 +196,15 @@ theorem kernel_entry_bounded
     (hc : 0 ≤ c) :
     kernel_entry c eps x y heps ≤ 1 := by
   unfold kernel_entry
-  apply Real.exp_le_one_of_nonpos
-  exact neg_nonpos.mpr (div_nonneg hc heps.le)
+  have hcd : 0 ≤ c / eps := div_nonneg hc heps.le
+  have hneg : -c / eps ≤ 0 := by rw [neg_div]; exact neg_nonpos.mpr hcd
+  calc Real.exp (-c / eps) ≤ Real.exp 0 := Real.exp_le_exp.mpr hneg
+    _ = 1 := Real.exp_zero
 
 theorem sinkhorn_contraction
     (u1 u2 : ℝ) (K : ℝ) (hK : 0 < K) :
     |Real.log u1 - Real.log u2| ≤
     |Real.log u1 - Real.log u2| := le_refl _
-
--- ============================================================
--- SECTION 7: GEODESICS IN WASSERSTEIN SPACE
--- ============================================================
 
 noncomputable def mccann_interpolation
     (x y t : ℝ) : ℝ :=
@@ -275,10 +235,6 @@ theorem wasserstein_triangle
     (h12 : 0 ≤ W12) (h23 : 0 ≤ W23)
     (h : W13 ≤ W12 + W23) :
     W13 ≤ W12 + W23 := h
-
--- ============================================================
--- SECTION 8: AWM OPTIMAL TRANSPORT BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -334,7 +290,16 @@ theorem margin_interpolation_pos
   unfold margin_interpolation mccann_interpolation
   have h1 := md1.wt_pos d
   have h2 := md2.wt_pos d
-  nlinarith
+  rcases ht1.lt_or_eq with hlt | heq
+  · have hpos1 : 0 < 1 - t := by linarith
+    have hterm1 : 0 < (1 - t) * md1.weights d := mul_pos hpos1 h1
+    have hterm2 : 0 ≤ t * md2.weights d := mul_nonneg ht0 h2.le
+    linarith
+  · rw [heq]
+    have hsimp : (1 - (1:ℝ)) * md1.weights d + (1:ℝ) * md2.weights d
+        = md2.weights d := by ring
+    rw [hsimp]
+    exact h2
 
 noncomputable def margin_wasserstein
     (md1 md2 : MarginDistribution) : ℝ :=
@@ -369,10 +334,6 @@ theorem equalization_reduces_cost
   apply Finset.sum_eq_zero; intro d _
   simp [h d]
 
--- ============================================================
--- SECTION 9: KANTOROVICH-RUBINSTEIN THEOREM
--- ============================================================
-
 def is_1_lipschitz (f : ℝ → ℝ) : Prop :=
   ∀ x y : ℝ, |f x - f y| ≤ |x - y|
 
@@ -403,10 +364,6 @@ theorem KR_lower_bound
     (integral_diff : ℝ)
     (h : integral_diff ≤ W) :
     integral_diff ≤ W := h
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure OptimalTransportLock where
   sq_cost_nn      : ∀ (x y : ℝ), 0 ≤ sq_cost x y
