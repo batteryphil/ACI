@@ -1,4 +1,3 @@
--- OptimalControl.lean
 import Mathlib
 
 namespace OptimalControl
@@ -9,11 +8,14 @@ open Finset Real
 -- ============================================================
 noncomputable def pontryagin_H (f L : ℝ → ℝ → ℝ) (x u p : ℝ) : ℝ := p * f x u - L x u
 
-theorem pontryagin_H_linear_in_p (f L : ℝ → ℝ → ℝ) (x u p q : ℝ) :
-    pontryagin_H f L x u (p + q) = pontryagin_H f L x u p + pontryagin_H f L x u q := by
+-- NOTE: H is affine in p, not linear — H(p+q) = H(p) + H(q) + L(x,u), since
+-- the -L(x,u) term is duplicated when H(p) and H(q) are summed. Restated
+-- honestly as the true affine relation (previous statement omitted the
+-- +L(x,u) correction term and was false whenever L(x,u) ≠ 0).
+theorem pontryagin_H_affine_in_p (f L : ℝ → ℝ → ℝ) (x u p q : ℝ) :
+    pontryagin_H f L x u (p + q) = pontryagin_H f L x u p + pontryagin_H f L x u q + L x u := by
   unfold pontryagin_H
-  rw [add_mul, sub_add_eq_sub_sub]
-  simp
+  ring
 
 theorem pontryagin_H_zero_cost (f : ℝ → ℝ → ℝ) (x u p : ℝ) :
     pontryagin_H f (fun _ _ => 0) x u p = p * f x u := by
@@ -46,9 +48,13 @@ theorem LQR_cost_zero_iff (Q R x u : ℝ) (hQ : 0 < Q) (hR : 0 < R) :
   · intro h
     have h1 : 0 ≤ Q * x ^ 2 := mul_nonneg (le_of_lt hQ) (sq_nonneg x)
     have h2 : 0 ≤ R * u ^ 2 := mul_nonneg (le_of_lt hR) (sq_nonneg u)
-    have hx : x^2 = 0 := by linarith [h, h1, h2]
-    have hu : u^2 = 0 := by linarith [h, h1, h2]
-    rw [sq_eq_zero] at hx hu
+    -- linarith can only reach Q*x^2 = 0 (linear in that atom), not x^2 = 0
+    -- (that step is nonlinear — needs division by Q). Bridge explicitly.
+    have hQx2 : Q * x ^ 2 = 0 := by linarith
+    have hRu2 : R * u ^ 2 = 0 := by linarith
+    have hx : x ^ 2 = 0 := (mul_eq_zero.mp hQx2).resolve_left hQ.ne'
+    have hu : u ^ 2 = 0 := (mul_eq_zero.mp hRu2).resolve_left hR.ne'
+    rw [sq_eq_zero_iff] at hx hu
     exact ⟨hx, hu⟩
   · rintro ⟨rfl, rfl⟩; simp
 
@@ -64,10 +70,16 @@ theorem LQR_cost_quadratic_scaling (Q R x u c : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ 
 -- ============================================================
 noncomputable def riccati_feedback (P B R : ℝ) (hR : 0 < R) : ℝ := -(B * P) / R
 
+-- NOTE: previous proof called `neg_div_pos_of_pos`, a name that does not
+-- match any real Mathlib convention and could not be independently
+-- verified (no network access in this environment) — treated as
+-- fabricated per Rule 3. Rebuilt from confirmed real lemmas only
+-- (neg_div, div_pos, mul_pos).
 theorem riccati_feedback_neg (P B R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B) :
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
-  apply neg_div_pos_of_pos (mul_pos hB hP) hR
+  rw [neg_div]
+  linarith [div_pos (mul_pos hB hP) hR]
 
 theorem riccati_feedback_zero_at_equilibrium (B R : ℝ) (hR : 0 < R) :
     riccati_feedback 0 B R hR = 0 := by unfold riccati_feedback; simp
@@ -150,9 +162,12 @@ structure DomainControlWeights where
 
 noncomputable def system_LQR_cost (w : DomainControlWeights) (states inputs : Domain21 → ℝ) : ℝ :=
   Finset.univ.sum (fun d => LQR_cost (w.Q d) (w.R d) (states d) (inputs d))
+
 theorem system_LQR_cost_nonneg (w : DomainControlWeights) (states inputs : Domain21 → ℝ) :
     0 ≤ system_LQR_cost w states inputs := by
-  unfold system_LQR_cost; apply Finset.sum_nonneg; intro d _; exact LQR_cost_nonneg _ _ _ _ (le_of_lt (w.Q_pos d)) (le_of_lt (w.R_pos d))
+  unfold system_LQR_cost; apply Finset.sum_nonneg; intro d _
+  exact LQR_cost_nonneg _ _ _ _ (le_of_lt (w.Q_pos d)) (le_of_lt (w.R_pos d))
+
 theorem system_LQR_zero_at_rest (w : DomainControlWeights) : system_LQR_cost w (fun _ => 0) (fun _ => 0) = 0 := by
   unfold system_LQR_cost LQR_cost; simp
 
@@ -171,4 +186,3 @@ def OCLock : OptimalControlLock where
   sys_nn      := fun w s i => system_LQR_cost_nonneg w s i
 
 end OptimalControl
-
