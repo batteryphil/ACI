@@ -8,10 +8,6 @@ open Finset Real
 -- ============================================================
 noncomputable def pontryagin_H (f L : ℝ → ℝ → ℝ) (x u p : ℝ) : ℝ := p * f x u - L x u
 
--- NOTE: H is affine in p, not linear — H(p+q) = H(p) + H(q) + L(x,u), since
--- the -L(x,u) term is duplicated when H(p) and H(q) are summed. Restated
--- honestly as the true affine relation (previous statement omitted the
--- +L(x,u) correction term and was false whenever L(x,u) ≠ 0).
 theorem pontryagin_H_affine_in_p (f L : ℝ → ℝ → ℝ) (x u p q : ℝ) :
     pontryagin_H f L x u (p + q) = pontryagin_H f L x u p + pontryagin_H f L x u q + L x u := by
   unfold pontryagin_H
@@ -48,8 +44,6 @@ theorem LQR_cost_zero_iff (Q R x u : ℝ) (hQ : 0 < Q) (hR : 0 < R) :
   · intro h
     have h1 : 0 ≤ Q * x ^ 2 := mul_nonneg (le_of_lt hQ) (sq_nonneg x)
     have h2 : 0 ≤ R * u ^ 2 := mul_nonneg (le_of_lt hR) (sq_nonneg u)
-    -- linarith can only reach Q*x^2 = 0 (linear in that atom), not x^2 = 0
-    -- (that step is nonlinear — needs division by Q). Bridge explicitly.
     have hQx2 : Q * x ^ 2 = 0 := by linarith
     have hRu2 : R * u ^ 2 = 0 := by linarith
     have hx : x ^ 2 = 0 := (mul_eq_zero.mp hQx2).resolve_left hQ.ne'
@@ -70,11 +64,6 @@ theorem LQR_cost_quadratic_scaling (Q R x u c : ℝ) (hQ : 0 ≤ Q) (hR : 0 ≤ 
 -- ============================================================
 noncomputable def riccati_feedback (P B R : ℝ) (hR : 0 < R) : ℝ := -(B * P) / R
 
--- NOTE: previous proof called `neg_div_pos_of_pos`, a name that does not
--- match any real Mathlib convention and could not be independently
--- verified (no network access in this environment) — treated as
--- fabricated per Rule 3. Rebuilt from confirmed real lemmas only
--- (neg_div, div_pos, mul_pos).
 theorem riccati_feedback_neg (P B R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B) :
     riccati_feedback P B R hR < 0 := by
   unfold riccati_feedback
@@ -90,8 +79,9 @@ noncomputable def closed_loop_dynamics (A B P R x : ℝ) (hR : 0 < R) : ℝ :=
 theorem closed_loop_stable (A B P R : ℝ) (hR : 0 < R) (hP : 0 < P) (hB : 0 < B)
     (hA : A < B ^ 2 * P / R) : closed_loop_dynamics A B P R 1 hR < A := by
   unfold closed_loop_dynamics riccati_feedback
+  have hB2P : 0 < B ^ 2 * P := mul_pos (pow_pos hB 2) hP
   field_simp
-  linarith [hA]
+  linarith [hB2P]
 
 -- ============================================================
 -- SECTION 4: BELLMAN PRINCIPLE
