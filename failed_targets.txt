@@ -1,6 +1,5 @@
 MyProject
 TopologicalDataAnalysis
-ConvexAnalysis
 ControlTheory
 RenormalizationGroup
 ConformalFieldTheory
