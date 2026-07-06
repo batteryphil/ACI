@@ -1,13 +1,10 @@
--- TopologicalDataAnalysis.lean
 import Mathlib
 
 namespace TopologicalDataAnalysis
 
 open Finset Real
 
--- ============================================================
 -- SECTION 1: BIRTH-DEATH PAIRS AND PERSISTENCE
--- ============================================================
 
 structure BirthDeathPair where
   birth death : ℝ
@@ -31,9 +28,7 @@ theorem death_eq_birth_plus_persistence (p : BirthDeathPair) :
     p.death = p.birth + persistence p := by
   unfold persistence; ring
 
--- ============================================================
 -- SECTION 2: BARCODES
--- ============================================================
 
 structure Barcode where
   pairs   : List BirthDeathPair
@@ -47,17 +42,16 @@ theorem total_persistence_pos (bc : Barcode) :
   unfold total_persistence
   apply List.sum_pos
   · intro x hx
-    simp [List.mem_map] at hx
-    obtain ⟨p, _, rfl⟩ := hx
+    obtain ⟨p, _, rfl⟩ := List.mem_map.mp hx
     exact persistence_pos p
-  · simp [List.map_ne_nil]
-    exact bc.nonempty
+  · intro hcontra
+    apply bc.nonempty
+    exact List.map_eq_nil_iff.mp hcontra
 
 theorem total_persistence_nonneg (bc : Barcode) :
     0 ≤ total_persistence bc :=
   le_of_lt (total_persistence_pos bc)
 
--- Number of bars
 def barcode_size (bc : Barcode) : ℕ :=
   bc.pairs.length
 
@@ -66,7 +60,6 @@ theorem barcode_size_pos (bc : Barcode) :
   unfold barcode_size
   exact List.length_pos.mpr bc.nonempty
 
--- Average persistence
 noncomputable def mean_persistence (bc : Barcode) : ℝ :=
   total_persistence bc / barcode_size bc
 
@@ -76,14 +69,11 @@ theorem mean_persistence_pos (bc : Barcode) :
   apply div_pos (total_persistence_pos bc)
   exact_mod_cast barcode_size_pos bc
 
--- ============================================================
 -- SECTION 3: BETTI NUMBERS
--- ============================================================
 
 structure BettiNumbers where
   b0 b1 b2 : ℕ
 
--- Euler characteristic from Betti numbers
 noncomputable def euler_characteristic (B : BettiNumbers) : ℤ :=
   (B.b0 : ℤ) - B.b1 + B.b2
 
@@ -99,23 +89,17 @@ theorem euler_char_plane :
     euler_characteristic ⟨1, 0, 0⟩ = 1 := by
   unfold euler_characteristic; norm_num
 
--- Connected components = b0
 theorem connected_iff_b0_one (B : BettiNumbers)
     (h : B.b0 = 1) : B.b0 = 1 := h
 
--- Simply connected: b1 = 0
 def simply_connected (B : BettiNumbers) : Prop :=
   B.b1 = 0
 
 theorem simply_connected_no_loops (B : BettiNumbers)
     (h : simply_connected B) : B.b1 = 0 := h
 
--- ============================================================
 -- SECTION 4: STABILITY THEOREM
--- Bottleneck distance ≤ sup norm of function difference
--- ============================================================
 
--- Bottleneck distance between two barcodes
 noncomputable def bottleneck_distance
     (bc1 bc2 : Barcode) : ℝ :=
   |total_persistence bc1 - total_persistence bc2|
@@ -146,23 +130,18 @@ theorem bottleneck_triangle
         |total_persistence bc2 - total_persistence bc3| :=
            abs_add _ _
 
--- Stability: small perturbation → small barcode change
 theorem stability_theorem
     (delta_f delta_barcode : ℝ)
     (hdf : 0 ≤ delta_f)
     (h : delta_barcode ≤ delta_f) :
     delta_barcode ≤ delta_f := h
 
--- ============================================================
 -- SECTION 5: PERSISTENCE DIAGRAM
--- ============================================================
 
--- A point in the persistence diagram
 structure PDPoint where
   b d : ℝ
   above_diagonal : b < d
 
--- Distance from point to diagonal
 noncomputable def diagonal_distance (p : PDPoint) : ℝ :=
   (p.d - p.b) / 2
 
@@ -172,7 +151,6 @@ theorem diagonal_distance_pos (p : PDPoint) :
   apply div_pos _ (by norm_num)
   linarith [p.above_diagonal]
 
--- Essential features: infinite persistence (death = ∞ proxy)
 def is_essential (p : BirthDeathPair) (threshold : ℝ) : Prop :=
   persistence p > threshold
 
@@ -181,11 +159,8 @@ theorem essential_persists_long
     (h : is_essential p threshold) :
     persistence p > threshold := h
 
--- ============================================================
 -- SECTION 6: ČECH AND VIETORIS-RIPS FILTRATIONS
--- ============================================================
 
--- Filtration: nested sequence of spaces parameterized by ε
 structure Filtration where
   epsilon : ℕ → ℝ
   increasing : ∀ n, epsilon n ≤ epsilon (n + 1)
@@ -198,18 +173,12 @@ theorem filtration_monotone (f : Filtration)
   | refl => exact le_refl _
   | step h ih => linarith [f.increasing n]
 
--- Rips complex: edges when distance ≤ 2ε
--- Čech complex: edges when balls of radius ε overlap
--- Rips ⊆ Čech ⊆ Rips(2ε)
 theorem rips_cech_interleaving
     (eps : ℝ) (heps : 0 < eps) :
     eps ≤ 2 * eps := by linarith
 
--- ============================================================
 -- SECTION 7: PERSISTENT HOMOLOGY ALGORITHM
--- ============================================================
 
--- Elder rule: younger feature dies first
 theorem elder_rule (b1 b2 d1 d2 : ℝ)
     (hb : b1 < b2) (hd1 : b1 < d1) (hd2 : b2 < d2) :
     ∃ p1 p2 : BirthDeathPair,
@@ -217,22 +186,17 @@ theorem elder_rule (b1 b2 d1 d2 : ℝ)
       p1.birth < p2.birth :=
   ⟨⟨b1, d1, hd1⟩, ⟨b2, d2, hd2⟩, rfl, rfl, hb⟩
 
--- Pairing uniqueness: each simplex pairs with at most one other
 theorem pairing_unique
     (creator destroyer : ℕ)
     (h1 h2 : creator < destroyer) :
     h1 = h2 := rfl
 
--- Reduction algorithm terminates
 theorem reduction_terminates (n : ℕ) :
     ∃ steps : ℕ, steps ≤ n * n :=
   ⟨n * n, le_refl _⟩
 
--- ============================================================
 -- SECTION 8: WASSERSTEIN DISTANCE BETWEEN DIAGRAMS
--- ============================================================
 
--- p-Wasserstein distance between persistence diagrams
 noncomputable def wasserstein_diagram
     (bc1 bc2 : Barcode) (p : ℝ) (hp : 0 < p) : ℝ :=
   (|total_persistence bc1 - total_persistence bc2|) ^ (1/p)
@@ -250,10 +214,7 @@ theorem wasserstein_symm
   unfold wasserstein_diagram
   rw [abs_sub_comm]
 
--- ============================================================
 -- SECTION 9: TDA-AWM BRIDGE
--- Apply TDA to 21-domain margin vectors
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -264,31 +225,43 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Margin vector as point cloud in ℝ²¹
 structure MarginCloud where
   margins : Domain21 → ℝ
   all_pos : ∀ d, 0 < margins d
 
--- Minimum margin = H₀ birth time
 noncomputable def H0_birth (mc : MarginCloud) : ℝ :=
   Finset.univ.inf' Finset.univ_nonempty mc.margins
 
+-- `Finset.lt_inf'_iff` is a confirmed-fabricated lemma (already flagged
+-- in this doc's Durable Bug Categories). Rebuilt via the real, standard
+-- "infimum over a finite nonempty set is attained" lemma
+-- (Finset.exists_mem_eq_inf'), then transferred positivity through
+-- that witness element directly.
 theorem H0_birth_pos (mc : MarginCloud) :
     0 < H0_birth mc := by
   unfold H0_birth
-  apply Finset.lt_inf'_iff.mpr
-  intro d _; exact mc.all_pos d
+  obtain ⟨d, _, hd⟩ := Finset.exists_mem_eq_inf' Finset.univ_nonempty mc.margins
+  rw [hd]
+  exact mc.all_pos d
 
--- Maximum margin = H₀ death proxy
 noncomputable def H0_death (mc : MarginCloud) : ℝ :=
   Finset.univ.sup' Finset.univ_nonempty mc.margins
 
+-- `Finset.inf'_le_sup'` could not be confidently verified as a real
+-- direct lemma name. Rebuilt via the confirmed-real `Finset.inf'_le`
+-- and `Finset.le_sup'`, chained through any single witness element
+-- (Domain21.A_Energy, since Domain21 is a known nonempty Fintype).
 theorem H0_death_ge_birth (mc : MarginCloud) :
     H0_birth mc ≤ H0_death mc := by
   unfold H0_birth H0_death
-  apply Finset.inf'_le_sup'
+  have h1 : Finset.univ.inf' Finset.univ_nonempty mc.margins ≤
+      mc.margins Domain21.A_Energy :=
+    Finset.inf'_le mc.margins (Finset.mem_univ Domain21.A_Energy)
+  have h2 : mc.margins Domain21.A_Energy ≤
+      Finset.univ.sup' Finset.univ_nonempty mc.margins :=
+    Finset.le_sup' mc.margins (Finset.mem_univ Domain21.A_Energy)
+  linarith
 
--- Margin persistence: how long the system stays connected
 noncomputable def margin_persistence (mc : MarginCloud) : ℝ :=
   H0_death mc - H0_birth mc
 
@@ -297,7 +270,6 @@ theorem margin_persistence_nonneg (mc : MarginCloud) :
   unfold margin_persistence
   linarith [H0_death_ge_birth mc]
 
--- System with higher minimum margin has better persistence
 theorem higher_floor_better_persistence
     (mc1 mc2 : MarginCloud)
     (h : H0_birth mc1 < H0_birth mc2)
@@ -305,9 +277,7 @@ theorem higher_floor_better_persistence
     margin_persistence mc1 < margin_persistence mc2 := by
   unfold margin_persistence; linarith
 
--- ============================================================
 -- SYSTEM LOCK
--- ============================================================
 
 structure TDALock where
   persist_pos    : ∀ (p : BirthDeathPair),
