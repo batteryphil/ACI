@@ -7,7 +7,8 @@ open Finset Real
 -- SECTION 1: BIRTH-DEATH PAIRS AND PERSISTENCE
 
 structure BirthDeathPair where
-  birth death : ℝ
+  birth : ℝ
+  death : ℝ
   bd_order    : birth < death
 
 noncomputable def persistence (p : BirthDeathPair) : ℝ :=
@@ -58,7 +59,7 @@ def barcode_size (bc : Barcode) : ℕ :=
 theorem barcode_size_pos (bc : Barcode) :
     0 < barcode_size bc := by
   unfold barcode_size
-  exact List.length_pos.mpr bc.nonempty
+  exact List.length_pos_of_ne_nil bc.nonempty
 
 noncomputable def mean_persistence (bc : Barcode) : ℝ :=
   total_persistence bc / barcode_size bc
@@ -72,7 +73,9 @@ theorem mean_persistence_pos (bc : Barcode) :
 -- SECTION 3: BETTI NUMBERS
 
 structure BettiNumbers where
-  b0 b1 b2 : ℕ
+  b0 : ℕ
+  b1 : ℕ
+  b2 : ℕ
 
 noncomputable def euler_characteristic (B : BettiNumbers) : ℤ :=
   (B.b0 : ℤ) - B.b1 + B.b2
@@ -122,13 +125,12 @@ theorem bottleneck_triangle
     bottleneck_distance bc1 bc2 +
     bottleneck_distance bc2 bc3 := by
   unfold bottleneck_distance
-  calc |total_persistence bc1 - total_persistence bc3|
-      = |total_persistence bc1 - total_persistence bc2 +
-         (total_persistence bc2 - total_persistence bc3)| := by
-           ring_nf
-    _ ≤ |total_persistence bc1 - total_persistence bc2| +
-        |total_persistence bc2 - total_persistence bc3| :=
-           abs_add _ _
+  have h1 := abs_nonneg (total_persistence bc1 - total_persistence bc2)
+  have h2 := abs_nonneg (total_persistence bc2 - total_persistence bc3)
+  rcases abs_cases (total_persistence bc1 - total_persistence bc3) with ⟨e1, _⟩ | ⟨e1, _⟩ <;>
+  rcases abs_cases (total_persistence bc1 - total_persistence bc2) with ⟨e2, _⟩ | ⟨e2, _⟩ <;>
+  rcases abs_cases (total_persistence bc2 - total_persistence bc3) with ⟨e3, _⟩ | ⟨e3, _⟩ <;>
+  linarith [e1, e2, e3]
 
 theorem stability_theorem
     (delta_f delta_barcode : ℝ)
@@ -139,7 +141,8 @@ theorem stability_theorem
 -- SECTION 5: PERSISTENCE DIAGRAM
 
 structure PDPoint where
-  b d : ℝ
+  b : ℝ
+  d : ℝ
   above_diagonal : b < d
 
 noncomputable def diagonal_distance (p : PDPoint) : ℝ :=
@@ -171,7 +174,7 @@ theorem filtration_monotone (f : Filtration)
     f.epsilon m ≤ f.epsilon n := by
   induction h with
   | refl => exact le_refl _
-  | step h ih => linarith [f.increasing n]
+  | step h ih => linarith [f.increasing _, ih]
 
 theorem rips_cech_interleaving
     (eps : ℝ) (heps : 0 < eps) :
@@ -225,6 +228,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 structure MarginCloud where
   margins : Domain21 → ℝ
   all_pos : ∀ d, 0 < margins d
@@ -232,11 +237,6 @@ structure MarginCloud where
 noncomputable def H0_birth (mc : MarginCloud) : ℝ :=
   Finset.univ.inf' Finset.univ_nonempty mc.margins
 
--- `Finset.lt_inf'_iff` is a confirmed-fabricated lemma (already flagged
--- in this doc's Durable Bug Categories). Rebuilt via the real, standard
--- "infimum over a finite nonempty set is attained" lemma
--- (Finset.exists_mem_eq_inf'), then transferred positivity through
--- that witness element directly.
 theorem H0_birth_pos (mc : MarginCloud) :
     0 < H0_birth mc := by
   unfold H0_birth
@@ -247,10 +247,6 @@ theorem H0_birth_pos (mc : MarginCloud) :
 noncomputable def H0_death (mc : MarginCloud) : ℝ :=
   Finset.univ.sup' Finset.univ_nonempty mc.margins
 
--- `Finset.inf'_le_sup'` could not be confidently verified as a real
--- direct lemma name. Rebuilt via the confirmed-real `Finset.inf'_le`
--- and `Finset.le_sup'`, chained through any single witness element
--- (Domain21.A_Energy, since Domain21 is a known nonempty Fintype).
 theorem H0_death_ge_birth (mc : MarginCloud) :
     H0_birth mc ≤ H0_death mc := by
   unfold H0_birth H0_death
