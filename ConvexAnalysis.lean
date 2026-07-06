@@ -170,7 +170,7 @@ theorem descent_lemma
   have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
       = -(1 / (2 * L) * grad_f x ^ 2) := by
     rw [inv_eq_one_div]
-    field_simp
+    field_simp [hL.ne']
     ring
   nlinarith [h, key]
 
@@ -189,7 +189,7 @@ theorem gradient_descent_progress
   have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
       = -(grad_f x ^ 2 / (2 * L)) := by
     rw [inv_eq_one_div]
-    field_simp
+    field_simp [hL.ne']
     ring
   nlinarith [h, key]
 
