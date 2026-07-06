@@ -160,11 +160,9 @@ structure Filtration where
 theorem filtration_monotone (f : Filtration)
     (m n : ℕ) (h : m ≤ n) :
     f.epsilon m ≤ f.epsilon n := by
-  induction h with
-  | refl => exact le_refl _
-  | step h ih =>
-      rename_i k _
-      linarith [f.increasing k, ih]
+  induction n, h using Nat.le_induction with
+  | base => exact le_refl _
+  | succ n hmn ih => linarith [f.increasing n]
 
 theorem rips_cech_interleaving
     (eps : ℝ) (heps : 0 < eps) :
@@ -252,7 +250,7 @@ theorem margin_persistence_nonneg (mc : MarginCloud) :
 
 theorem higher_floor_better_persistence
     (mc1 mc2 : MarginCloud)
-    (h : H0_death mc1 - H0_birth mc2 < H0_death mc2 - H0_birth mc1) :
+    (h : H0_death mc2 + H0_birth mc1 > H0_death mc1 + H0_birth mc2) :
     margin_persistence mc1 < margin_persistence mc2 := by
   unfold margin_persistence; linarith
 
