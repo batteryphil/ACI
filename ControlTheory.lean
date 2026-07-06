@@ -79,7 +79,8 @@ theorem QL_derivative_neg_stable
     (hA : A < 0) (hx : x ≠ 0) :
     quadratic_lyapunov_derivative P A x < 0 := by
   unfold quadratic_lyapunov_derivative
-  nlinarith [sq_pos_of_ne_zero hx]
+  have hxsq : 0 < x ^ 2 := sq_pos_of_ne_zero hx
+  nlinarith [mul_pos hP hxsq]
 
 theorem exponential_stability
     (P A x0 : ℝ) (hP : 0 < P) (hA : A < 0) :
@@ -93,7 +94,9 @@ theorem exponential_stability
     exact mul_ne_zero hx (Real.exp_pos _).ne'
 
 structure PIDGains where
-  Kp Ki Kd : ℝ
+  Kp : ℝ
+  Ki : ℝ
+  Kd : ℝ
   Kp_pos : 0 < Kp
   Ki_pos : 0 < Ki
   Kd_pos : 0 < Kd
@@ -166,7 +169,8 @@ theorem gain_magnitude_pos
   unfold gain_magnitude
   apply Real.sqrt_pos_of_pos
   apply div_pos
-  · positivity
+  · exact mul_pos (pow_pos (abs_pos.mpr hC) 2 |>.trans_eq (by rw [sq_abs]))
+      (pow_pos (abs_pos.mpr hB) 2 |>.trans_eq (by rw [sq_abs]))
   · positivity
 
 theorem gain_decreases_with_frequency
@@ -176,20 +180,22 @@ theorem gain_decreases_with_frequency
     gain_magnitude A B C omega2 <
     gain_magnitude A B C omega1 := by
   unfold gain_magnitude
-  apply Real.sqrt_lt_sqrt (by positivity)
   have hden1 : 0 < A ^ 2 + omega1 ^ 2 := by positivity
   have hden2 : 0 < A ^ 2 + omega2 ^ 2 := by positivity
+  have hnum : 0 < C ^ 2 * B ^ 2 := by
+    have hCsq : 0 < C ^ 2 := by
+      have := abs_pos.mpr hC
+      nlinarith [sq_abs C]
+    have hBsq : 0 < B ^ 2 := by
+      have := abs_pos.mpr hB
+      nlinarith [sq_abs B]
+    exact mul_pos hCsq hBsq
   have hsq : omega1 ^ 2 < omega2 ^ 2 := by
-    have := sq_lt_sq' (by linarith [abs_nonneg omega1, le_abs_self omega1,
-      neg_abs_le omega1] : -|omega2| < omega1) (by
-        rcases abs_cases omega1 with ⟨e1, _⟩ | ⟨e1, _⟩ <;>
-        rcases abs_cases omega2 with ⟨e2, _⟩ | ⟨e2, _⟩ <;> linarith)
-    simpa [sq_abs] using this
+    have h1 : 0 ≤ |omega1| := abs_nonneg omega1
+    nlinarith [sq_abs omega1, sq_abs omega2, h, h1]
+  apply Real.sqrt_lt_sqrt (by positivity)
   rw [div_lt_div_iff hden2 hden1]
-  nlinarith [sq_nonneg C, sq_nonneg B, mul_pos (sq_nonneg C).lt_of_ne' (by
-    intro hcz; exact hC (pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hcz.symm))
-    (sq_nonneg B).lt_of_ne' (by
-    intro hbz; exact hB (pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hbz.symm))]
+  nlinarith [hnum]
 
 noncomputable def closed_loop_A
     (A B K : ℝ) : ℝ := A - B * K
@@ -205,6 +211,7 @@ theorem pole_placement
   use (A - s_star) / B
   unfold closed_loop_A
   field_simp
+  ring
 
 noncomputable def stabilizing_gain
     (A B margin : ℝ) (hB : 0 < B) : ℝ :=
