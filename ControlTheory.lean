@@ -169,10 +169,10 @@ theorem gain_magnitude_pos
   unfold gain_magnitude
   apply Real.sqrt_pos_of_pos
   apply div_pos
-  · have hCsq : 0 < C ^ 2 := by positivity
-    have hBsq : 0 < B ^ 2 := by positivity
+  · have hCsq : 0 < C ^ 2 := pow_pos (abs_pos.mpr hC) 2 |>.trans_eq (sq_abs C)
+    have hBsq : 0 < B ^ 2 := pow_pos (abs_pos.mpr hB) 2 |>.trans_eq (sq_abs B)
     exact mul_pos hCsq hBsq
-  · have hAsq : 0 < A ^ 2 := by positivity
+  · have hAsq : 0 < A ^ 2 := pow_pos (abs_pos.mpr hA) 2 |>.trans_eq (sq_abs A)
     have hom : 0 ≤ omega ^ 2 := sq_nonneg omega
     linarith
 
@@ -189,7 +189,7 @@ theorem gain_decreases_with_frequency
   have hsq : omega1 ^ 2 < omega2 ^ 2 := by
     nlinarith [sq_abs omega1, sq_abs omega2, h, abs_nonneg omega1]
   apply Real.sqrt_lt_sqrt (by positivity)
-  rw [div_lt_div_iff_of_pos hden2 hden1]
+  rw [div_lt_div_iff hden2 hden1]
   nlinarith [hnum]
 
 noncomputable def closed_loop_A
@@ -206,6 +206,7 @@ theorem pole_placement
   use (A - s_star) / B
   unfold closed_loop_A
   field_simp
+  ring
 
 noncomputable def stabilizing_gain
     (A B margin : ℝ) (hB : 0 < B) : ℝ :=
@@ -231,6 +232,7 @@ theorem single_input_controllable
   left
   unfold state_derivative
   field_simp
+  ring
 
 def is_observable (A C : ℝ) : Prop :=
   ∀ x : ℝ, system_output C x = 0 → x = 0
