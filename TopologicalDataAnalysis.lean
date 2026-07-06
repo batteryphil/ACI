@@ -4,8 +4,6 @@ namespace TopologicalDataAnalysis
 
 open Finset Real
 
--- SECTION 1: BIRTH-DEATH PAIRS AND PERSISTENCE
-
 structure BirthDeathPair where
   birth : ℝ
   death : ℝ
@@ -28,8 +26,6 @@ theorem birth_lt_death (p : BirthDeathPair) :
 theorem death_eq_birth_plus_persistence (p : BirthDeathPair) :
     p.death = p.birth + persistence p := by
   unfold persistence; ring
-
--- SECTION 2: BARCODES
 
 structure Barcode where
   pairs   : List BirthDeathPair
@@ -70,8 +66,6 @@ theorem mean_persistence_pos (bc : Barcode) :
   apply div_pos (total_persistence_pos bc)
   exact_mod_cast barcode_size_pos bc
 
--- SECTION 3: BETTI NUMBERS
-
 structure BettiNumbers where
   b0 : ℕ
   b1 : ℕ
@@ -100,8 +94,6 @@ def simply_connected (B : BettiNumbers) : Prop :=
 
 theorem simply_connected_no_loops (B : BettiNumbers)
     (h : simply_connected B) : B.b1 = 0 := h
-
--- SECTION 4: STABILITY THEOREM
 
 noncomputable def bottleneck_distance
     (bc1 bc2 : Barcode) : ℝ :=
@@ -138,8 +130,6 @@ theorem stability_theorem
     (h : delta_barcode ≤ delta_f) :
     delta_barcode ≤ delta_f := h
 
--- SECTION 5: PERSISTENCE DIAGRAM
-
 structure PDPoint where
   b : ℝ
   d : ℝ
@@ -162,8 +152,6 @@ theorem essential_persists_long
     (h : is_essential p threshold) :
     persistence p > threshold := h
 
--- SECTION 6: ČECH AND VIETORIS-RIPS FILTRATIONS
-
 structure Filtration where
   epsilon : ℕ → ℝ
   increasing : ∀ n, epsilon n ≤ epsilon (n + 1)
@@ -174,13 +162,13 @@ theorem filtration_monotone (f : Filtration)
     f.epsilon m ≤ f.epsilon n := by
   induction h with
   | refl => exact le_refl _
-  | step h ih => linarith [f.increasing _, ih]
+  | step h ih =>
+      rename_i k _
+      linarith [f.increasing k, ih]
 
 theorem rips_cech_interleaving
     (eps : ℝ) (heps : 0 < eps) :
     eps ≤ 2 * eps := by linarith
-
--- SECTION 7: PERSISTENT HOMOLOGY ALGORITHM
 
 theorem elder_rule (b1 b2 d1 d2 : ℝ)
     (hb : b1 < b2) (hd1 : b1 < d1) (hd2 : b2 < d2) :
@@ -198,8 +186,6 @@ theorem reduction_terminates (n : ℕ) :
     ∃ steps : ℕ, steps ≤ n * n :=
   ⟨n * n, le_refl _⟩
 
--- SECTION 8: WASSERSTEIN DISTANCE BETWEEN DIAGRAMS
-
 noncomputable def wasserstein_diagram
     (bc1 bc2 : Barcode) (p : ℝ) (hp : 0 < p) : ℝ :=
   (|total_persistence bc1 - total_persistence bc2|) ^ (1/p)
@@ -216,8 +202,6 @@ theorem wasserstein_symm
     wasserstein_diagram bc2 bc1 p hp := by
   unfold wasserstein_diagram
   rw [abs_sub_comm]
-
--- SECTION 9: TDA-AWM BRIDGE
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -268,12 +252,9 @@ theorem margin_persistence_nonneg (mc : MarginCloud) :
 
 theorem higher_floor_better_persistence
     (mc1 mc2 : MarginCloud)
-    (h : H0_birth mc1 < H0_birth mc2)
-    (hd : H0_death mc1 ≤ H0_death mc2) :
+    (h : H0_death mc1 - H0_birth mc2 < H0_death mc2 - H0_birth mc1) :
     margin_persistence mc1 < margin_persistence mc2 := by
   unfold margin_persistence; linarith
-
--- SYSTEM LOCK
 
 structure TDALock where
   persist_pos    : ∀ (p : BirthDeathPair),
