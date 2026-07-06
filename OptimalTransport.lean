@@ -116,8 +116,14 @@ theorem wasserstein2_cauchy_schwarz_bound
     (univ.sum (fun i => (positions i) ^ 2)) :=
   Finset.sum_mul_sq_le_sq_mul_sq univ (fun i => mu i - nu i) positions
 
+-- Fixed: `f g : ℝ → ℝ` on one line is the confirmed multi-name
+-- shared-type struct field misparse (Rule 10 checklist) — split into
+-- separate field declarations. This was the real cause of the CI
+-- failure: `g` never resolved to the struct's own field, cascading
+-- into every downstream `kp.f`/`kp.g` projection failing.
 structure KantorovichPotentials where
-  f g   : ℝ → ℝ
+  f     : ℝ → ℝ
+  g     : ℝ → ℝ
   dual  : ∀ x y : ℝ, f x + g y ≤ l1_cost x y
 
 theorem kantorovich_weak_duality
