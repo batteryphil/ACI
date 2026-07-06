@@ -156,6 +156,12 @@ noncomputable def gradient_step
     (grad_f : ℝ → ℝ) (alpha x : ℝ) : ℝ :=
   x - alpha * grad_f x
 
+theorem descent_algebra_identity (a L : ℝ) (hL : L ≠ 0) :
+    -(a * (1 / L * a)) + L / 2 * (1 / L * a) ^ 2 =
+    -(1 / (2 * L) * a ^ 2) := by
+  field_simp
+  ring
+
 theorem descent_lemma
     (f grad_f : ℝ → ℝ) (L alpha x : ℝ)
     (hL : 0 < L) (halpha : alpha = 1 / L)
@@ -166,12 +172,7 @@ theorem descent_lemma
   have h := hsmooth (gradient_step grad_f alpha x)
   unfold gradient_step at h ⊢
   rw [halpha] at h ⊢
-  simp only [neg_mul] at h
-  have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
-      = -(1 / (2 * L) * grad_f x ^ 2) := by
-    rw [inv_eq_one_div]
-    field_simp [hL.ne']
-    ring
+  have key := descent_algebra_identity (grad_f x) L hL.ne'
   nlinarith [h, key]
 
 theorem gradient_descent_progress
@@ -185,13 +186,9 @@ theorem gradient_descent_progress
     f x - grad_f x ^ 2 / (2 * L) := by
   have h := hsmooth (gradient_step grad_f (1/L) x)
   unfold gradient_step at h ⊢
-  simp only [neg_mul] at h
-  have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
-      = -(grad_f x ^ 2 / (2 * L)) := by
-    rw [inv_eq_one_div]
-    field_simp [hL.ne']
-    ring
-  nlinarith [h, key]
+  have key := descent_algebra_identity (grad_f x) L hL.ne'
+  have key2 : 1 / (2 * L) * grad_f x ^ 2 = grad_f x ^ 2 / (2 * L) := by ring
+  nlinarith [h, key, key2]
 
 noncomputable def lagrangian
     (f g : ℝ → ℝ) (x lambda : ℝ) : ℝ :=
