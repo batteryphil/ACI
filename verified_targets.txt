@@ -39,4 +39,5 @@ StatisticalMechanics
 StochasticDifferentialEquations
 Synaptic_Weights
 Thermodynamics
+TopologicalDataAnalysis
 VerifyState

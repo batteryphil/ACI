@@ -1,5 +1,4 @@
 MyProject
-TopologicalDataAnalysis
 ControlTheory
 RenormalizationGroup
 ConformalFieldTheory
