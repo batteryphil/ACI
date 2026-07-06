@@ -231,12 +231,6 @@ theorem proj_interval_in_bounds (x lo hi : ℝ)
   · exact le_max_left _ _
   · exact max_le h (min_le_left _ _)
 
--- Fixed: the original combinator chain (max_le_max_left/min_le_min_left
--- inside a fragile constructor <;> {...} block) used lemma names that
--- could not be confidently verified and a proof structure risky enough
--- to warrant rebuilding. Replaced with explicit case-splitting on where
--- x and y fall relative to [lo,hi] — depends only on linarith/abs_le,
--- both confirmed-safe throughout this session.
 theorem proj_interval_nonexpansive (x y lo hi : ℝ) :
     |proj_interval x lo hi - proj_interval y lo hi| ≤
     |x - y| := by
