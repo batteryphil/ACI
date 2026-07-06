@@ -98,13 +98,6 @@ theorem fenchel_young_quadratic (x y : ℝ) :
     x * y ≤ x ^ 2 / 2 + y ^ 2 / 2 := by
   nlinarith [sq_nonneg (x - y)]
 
--- The original `double_conjugate_lower_bound` claimed f_dstar z ≤ f z
--- from h_star and h_dstar alone. This is CONFIRMED FALSE as stated, not
--- just hard: h_star/h_dstar are one-sided Fenchel-Young-style bounds,
--- not real supremum characterizations — an adversarial f_dstar could
--- satisfy h_dstar while being arbitrarily large, violating the claimed
--- conclusion. What IS honestly provable from h_star/h_dstar alone is
--- that both f z and f_dstar z share the same lower bound z²-f_star z.
 theorem double_conjugate_common_lower_bound
     (f f_star f_dstar : ℝ → ℝ)
     (h_star : ∀ x y, x * y ≤ f x + f_star y)
@@ -186,7 +179,7 @@ theorem descent_lemma
   simp only [neg_mul] at h
   have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
       = -(1 / (2 * L) * grad_f x ^ 2) := by
-    field_simp
+    field_simp [hL.ne']
     ring
   nlinarith [h, key]
 
@@ -204,7 +197,7 @@ theorem gradient_descent_progress
   simp only [neg_mul] at h
   have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
       = -(grad_f x ^ 2 / (2 * L)) := by
-    field_simp
+    field_simp [hL.ne']
     ring
   nlinarith [h, key]
 
