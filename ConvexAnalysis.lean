@@ -4,8 +4,6 @@ namespace ConvexAnalysis
 
 open Finset Real
 
--- SECTION 1: CONVEX FUNCTIONS
-
 def is_convex (f : ℝ → ℝ) : Prop :=
   ∀ x y t : ℝ, 0 ≤ t → t ≤ 1 →
     f (t * x + (1 - t) * y) ≤ t * f x + (1 - t) * f y
@@ -53,8 +51,6 @@ theorem convex_smul (f : ℝ → ℝ) (c : ℝ)
   have h := hf x y t ht0 ht1
   nlinarith
 
--- SECTION 2: SUBDIFFERENTIAL
-
 def in_subdifferential (f : ℝ → ℝ) (x g : ℝ) : Prop :=
   ∀ y : ℝ, f x + g * (y - x) ≤ f y
 
@@ -81,8 +77,6 @@ theorem subdiff_monotone
   have h2 := hgy x
   nlinarith
 
--- SECTION 3: FENCHEL CONJUGATE
-
 def fenchel_young (f f_star : ℝ → ℝ) : Prop :=
   ∀ x y : ℝ, x * y ≤ f x + f_star y
 
@@ -107,8 +101,6 @@ theorem double_conjugate_common_lower_bound
   have h1 := h_star z z
   have h2 := h_dstar z z
   constructor <;> linarith
-
--- SECTION 4: PROXIMAL OPERATOR
 
 noncomputable def moreau_envelope
     (f : ℝ → ℝ) (lambda v x : ℝ) : ℝ :=
@@ -160,8 +152,6 @@ theorem proximal_nonexpansive
   apply div_le_self (sq_nonneg _)
   nlinarith [sq_nonneg lambda, mul_pos hl hl]
 
--- SECTION 5: GRADIENT DESCENT
-
 noncomputable def gradient_step
     (grad_f : ℝ → ℝ) (alpha x : ℝ) : ℝ :=
   x - alpha * grad_f x
@@ -179,7 +169,8 @@ theorem descent_lemma
   simp only [neg_mul] at h
   have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
       = -(1 / (2 * L) * grad_f x ^ 2) := by
-    field_simp [hL.ne']
+    rw [inv_eq_one_div]
+    field_simp
     ring
   nlinarith [h, key]
 
@@ -197,11 +188,10 @@ theorem gradient_descent_progress
   simp only [neg_mul] at h
   have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
       = -(grad_f x ^ 2 / (2 * L)) := by
-    field_simp [hL.ne']
+    rw [inv_eq_one_div]
+    field_simp
     ring
   nlinarith [h, key]
-
--- SECTION 6: DUALITY
 
 noncomputable def lagrangian
     (f g : ℝ → ℝ) (x lambda : ℝ) : ℝ :=
@@ -230,8 +220,6 @@ theorem strong_duality_KKT
     (hfeas : g x_star = 0)
     (hcompl : lambda_star * g x_star = 0) :
     lambda_star * g x_star = 0 := hcompl
-
--- SECTION 7: PROJECTION ONTO CONVEX SET
 
 noncomputable def proj_interval (x lo hi : ℝ) : ℝ :=
   max lo (min hi x)
@@ -278,8 +266,6 @@ theorem proj_halfspace_feasible
   split_ifs with h
   · exact h
   · field_simp; linarith
-
--- SECTION 8: AWM CONVEX OPTIMIZATION BRIDGE
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -336,8 +322,6 @@ theorem system_gradient_decreases
     system_cost costs states ∨
     system_cost costs states ≤
     system_cost costs states := Or.inr (le_refl _)
-
--- SYSTEM LOCK
 
 structure ConvexLock where
   quad_convex    : ∀ (a : ℝ), 0 ≤ a →
