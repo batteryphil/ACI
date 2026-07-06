@@ -21,18 +21,22 @@ theorem convex_midpoint
     (f : ℝ → ℝ) (hf : is_convex f) (x y : ℝ) :
     f ((x + y) / 2) ≤ (f x + f y) / 2 := by
   have h := hf x y (1/2) (by norm_num) (by norm_num)
+  have heq : (x + y) / 2 = 1/2 * x + (1 - 1/2) * y := by ring
+  rw [heq]
   linarith
 
 theorem quadratic_convex (a : ℝ) (ha : 0 ≤ a) :
     is_convex (fun x => a * x ^ 2) := by
   intro x y t ht0 ht1
-  nlinarith [sq_nonneg (x - y), sq_nonneg t,
-             sq_nonneg (1 - t), mul_self_nonneg t]
+  simp only
+  nlinarith [mul_nonneg ha (mul_nonneg
+    (mul_nonneg ht0 (by linarith : (0:ℝ) ≤ 1 - t)) (sq_nonneg (x - y)))]
 
 theorem affine_convex (a b : ℝ) :
     is_convex (fun x => a * x + b) := by
   intro x y t ht0 ht1
-  ring_nf
+  simp only
+  exact le_of_eq (by ring)
 
 theorem convex_sum (f g : ℝ → ℝ)
     (hf : is_convex f) (hg : is_convex g) :
@@ -94,15 +98,22 @@ theorem fenchel_young_quadratic (x y : ℝ) :
     x * y ≤ x ^ 2 / 2 + y ^ 2 / 2 := by
   nlinarith [sq_nonneg (x - y)]
 
-theorem double_conjugate_lower_bound
+-- The original `double_conjugate_lower_bound` claimed f_dstar z ≤ f z
+-- from h_star and h_dstar alone. This is CONFIRMED FALSE as stated, not
+-- just hard: h_star/h_dstar are one-sided Fenchel-Young-style bounds,
+-- not real supremum characterizations — an adversarial f_dstar could
+-- satisfy h_dstar while being arbitrarily large, violating the claimed
+-- conclusion. What IS honestly provable from h_star/h_dstar alone is
+-- that both f z and f_dstar z share the same lower bound z²-f_star z.
+theorem double_conjugate_common_lower_bound
     (f f_star f_dstar : ℝ → ℝ)
     (h_star : ∀ x y, x * y ≤ f x + f_star y)
     (h_dstar : ∀ x z, x * z ≤ f_star x + f_dstar z) :
-    ∀ z, f_dstar z ≤ f z := by
+    ∀ z, z * z - f_star z ≤ f z ∧ z * z - f_star z ≤ f_dstar z := by
   intro z
   have h1 := h_star z z
   have h2 := h_dstar z z
-  nlinarith
+  constructor <;> linarith
 
 -- SECTION 4: PROXIMAL OPERATOR
 
@@ -145,11 +156,13 @@ theorem proximal_nonexpansive
     have hh := h2 ((v2 - p2) / lambda)
     nlinarith [sq_nonneg (p2 - (v2 - p2) / lambda)]
   have hp1 : p1 = v1 / (1 + lambda) := by
+    rw [eq_div_iff (by linarith : (1 + lambda : ℝ) ≠ 0)]
     field_simp [hl.ne'] at e1
-    linarith
+    nlinarith [e1]
   have hp2 : p2 = v2 / (1 + lambda) := by
+    rw [eq_div_iff (by linarith : (1 + lambda : ℝ) ≠ 0)]
     field_simp [hl.ne'] at e2
-    linarith
+    nlinarith [e2]
   rw [hp1, hp2, div_sub_div_same, div_pow]
   apply div_le_self (sq_nonneg _)
   nlinarith [sq_nonneg lambda, mul_pos hl hl]
@@ -170,8 +183,12 @@ theorem descent_lemma
   have h := hsmooth (gradient_step grad_f alpha x)
   unfold gradient_step at h ⊢
   rw [halpha] at h ⊢
-  simp at h
-  linarith [sq_nonneg (grad_f x), hL]
+  simp only [neg_mul] at h
+  have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
+      = -(1 / (2 * L) * grad_f x ^ 2) := by
+    field_simp
+    ring
+  nlinarith [h, key]
 
 theorem gradient_descent_progress
     (f grad_f : ℝ → ℝ) (L x x_star : ℝ)
@@ -184,8 +201,12 @@ theorem gradient_descent_progress
     f x - grad_f x ^ 2 / (2 * L) := by
   have h := hsmooth (gradient_step grad_f (1/L) x)
   unfold gradient_step at h ⊢
-  simp at h
-  linarith [sq_nonneg (grad_f x), hL]
+  simp only [neg_mul] at h
+  have key : -(grad_f x * (L⁻¹ * grad_f x)) + L / 2 * (L⁻¹ * grad_f x) ^ 2
+      = -(grad_f x ^ 2 / (2 * L)) := by
+    field_simp
+    ring
+  nlinarith [h, key]
 
 -- SECTION 6: DUALITY
 
@@ -241,14 +262,14 @@ theorem proj_interval_nonexpansive (x y lo hi : ℝ) :
     rcases le_total lo (min hi y) with hy1 | hy1 <;>
     rcases le_total hi x with hx2 | hx2 <;>
     rcases le_total hi y with hy2 | hy2 <;>
-    simp_all [max_eq_left, max_eq_right, min_eq_left, min_eq_right] <;>
+    simp_all <;>
     linarith [abs_le.mp (le_refl |x - y|), le_abs_self (x - y),
               neg_abs_le (x - y)]
   · rcases le_total lo (min hi x) with hx1 | hx1 <;>
     rcases le_total lo (min hi y) with hy1 | hy1 <;>
     rcases le_total hi x with hx2 | hx2 <;>
     rcases le_total hi y with hy2 | hy2 <;>
-    simp_all [max_eq_left, max_eq_right, min_eq_left, min_eq_right] <;>
+    simp_all <;>
     linarith [abs_le.mp (le_refl |x - y|), le_abs_self (x - y),
               neg_abs_le (x - y)]
 
@@ -304,8 +325,7 @@ theorem system_cost_convex
           intro d _; exact hc d x y t ht0 ht1
     _ = t * Finset.univ.sum (fun d => costs d x) +
         (1 - t) * Finset.univ.sum (fun d => costs d y) := by
-          rw [← Finset.mul_sum, ← Finset.mul_sum,
-              ← Finset.sum_add_distrib]
+          rw [Finset.sum_add_distrib, Finset.mul_sum, Finset.mul_sum]
 
 noncomputable def system_gradient_step
     (grad_costs : Domain21 → ℝ → ℝ)
@@ -362,4 +382,3 @@ def CALock : ConvexLock where
   sys_cost_nn    := system_cost_nonneg
 
 end ConvexAnalysis
-
