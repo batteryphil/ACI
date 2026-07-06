@@ -1,9 +1,7 @@
 MyProject
-OptimalControl
 TopologicalDataAnalysis
 ConvexAnalysis
 ControlTheory
-OptimalTransport
 RenormalizationGroup
 ConformalFieldTheory
 WaveletAnalysis

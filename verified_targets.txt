@@ -1,5 +1,4 @@
 ACIManifold
-ACI_Governance
 AM10
 AWM21
 AWMCore
@@ -24,6 +23,8 @@ MoruzinLaw
 N7Spine
 NoncommutativeGeometry
 NumberTheoryCore
+OptimalControl
+OptimalTransport
 Optimus7
 Optimus7Quantum
 PhysicsCore
