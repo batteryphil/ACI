@@ -1,18 +1,16 @@
--- ControlTheory.lean
 import Mathlib
 
 namespace ControlTheory
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: LINEAR SYSTEMS
--- ẋ = Ax + Bu, y = Cx
--- ============================================================
-
 structure LinearSystem where
-  A B C : ℝ
-  state_dim input_dim output_dim : ℕ
+  A : ℝ
+  B : ℝ
+  C : ℝ
+  state_dim : ℕ
+  input_dim : ℕ
+  output_dim : ℕ
   dims_pos : 0 < state_dim ∧ 0 < input_dim ∧ 0 < output_dim
 
 noncomputable def system_output
@@ -37,7 +35,6 @@ theorem state_derivative_linear
     c * state_derivative A B x1 u1 := by
   unfold state_derivative; ring
 
--- Equilibrium: ẋ = 0 when Ax* + Bu* = 0
 def is_equilibrium (A B x_star u_star : ℝ) : Prop :=
   state_derivative A B x_star u_star = 0
 
@@ -46,11 +43,6 @@ theorem zero_is_equilibrium_zero_input
     is_equilibrium A B 0 0 := by
   unfold is_equilibrium state_derivative; ring
 
--- ============================================================
--- SECTION 2: STABILITY — LYAPUNOV THEORY
--- ============================================================
-
--- Lyapunov function V: V > 0, dV/dt < 0
 def lyapunov_candidate (V : ℝ → ℝ) : Prop :=
   V 0 = 0 ∧ ∀ x : ℝ, x ≠ 0 → 0 < V x
 
@@ -65,7 +57,6 @@ theorem lyapunov_stable
     ∀ x : ℝ, x ≠ 0 → 0 < V x ∧ dV x < 0 :=
   fun x hx => ⟨hV.2 x hx, hdV x hx⟩
 
--- Quadratic Lyapunov: V(x) = Px²
 noncomputable def quadratic_lyapunov
     (P x : ℝ) : ℝ := P * x ^ 2
 
@@ -79,7 +70,6 @@ theorem quadratic_lyapunov_zero
     (P : ℝ) : quadratic_lyapunov P 0 = 0 := by
   unfold quadratic_lyapunov; ring
 
--- dV/dt = 2PAx for V = Px², ẋ = Ax
 noncomputable def quadratic_lyapunov_derivative
     (P A x : ℝ) : ℝ :=
   2 * P * A * x ^ 2
@@ -91,7 +81,6 @@ theorem QL_derivative_neg_stable
   unfold quadratic_lyapunov_derivative
   nlinarith [sq_pos_of_ne_zero hx]
 
--- Asymptotic stability: V → 0 exponentially
 theorem exponential_stability
     (P A x0 : ℝ) (hP : 0 < P) (hA : A < 0) :
     ∀ t : ℝ, 0 ≤ t →
@@ -102,11 +91,6 @@ theorem exponential_stability
   · simp [hx, quadratic_lyapunov]; positivity
   · apply quadratic_lyapunov_pos P _ hP
     exact mul_ne_zero hx (Real.exp_pos _).ne'
-
--- ============================================================
--- SECTION 3: PID CONTROLLER
--- u = Kp·e + Ki·∫e + Kd·ė
--- ============================================================
 
 structure PIDGains where
   Kp Ki Kd : ℝ
@@ -144,7 +128,6 @@ theorem pid_proportional_dominates
   have := pid.Kd_pos
   nlinarith
 
--- Integral action eliminates steady-state error
 theorem integral_zero_at_setpoint
     (pid : PIDGains) (i : ℝ)
     (h : pid_output pid 0 i 0 = 0) :
@@ -153,25 +136,17 @@ theorem integral_zero_at_setpoint
   have hKi := pid.Ki_pos
   nlinarith
 
--- ============================================================
--- SECTION 4: TRANSFER FUNCTIONS AND POLES
--- G(s) = C(sI - A)^{-1}B
--- ============================================================
-
--- Pole of transfer function: eigenvalue of A
 def is_pole (A s : ℝ) : Prop := s = A
 
--- System stable iff all poles have negative real part
 def pole_stable (s : ℝ) : Prop := s < 0
 
 theorem stable_pole_implies_decay
     (A x0 : ℝ) (hA : pole_stable A)
     (t : ℝ) (ht : 0 < t) :
     Real.exp (A * t) < 1 := by
-  apply Real.exp_lt_one_of_neg
+  rw [Real.exp_lt_one_iff]
   exact mul_neg_of_neg_of_pos hA ht
 
--- DC gain: G(0) = -C/A · B for stable system
 noncomputable def dc_gain (A B C : ℝ) : ℝ :=
   -C * B / A
 
@@ -180,7 +155,6 @@ theorem dc_gain_finite
     ∃ g : ℝ, g = dc_gain A B C :=
   ⟨dc_gain A B C, rfl⟩
 
--- Bandwidth: frequency at which |G(jω)| = |G(0)|/√2
 noncomputable def gain_magnitude
     (A B C omega : ℝ) : ℝ :=
   Real.sqrt (C ^ 2 * B ^ 2 / (A ^ 2 + omega ^ 2))
@@ -203,15 +177,20 @@ theorem gain_decreases_with_frequency
     gain_magnitude A B C omega1 := by
   unfold gain_magnitude
   apply Real.sqrt_lt_sqrt (by positivity)
-  apply div_lt_div_of_pos_left (by positivity)
-  · positivity
-  · nlinarith [sq_abs omega1, sq_abs omega2]
+  have hden1 : 0 < A ^ 2 + omega1 ^ 2 := by positivity
+  have hden2 : 0 < A ^ 2 + omega2 ^ 2 := by positivity
+  have hsq : omega1 ^ 2 < omega2 ^ 2 := by
+    have := sq_lt_sq' (by linarith [abs_nonneg omega1, le_abs_self omega1,
+      neg_abs_le omega1] : -|omega2| < omega1) (by
+        rcases abs_cases omega1 with ⟨e1, _⟩ | ⟨e1, _⟩ <;>
+        rcases abs_cases omega2 with ⟨e2, _⟩ | ⟨e2, _⟩ <;> linarith)
+    simpa [sq_abs] using this
+  rw [div_lt_div_iff hden2 hden1]
+  nlinarith [sq_nonneg C, sq_nonneg B, mul_pos (sq_nonneg C).lt_of_ne' (by
+    intro hcz; exact hC (pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hcz.symm))
+    (sq_nonneg B).lt_of_ne' (by
+    intro hbz; exact hB (pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hbz.symm))]
 
--- ============================================================
--- SECTION 5: FEEDBACK CONTROL
--- ============================================================
-
--- Closed-loop: A_cl = A - BK
 noncomputable def closed_loop_A
     (A B K : ℝ) : ℝ := A - B * K
 
@@ -220,7 +199,6 @@ theorem closed_loop_stable_condition
     pole_stable (closed_loop_A A B K) := by
   unfold closed_loop_A pole_stable; linarith
 
--- Pole placement: choose K to place pole at s*
 theorem pole_placement
     (A B s_star : ℝ) (hB : B ≠ 0) :
     ∃ K : ℝ, closed_loop_A A B K = s_star := by
@@ -228,7 +206,6 @@ theorem pole_placement
   unfold closed_loop_A
   field_simp
 
--- State feedback gain for stability
 noncomputable def stabilizing_gain
     (A B margin : ℝ) (hB : 0 < B) : ℝ :=
   (A + margin) / B
@@ -241,11 +218,6 @@ theorem stabilizing_gain_works
   field_simp
   linarith
 
--- ============================================================
--- SECTION 6: OBSERVABILITY AND CONTROLLABILITY
--- ============================================================
-
--- Controllable: can reach any state from origin
 def is_controllable (A B : ℝ) : Prop :=
   ∀ x_target : ℝ, ∃ u : ℝ,
     state_derivative A B 0 u = x_target ∨ True
@@ -259,7 +231,6 @@ theorem single_input_controllable
   unfold state_derivative
   field_simp
 
--- Observable: can reconstruct state from output
 def is_observable (A C : ℝ) : Prop :=
   ∀ x : ℝ, system_output C x = 0 → x = 0
 
@@ -270,18 +241,12 @@ theorem single_output_observable
   unfold system_output at h
   exact (mul_eq_zero.mp h).resolve_left hC
 
--- Duality: controllability ↔ observability of dual
 theorem duality_principle
     (A B C : ℝ) (hB : B ≠ 0) (hC : C ≠ 0) :
     is_controllable A B ∧ is_observable A C :=
   ⟨single_input_controllable A B hB,
    single_output_observable A C hC⟩
 
--- ============================================================
--- SECTION 7: ROBUST CONTROL
--- ============================================================
-
--- Gain margin: how much gain can increase before instability
 noncomputable def gain_margin
     (K_nom K_crit : ℝ) : ℝ :=
   K_crit / K_nom
@@ -298,9 +263,8 @@ theorem gain_margin_gt_one_stable
     (h : K_nom < K_crit) :
     1 < gain_margin K_nom K_crit := by
   unfold gain_margin
-  exact one_lt_div hnom |>.mpr h
+  exact (one_lt_div hnom).mpr h
 
--- Phase margin: how much phase lag before instability
 noncomputable def phase_margin
     (phi_actual phi_critical : ℝ) : ℝ :=
   phi_critical - phi_actual
@@ -311,17 +275,11 @@ theorem phase_margin_pos_stable
     0 < phase_margin phi_actual phi_critical := by
   unfold phase_margin; linarith
 
--- Robustness: system tolerates bounded perturbations
 def robust_stable
     (A B K delta_max : ℝ)
     (hK : pole_stable (closed_loop_A A B K)) : Prop :=
   ∀ delta : ℝ, |delta| ≤ delta_max →
     pole_stable (closed_loop_A (A + delta) B K)
-
--- ============================================================
--- SECTION 8: AWM CONTROL BRIDGE
--- 21-domain control architecture
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -332,7 +290,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Each domain has its own control system
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 structure DomainControlSystem where
   A : Domain21 → ℝ
   B : Domain21 → ℝ
@@ -346,7 +305,6 @@ theorem all_domains_stable
       (dcs.A d) (dcs.B d) (dcs.K d)) :=
   dcs.stable d
 
--- System Lyapunov function: sum of domain Lyapunov values
 noncomputable def system_lyapunov
     (P : ℝ) (hP : 0 < P)
     (states : Domain21 → ℝ) : ℝ :=
@@ -367,7 +325,6 @@ theorem system_lyapunov_zero_at_rest
   unfold system_lyapunov quadratic_lyapunov
   simp
 
--- Domain PID bank
 structure DomainPIDBank where
   gains : Domain21 → PIDGains
 
@@ -376,7 +333,6 @@ theorem domain_pid_zero_at_equilibrium
     pid_output (bank.gains d) 0 0 0 = 0 :=
   pid_zero_at_equilibrium (bank.gains d)
 
--- Governance gate: only deploy if all poles stable
 def governance_approved
     (dcs : DomainControlSystem) : Prop :=
   ∀ d : Domain21, pole_stable
@@ -386,10 +342,6 @@ theorem governance_approved_all_stable
     (dcs : DomainControlSystem) :
     governance_approved dcs :=
   fun d => dcs.stable d
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure ControlLock where
   zero_equil    : ∀ (A B : ℝ),
