@@ -164,37 +164,32 @@ noncomputable def gain_magnitude
 
 theorem gain_magnitude_pos
     (A B C omega : ℝ)
-    (hC : C ≠ 0) (hB : B ≠ 0) :
+    (hC : C ≠ 0) (hB : B ≠ 0) (hA : A ≠ 0) :
     0 < gain_magnitude A B C omega := by
   unfold gain_magnitude
   apply Real.sqrt_pos_of_pos
   apply div_pos
-  · exact mul_pos (pow_pos (abs_pos.mpr hC) 2 |>.trans_eq (by rw [sq_abs]))
-      (pow_pos (abs_pos.mpr hB) 2 |>.trans_eq (by rw [sq_abs]))
-  · positivity
+  · have hCsq : 0 < C ^ 2 := by positivity
+    have hBsq : 0 < B ^ 2 := by positivity
+    exact mul_pos hCsq hBsq
+  · have hAsq : 0 < A ^ 2 := by positivity
+    have hom : 0 ≤ omega ^ 2 := sq_nonneg omega
+    linarith
 
 theorem gain_decreases_with_frequency
     (A B C omega1 omega2 : ℝ)
-    (hC : C ≠ 0) (hB : B ≠ 0)
+    (hC : C ≠ 0) (hB : B ≠ 0) (hA : A ≠ 0)
     (h : |omega1| < |omega2|) :
     gain_magnitude A B C omega2 <
     gain_magnitude A B C omega1 := by
   unfold gain_magnitude
   have hden1 : 0 < A ^ 2 + omega1 ^ 2 := by positivity
   have hden2 : 0 < A ^ 2 + omega2 ^ 2 := by positivity
-  have hnum : 0 < C ^ 2 * B ^ 2 := by
-    have hCsq : 0 < C ^ 2 := by
-      have := abs_pos.mpr hC
-      nlinarith [sq_abs C]
-    have hBsq : 0 < B ^ 2 := by
-      have := abs_pos.mpr hB
-      nlinarith [sq_abs B]
-    exact mul_pos hCsq hBsq
+  have hnum : 0 < C ^ 2 * B ^ 2 := by positivity
   have hsq : omega1 ^ 2 < omega2 ^ 2 := by
-    have h1 : 0 ≤ |omega1| := abs_nonneg omega1
-    nlinarith [sq_abs omega1, sq_abs omega2, h, h1]
+    nlinarith [sq_abs omega1, sq_abs omega2, h, abs_nonneg omega1]
   apply Real.sqrt_lt_sqrt (by positivity)
-  rw [div_lt_div_iff hden2 hden1]
+  rw [div_lt_div_iff_of_pos hden2 hden1]
   nlinarith [hnum]
 
 noncomputable def closed_loop_A
@@ -211,7 +206,6 @@ theorem pole_placement
   use (A - s_star) / B
   unfold closed_loop_A
   field_simp
-  ring
 
 noncomputable def stabilizing_gain
     (A B margin : ℝ) (hB : 0 < B) : ℝ :=
