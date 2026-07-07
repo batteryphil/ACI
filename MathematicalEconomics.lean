@@ -80,8 +80,8 @@ theorem production_pos
       A K L alpha beta hA hK hL := by
   unfold cobb_douglas_prod
   apply mul_pos (mul_pos hA _)
-  · exact Real.rpow_pos_of_pos hK _
   · exact Real.rpow_pos_of_pos hL _
+  · exact Real.rpow_pos_of_pos hK _
 
 noncomputable def profit
     (p y w L r K : ℝ) : ℝ :=
@@ -191,11 +191,11 @@ theorem rawls_le_utilitarian (n : ℕ)
     social_welfare n (fun _ => 1) U := by
   haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   unfold rawls_welfare social_welfare
-  apply le_trans
-    (Finset.inf'_le _ (Finset.mem_univ _))
-  apply Finset.single_le_sum
-    (fun i _ => by simpa using hU i)
-  exact Finset.mem_univ _
+  simp only [one_mul]
+  obtain ⟨i0, hi0, heq⟩ :=
+    Finset.exists_mem_eq_inf' Finset.univ_nonempty U
+  rw [heq]
+  exact Finset.single_le_sum (fun i _ => hU i) hi0
 
 -- ============================================================
 -- SECTION 7: GROWTH THEORY
@@ -280,7 +280,7 @@ theorem domain_budget :
     satisfies_budget 21
       (fun _ => 1) (fun _ => 0) 1 := by
   unfold satisfies_budget
-  simp; norm_num
+  simp
 
 theorem domain_expenditure_nonneg :
     0 ≤ Finset.univ.sum (fun _ : Fin 21 =>
