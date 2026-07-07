@@ -4,10 +4,6 @@ namespace NumberTheory
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: PRIME NUMBERS
--- ============================================================
-
 noncomputable def prime_count (n : ℕ) : ℕ :=
   (Finset.range n).filter Nat.Prime |>.card
 
@@ -57,10 +53,6 @@ theorem goldbach_6 : goldbach_property 6 := by
   intro _ _
   exact ⟨3, 3, by decide, by decide, rfl⟩
 
--- ============================================================
--- SECTION 2: MODULAR ARITHMETIC
--- ============================================================
-
 def mod_equiv (a b n : ℤ) : Prop := n ∣ (a - b)
 
 theorem mod_equiv_refl (a n : ℤ) :
@@ -97,27 +89,31 @@ theorem mod_equiv_mul (a b c d n : ℤ)
   rwa [show b * (c - d) + d * (a - b) =
        a * c - b * d from by ring] at key
 
--- Wilson's theorem
 theorem wilson (p : ℕ) (hp : Nat.Prime p) :
-    (p - 1).factorial % p = p - 1 :=
-  Nat.Prime.factorial_mulInv_atPrime hp
+    (p - 1).factorial % p = p - 1 := by
+  haveI : Fact p.Prime := ⟨hp⟩
+  have hw := ZMod.wilsons_lemma p
+  have h1le : 1 ≤ p := hp.one_lt.le
+  have h1 : ((p - 1 : ℕ) : ZMod p) = -1 := by
+    rw [Nat.cast_sub h1le]
+    simp [ZMod.natCast_self]
+  have heq : ((p - 1).factorial : ZMod p) = ((p - 1 : ℕ) : ZMod p) := by
+    rw [hw, h1]
+  have hmod : (p - 1).factorial % p = (p - 1) % p :=
+    (ZMod.natCast_eq_natCast_iff _ _ _).mp heq
+  rw [hmod, Nat.mod_eq_of_lt (by omega : p - 1 < p)]
 
--- CRT: exists x with x ≡ a (mod m) and x ≡ b (mod n)
 theorem CRT (m n : ℕ) (hcop : Nat.Coprime m n)
     (a b : ℤ) :
     ∃ x : ℤ,
       mod_equiv x a m ∧ mod_equiv x b n := by
-  have ⟨u, v, huv⟩ := hcop.eq_one_of_self_pow
-    hcop 1 |>.symm ▸ hcop
-  exact ⟨a * n * v + b * m * u,
-    ⟨by unfold mod_equiv; ring_nf
-        exact dvd_mul_right _ _⟩,
-    ⟨by unfold mod_equiv; ring_nf
-        exact dvd_mul_right _ _⟩⟩
-
--- ============================================================
--- SECTION 3: LEGENDRE SYMBOL AND RECIPROCITY
--- ============================================================
+  have hbezout : (m : ℤ) * Nat.gcdA m n + (n : ℤ) * Nat.gcdB m n = 1 := by
+    have h := Nat.gcd_eq_gcd_ab m n
+    rw [hcop] at h
+    exact_mod_cast h.symm
+  refine ⟨a * n * Nat.gcdB m n + b * m * Nat.gcdA m n, ?_, ?_⟩
+  · exact ⟨Nat.gcdA m n * (b - a), by linear_combination a * hbezout⟩
+  · exact ⟨Nat.gcdB m n * (a - b), by linear_combination b * hbezout⟩
 
 noncomputable def legendre_symbol (a p : ℤ) : ℤ :=
   if (p : ℤ) ∣ a then 0
@@ -141,7 +137,6 @@ theorem legendre_one (p : ℤ) :
   simp
   exact ⟨1, by unfold mod_equiv; simp⟩
 
--- Euler's criterion as definition
 theorem euler_criterion_sign (p : ℕ)
     (hp : Nat.Prime p) (a : ℤ) :
     legendre_symbol a p = 0 ∨
@@ -149,7 +144,6 @@ theorem euler_criterion_sign (p : ℕ)
     legendre_symbol a p = -1 := by
   rcases legendre_values a p with h | h | h <;> simp [h]
 
--- Quadratic reciprocity for specific small cases
 theorem QR_3_5 :
     legendre_symbol 3 5 * legendre_symbol 5 3 =
     (-1 : ℤ) ^ ((3-1)/2 * ((5-1)/2)) := by
@@ -160,7 +154,6 @@ theorem QR_3_7 :
     (-1 : ℤ) ^ ((3-1)/2 * ((7-1)/2)) := by
   native_decide
 
--- General QR: sign formula
 theorem QR_sign (p q : ℕ)
     (hp : Nat.Prime p) (hq : Nat.Prime q)
     (hpp : p % 2 = 1) (hqp : q % 2 = 1)
@@ -170,10 +163,6 @@ theorem QR_sign (p q : ℕ)
   rcases legendre_values p q with h1 | h1 | h1 <;>
   rcases legendre_values q p with h2 | h2 | h2 <;>
   simp [h1, h2]
-
--- ============================================================
--- SECTION 4: ARITHMETIC FUNCTIONS
--- ============================================================
 
 noncomputable def euler_totient (n : ℕ) : ℕ :=
   (Finset.range n).filter
@@ -245,7 +234,6 @@ def is_multiplicative (f : ℕ → ℤ) : Prop :=
   f 1 = 1 ∧
   ∀ m n : ℕ, Nat.Coprime m n → f (m * n) = f m * f n
 
--- Möbius multiplicativity via Mathlib
 theorem mobius_multiplicative :
     is_multiplicative mobius := by
   constructor
@@ -272,10 +260,6 @@ theorem mobius_multiplicative :
         List.length_append,
         pow_add,
         hcop.factors_unique]
-
--- ============================================================
--- SECTION 5: DIRICHLET SERIES
--- ============================================================
 
 structure DirichletCharacter (q : ℕ) where
   chi      : ℕ → ℂ
@@ -306,10 +290,6 @@ theorem euler_product_2 (s : ℝ) (hs : 1 < s) :
     (by norm_num : (0:ℝ) < 2) (-s),
     Real.rpow_lt_one (by norm_num : (0:ℝ) ≤ 2)
       (by norm_num : (2:ℝ) < 1) (by linarith)]
-
--- ============================================================
--- SECTION 6: ALGEBRAIC NUMBER THEORY
--- ============================================================
 
 def is_algebraic_integer (alpha : ℝ) : Prop :=
   ∃ (n : ℕ) (coeffs : Fin n → ℤ),
@@ -349,10 +329,6 @@ theorem quad_int_norm_mul
     quad_int_norm a1 b1 d *
     quad_int_norm a2 b2 d := by
   unfold quad_int_norm; ring
-
--- ============================================================
--- SECTION 7: p-ADIC NUMBERS
--- ============================================================
 
 noncomputable def p_adic_val (p n : ℕ)
     (hp : Nat.Prime p) (hn : 0 < n) : ℕ :=
@@ -395,10 +371,6 @@ theorem p_adic_ultrametric (p m n : ℕ)
     (by exact_mod_cast hp.one_lt.le)
   simp
   exact_mod_cast Nat.factorization_add_le m n p
-
--- ============================================================
--- SECTION 8: ANALYTIC NUMBER THEORY
--- ============================================================
 
 def PNT_approx (n : ℕ) : ℝ := n / Real.log n
 
@@ -449,10 +421,6 @@ theorem von_mangoldt_nonneg (n : ℕ) :
       (Nat.minFac_pos n).ne'
   · linarith
 
--- ============================================================
--- SECTION 9: AWM NUMBER THEORY BRIDGE
--- ============================================================
-
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
   | E_Boundary | F_Diagnostics | G_Governance
@@ -462,8 +430,31 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
-noncomputable def domain_index (d : Domain21) : ℕ :=
-  d.toCtorIdx
+def domain_rank (d : Domain21) : ℕ :=
+  match d with
+  | .A_Energy => 0
+  | .B_Control => 1
+  | .C_Thermal => 2
+  | .D_Structural => 3
+  | .E_Boundary => 4
+  | .F_Diagnostics => 5
+  | .G_Governance => 6
+  | .H_Harmonic => 7
+  | .I_Information => 8
+  | .J_Joining => 9
+  | .K_Kernel => 10
+  | .L_Localization => 11
+  | .M_Morphogenic => 12
+  | .N_Node => 13
+  | .O_Operator => 14
+  | .P_Propagation => 15
+  | .Q_Quality => 16
+  | .R_Resonance => 17
+  | .S_State => 18
+  | .T_Temporal => 19
+  | .U_Unification => 20
+
+def domain_index (d : Domain21) : ℕ := domain_rank d
 
 theorem twenty_one_factored : 21 = 3 * 7 := by norm_num
 
@@ -524,10 +515,6 @@ theorem domain_mangoldt_nonneg
   unfold domain_mangoldt_sum
   apply Finset.sum_nonneg
   intro d _; exact von_mangoldt_nonneg (margins d)
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure NumberTheoryLock where
   inf_primes      : ∀ (n : ℕ),
