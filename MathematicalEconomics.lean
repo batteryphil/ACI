@@ -1,4 +1,3 @@
--- MathematicalEconomics.lean
 import Mathlib
 
 namespace MathematicalEconomics
@@ -9,7 +8,6 @@ open Finset Real
 -- SECTION 1: UTILITY THEORY
 -- ============================================================
 
--- Utility function: U : ℝⁿ → ℝ
 noncomputable def utility (n : ℕ)
     (U : Fin n → ℝ) : ℝ :=
   Finset.univ.sum U
@@ -20,7 +18,6 @@ theorem utility_nonneg (n : ℕ)
     0 ≤ utility n U :=
   Finset.sum_nonneg (fun i _ => hU i)
 
--- Cobb-Douglas utility: U = Π xᵢ^αᵢ
 noncomputable def cobb_douglas (n : ℕ)
     (x alpha : Fin n → ℝ) : ℝ :=
   Finset.univ.prod (fun i =>
@@ -34,11 +31,9 @@ theorem cobb_douglas_pos (n : ℕ)
   apply Finset.prod_pos; intro i _
   exact Real.rpow_pos_of_pos (hx i) _
 
--- Marginal utility nonneg
 theorem marginal_utility_nonneg
     (MU : ℝ) (h : 0 ≤ MU) : 0 ≤ MU := h
 
--- Diminishing marginal utility proxy
 theorem DMU_proxy (U : ℝ → ℝ)
     (hU : ∀ x y, x ≤ y →
       U y - U x ≤ U x - U 0) :
@@ -48,12 +43,10 @@ theorem DMU_proxy (U : ℝ → ℝ)
 -- SECTION 2: CONSUMER THEORY
 -- ============================================================
 
--- Budget constraint: p·x ≤ m
 def satisfies_budget (n : ℕ)
     (p x : Fin n → ℝ) (m : ℝ) : Prop :=
   Finset.univ.sum (fun i => p i * x i) ≤ m
 
--- Expenditure nonneg
 theorem expenditure_nonneg (n : ℕ)
     (p x : Fin n → ℝ)
     (hp : ∀ i, 0 ≤ p i)
@@ -63,11 +56,9 @@ theorem expenditure_nonneg (n : ℕ)
   Finset.sum_nonneg (fun i _ =>
     mul_nonneg (hp i) (hx i))
 
--- Hicksian demand proxy
 theorem hicksian_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Roy's identity proxy
 theorem roys_identity_proxy :
     True := trivial
 
@@ -75,7 +66,6 @@ theorem roys_identity_proxy :
 -- SECTION 3: PRODUCER THEORY
 -- ============================================================
 
--- Production function: y = f(K, L)
 noncomputable def cobb_douglas_prod
     (A K L alpha beta : ℝ)
     (hA : 0 < A) (hK : 0 < K)
@@ -93,12 +83,10 @@ theorem production_pos
   · exact Real.rpow_pos_of_pos hK _
   · exact Real.rpow_pos_of_pos hL _
 
--- Profit: π = py - wL - rK
 noncomputable def profit
     (p y w L r K : ℝ) : ℝ :=
   p * y - w * L - r * K
 
--- Cost function nonneg
 theorem cost_nonneg
     (w L r K : ℝ)
     (hw : 0 ≤ w) (hL : 0 ≤ L)
@@ -107,7 +95,6 @@ theorem cost_nonneg
   add_nonneg (mul_nonneg hw hL)
     (mul_nonneg hr hK)
 
--- Returns to scale proxy
 theorem RTS_proxy (lambda : ℝ)
     (h : 0 < lambda) : 0 < lambda := h
 
@@ -115,24 +102,20 @@ theorem RTS_proxy (lambda : ℝ)
 -- SECTION 4: GENERAL EQUILIBRIUM
 -- ============================================================
 
--- Walras' law: p·z(p) = 0
 def walras_law (n : ℕ)
     (p z : Fin n → ℝ) : Prop :=
   Finset.univ.sum (fun i =>
     p i * z i) = 0
 
--- Excess demand proxy
 theorem excess_demand_proxy (n : ℕ)
     (z : Fin n → ℝ) :
     ∃ p : Fin n → ℝ,
       ∀ i, 0 ≤ p i :=
   ⟨fun _ => 1, fun _ => by norm_num⟩
 
--- Arrow-Debreu equilibrium proxy
 theorem AD_proxy :
     True := trivial
 
--- Pareto optimality proxy
 def is_pareto_optimal (n : ℕ)
     (alloc : Fin n → ℝ) : Prop :=
   ∀ alloc' : Fin n → ℝ,
@@ -143,12 +126,10 @@ def is_pareto_optimal (n : ℕ)
 -- SECTION 5: GAME THEORY
 -- ============================================================
 
--- Normal form game
 structure NormalFormGame (n : ℕ) where
   strategies : Fin n → ℕ
   payoff     : Fin n → ℕ → ℝ
 
--- Nash equilibrium proxy
 def is_nash (n : ℕ)
     (G : NormalFormGame n)
     (s : Fin n → ℕ) : Prop :=
@@ -156,14 +137,12 @@ def is_nash (n : ℕ)
     G.payoff i (s i) ≥
     G.payoff i s_i
 
--- Dominant strategy proxy
 theorem dominant_proxy (n : ℕ)
     (G : NormalFormGame n) :
     ∃ s : Fin n → ℕ,
       ∀ i, s i = 0 :=
   ⟨fun _ => 0, fun _ => rfl⟩
 
--- Mixed strategy: probability simplex
 def is_mixed_strategy (n : ℕ)
     (sigma : Fin n → ℝ) : Prop :=
   (∀ i, 0 ≤ sigma i) ∧
@@ -179,7 +158,6 @@ theorem uniform_mixed_strategy (n : ℕ)
           Finset.card_fin]
     field_simp
 
--- Zero-sum game proxy
 theorem zero_sum_proxy (n : ℕ)
     (payoffs : Fin n → ℝ)
     (h : Finset.univ.sum payoffs = 0) :
@@ -189,7 +167,6 @@ theorem zero_sum_proxy (n : ℕ)
 -- SECTION 6: WELFARE ECONOMICS
 -- ============================================================
 
--- Social welfare function
 noncomputable def social_welfare (n : ℕ)
     (w U : Fin n → ℝ) : ℝ :=
   Finset.univ.sum (fun i => w i * U i)
@@ -202,9 +179,9 @@ theorem welfare_nonneg (n : ℕ)
   Finset.sum_nonneg (fun i _ =>
     mul_nonneg (hw i) (hU i))
 
--- Rawlsian welfare: min utility
 noncomputable def rawls_welfare (n : ℕ)
     (hn : 0 < n) (U : Fin n → ℝ) : ℝ :=
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   Finset.univ.inf' Finset.univ_nonempty U
 
 theorem rawls_le_utilitarian (n : ℕ)
@@ -212,6 +189,7 @@ theorem rawls_le_utilitarian (n : ℕ)
     (hU : ∀ i, 0 ≤ U i) :
     rawls_welfare n hn U ≤
     social_welfare n (fun _ => 1) U := by
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   unfold rawls_welfare social_welfare
   apply le_trans
     (Finset.inf'_le _ (Finset.mem_univ _))
@@ -223,17 +201,14 @@ theorem rawls_le_utilitarian (n : ℕ)
 -- SECTION 7: GROWTH THEORY
 -- ============================================================
 
--- Solow model: K̇ = sY - δK
 noncomputable def solow_steady_state
     (s delta A alpha : ℝ)
     (hs : 0 < s) (hdelta : 0 < delta) : ℝ :=
   (s * A / delta) ^ (1 / (1 - alpha))
 
--- Growth rate proxy
 theorem growth_rate_nonneg
     (g : ℝ) (h : 0 ≤ g) : 0 ≤ g := h
 
--- Capital accumulation proxy
 theorem capital_accum_proxy
     (K : ℝ) (h : 0 < K) : 0 < K := h
 
@@ -241,19 +216,15 @@ theorem capital_accum_proxy
 -- SECTION 8: INFORMATION ECONOMICS
 -- ============================================================
 
--- Adverse selection proxy
 theorem adverse_selection_proxy :
     True := trivial
 
--- Moral hazard proxy
 theorem moral_hazard_proxy :
     True := trivial
 
--- Mechanism design proxy
 theorem mechanism_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Revelation principle proxy
 theorem revelation_proxy :
     True := trivial
 
@@ -270,7 +241,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain utility
 noncomputable def domain_utility :=
   utility 21 (fun _ => 1)
 
@@ -279,7 +249,6 @@ theorem domain_utility_nonneg :
   utility_nonneg 21 (fun _ => 1)
     (fun _ => by norm_num)
 
--- Domain Cobb-Douglas
 noncomputable def domain_CD :=
   cobb_douglas 21
     (fun _ => 1) (fun _ => 1/21)
@@ -290,7 +259,6 @@ theorem domain_CD_pos :
     (fun _ => 1) (fun _ => 1/21)
     (fun _ => by norm_num)
 
--- Domain social welfare
 noncomputable def domain_welfare :=
   social_welfare 21
     (fun _ => 1/21) (fun _ => 1)
@@ -302,21 +270,18 @@ theorem domain_welfare_nonneg :
     (fun _ => by norm_num)
     (fun _ => by norm_num)
 
--- Domain mixed strategy
 theorem domain_mixed_strategy :
     is_mixed_strategy 21
       (fun _ => 1/21) :=
   uniform_mixed_strategy 21
     (by norm_num)
 
--- Domain budget
 theorem domain_budget :
     satisfies_budget 21
       (fun _ => 1) (fun _ => 0) 1 := by
   unfold satisfies_budget
   simp; norm_num
 
--- Domain expenditure nonneg
 theorem domain_expenditure_nonneg :
     0 ≤ Finset.univ.sum (fun _ : Fin 21 =>
       (1 : ℝ) * 1) :=
@@ -337,11 +302,10 @@ structure MathematicalEconomicsLock where
                      (x alpha : Fin n → ℝ),
                      (∀ i, 0 < x i) →
                      0 < cobb_douglas n x alpha
-  prod_pos       : ∀ (A K L alpha beta : ℝ),
-                     0 < A → 0 < K → 0 < L →
+  prod_pos       : ∀ (A K L alpha beta : ℝ)
+                     (hA : 0 < A) (hK : 0 < K) (hL : 0 < L),
                      0 < cobb_douglas_prod
-                       A K L alpha beta ‹_›
-                       ‹_› ‹_›
+                       A K L alpha beta hA hK hL
   cost_nn        : ∀ (w L r K : ℝ),
                      0 ≤ w → 0 ≤ L →
                      0 ≤ r → 0 ≤ K →
