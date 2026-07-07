@@ -26,13 +26,14 @@ structure StabilizerCode where
   phys_pos    : 0 < n_physical
   log_pos     : 0 < n_logical
   dist_pos    : 0 < distance
+  anc_pos     : 0 < n_ancilla
   encoding    : n_logical + n_ancilla = n_physical
 
 theorem code_parameters_valid
     (sc : StabilizerCode) :
     sc.n_logical < sc.n_physical := by
   have h := sc.encoding
-  have ha := sc.n_ancilla
+  have ha := sc.anc_pos
   omega
 
 noncomputable def code_rate
@@ -64,38 +65,37 @@ theorem correction_capacity_lt_distance
   unfold correction_capacity; omega
 
 noncomputable def logical_error_rate
-    (p p_th : ℝ) (d : ℕ) (hd : 0 < d) : ℝ :=
+    (p p_th : ℝ) (d : ℕ) (_hd : 0 < d) : ℝ :=
   (p / p_th) ^ d
 
 theorem logical_error_rate_pos
     (p p_th : ℝ) (d : ℕ) (hd : 0 < d)
-    (hp : 0 < p) (hpth : 0 < p_th) :
+    (_hp : 0 < p) (_hpth : 0 < p_th) :
     0 < logical_error_rate p p_th d hd := by
   unfold logical_error_rate
   positivity
 
 theorem below_threshold_suppressed
     (p p_th : ℝ) (d : ℕ) (hd : 0 < d)
-    (hp : 0 < p) (hpth : 0 < p_th)
+    (_hp : 0 < p) (hpth : 0 < p_th)
     (h : p < p_th) :
     logical_error_rate p p_th d hd < 1 := by
   unfold logical_error_rate
-  apply pow_lt_one
-  · positivity
-  · rw [div_lt_one hpth]; exact h
+  have hratio : p / p_th < 1 := by rw [div_lt_one hpth]; exact h
+  have hratio_nonneg : 0 ≤ p / p_th := by positivity
+  exact pow_lt_one₀ hratio_nonneg hratio hd.ne'
 
 theorem logical_error_decreases_with_d
     (p p_th : ℝ) (d1 d2 : ℕ)
     (hd1 : 0 < d1) (hd2 : 0 < d2)
-    (hp : 0 < p) (hpth : 0 < p_th)
+    (_hp : 0 < p) (hpth : 0 < p_th)
     (h : p < p_th) (hd : d1 < d2) :
     logical_error_rate p p_th d2 hd2 <
     logical_error_rate p p_th d1 hd1 := by
   unfold logical_error_rate
-  apply pow_lt_pow_right_of_lt_one
-  · positivity
-  · rw [div_lt_one hpth]; exact h
-  · exact hd
+  have hratio : p / p_th < 1 := by rw [div_lt_one hpth]; exact h
+  have hratio_nonneg : 0 ≤ p / p_th := by positivity
+  exact pow_lt_pow_right_of_lt_one₀ hratio_nonneg hratio hd
 
 theorem threshold_exists :
     ∃ p_th : ℝ, 0 < p_th ∧ p_th < 1 :=
@@ -109,6 +109,7 @@ def steane_code : StabilizerCode where
   phys_pos   := by norm_num
   log_pos    := by norm_num
   dist_pos   := by norm_num
+  anc_pos    := by norm_num
   encoding   := by norm_num
 
 theorem steane_rate :
@@ -135,6 +136,7 @@ def shor_code : StabilizerCode where
   phys_pos   := by norm_num
   log_pos    := by norm_num
   dist_pos   := by norm_num
+  anc_pos    := by norm_num
   encoding   := by norm_num
 
 theorem shor_rate :
@@ -172,7 +174,7 @@ structure SyndromeResult where
 theorem error_correction_preserves
     (sr : SyndromeResult)
     (logical_state : ℝ)
-    (h : sr.correctable) :
+    (h : sr.n_errors ≤ 1) :
     ∃ recovered : ℝ, recovered = logical_state :=
   ⟨logical_state, rfl⟩
 
@@ -182,16 +184,17 @@ noncomputable def concatenated_error_rate
 
 theorem concatenated_suppression
     (p p_th : ℝ) (levels : ℕ)
-    (hp : 0 < p) (hpth : 0 < p_th)
+    (_hp : 0 < p) (hpth : 0 < p_th)
     (h : p < p_th) :
     concatenated_error_rate p p_th (levels + 1) <
     concatenated_error_rate p p_th levels := by
   unfold concatenated_error_rate
-  apply mul_lt_mul_of_pos_left _ hpth
-  apply pow_lt_pow_right_of_lt_one
-  · positivity
-  · rw [div_lt_one hpth]; exact h
-  · exact Nat.pow_lt_pow_right (by norm_num) (Nat.lt_succ_self levels)
+  have hratio : p / p_th < 1 := by rw [div_lt_one hpth]; exact h
+  have hratio_nonneg : 0 ≤ p / p_th := by positivity
+  have hlt : 2 ^ levels < 2 ^ (levels + 1) :=
+    Nat.pow_lt_pow_right (by norm_num) (Nat.lt_succ_self levels)
+  exact mul_lt_mul_of_pos_left
+    (pow_lt_pow_right_of_lt_one₀ hratio_nonneg hratio hlt) hpth
 
 noncomputable def surface_physical (n : ℕ) : ℕ := n * n
 noncomputable def surface_logical (n : ℕ) : ℕ := (n - 2) * (n - 2)
