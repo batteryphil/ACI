@@ -1,4 +1,3 @@
--- ComputationalComplexity.lean
 import Mathlib
 
 namespace ComputationalComplexity
@@ -59,21 +58,32 @@ theorem quadratic_is_poly :
   ⟨2, 1, 0, Nat.one_pos,
    fun n _ => by simp⟩
 
+-- Self-contained bound avoiding reliance on an unverified library
+-- lemma name: n < 2^n, built from pow_pos (confirmed real, used in
+-- prior passing CI) plus basic induction/omega.
+theorem nat_lt_two_pow_self (n : ℕ) : n < 2 ^ n := by
+  induction n with
+  | zero => decide
+  | succ k ih =>
+    have hk : 0 < 2 ^ k := pow_pos (by norm_num) k
+    have heq : (2 : ℕ) ^ (k + 1) = 2 ^ k + 2 ^ k := by ring
+    omega
+
 -- Exponential dominates all polynomials proxy
 theorem exp_not_poly_proxy (k : ℕ) :
     ∀ N : ℕ, ∃ n, N ≤ n ∧
         (n : ℝ) < 2 ^ n := by
   intro N
-  exact ⟨N, le_refl _,
-    by exact_mod_cast Nat.lt_two_pow N⟩
+  refine ⟨N, le_refl _, ?_⟩
+  exact_mod_cast nat_lt_two_pow_self N
 
 -- Logarithmic is sublinear proxy
 theorem log_sublinear_proxy (n : ℕ)
     (hn : 0 < n) :
     Real.log n ≤ n := by
-  exact Real.log_le_sub_one_of_le
-    (by exact_mod_cast hn) |>.trans
-    (by linarith [Nat.cast_nonneg n])
+  have h : Real.log (n : ℝ) ≤ (n : ℝ) - 1 :=
+    Real.log_le_sub_one_of_pos (by exact_mod_cast hn)
+  linarith
 
 -- ============================================================
 -- SECTION 3: SPACE COMPLEXITY
