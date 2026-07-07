@@ -1,4 +1,3 @@
--- CondensedMatterPhysics.lean
 import Mathlib
 
 namespace CondensedMatterPhysics
@@ -9,7 +8,6 @@ open Finset Real
 -- SECTION 1: CRYSTAL STRUCTURE
 -- ============================================================
 
--- Bravais lattice vector
 def lattice_vector (n : ℕ)
     (a : Fin n → ℝ) (m : Fin n → ℤ) : ℝ :=
   Finset.univ.sum (fun i =>
@@ -26,11 +24,9 @@ theorem lattice_vector_linear (n : ℕ)
   simp [Finset.sum_add_distrib,
         Int.cast_add, add_mul]
 
--- Reciprocal lattice
 theorem reciprocal_lattice_nonneg (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Unit cell volume proxy
 theorem unit_cell_pos
     (V : ℝ) (hV : 0 < V) : 0 < V := hV
 
@@ -38,7 +34,6 @@ theorem unit_cell_pos
 -- SECTION 2: BLOCH THEOREM
 -- ============================================================
 
--- Bloch wave: ψ_k(r) = u_k(r) exp(ik·r)
 noncomputable def bloch_norm
     (u_k : ℝ) (k r : ℝ) : ℝ :=
   u_k ^ 2
@@ -48,7 +43,6 @@ theorem bloch_norm_nonneg
     0 ≤ bloch_norm u_k k r :=
   sq_nonneg u_k
 
--- Crystal momentum conserved proxy
 theorem crystal_momentum_proxy
     (k : ℝ) : ∃ k' : ℝ, k' = k :=
   ⟨k, rfl⟩
@@ -57,7 +51,6 @@ theorem crystal_momentum_proxy
 -- SECTION 3: BAND THEORY
 -- ============================================================
 
--- Energy band: E_n(k)
 noncomputable def band_energy
     (n : ℕ) (k : ℝ)
     (epsilon : Fin n → ℝ → ℝ)
@@ -68,17 +61,14 @@ theorem band_gap_nonneg
     (E_c E_v : ℝ) (h : E_v ≤ E_c) :
     0 ≤ E_c - E_v := by linarith
 
--- Effective mass proxy
 theorem effective_mass_pos
     (m_eff : ℝ) (h : 0 < m_eff) :
     0 < m_eff := h
 
--- Fermi energy
 theorem fermi_energy_pos
     (E_F : ℝ) (h : 0 < E_F) :
     0 < E_F := h
 
--- Density of states nonneg
 theorem DOS_nonneg
     (g : ℝ) (h : 0 ≤ g) : 0 ≤ g := h
 
@@ -86,7 +76,6 @@ theorem DOS_nonneg
 -- SECTION 4: FERMI-DIRAC DISTRIBUTION
 -- ============================================================
 
--- Fermi-Dirac: f(E) = 1/(exp((E-μ)/kT) + 1)
 noncomputable def fermi_dirac
     (E mu k T : ℝ) (hT : 0 < T) : ℝ :=
   1 / (Real.exp ((E - mu) / (k * T)) + 1)
@@ -114,7 +103,6 @@ theorem fermi_dirac_lt_one
 -- SECTION 5: PHONONS
 -- ============================================================
 
--- Phonon dispersion: ω(k)
 noncomputable def phonon_dispersion
     (C M k : ℝ) (hM : 0 < M)
     (hC : 0 < C) : ℝ :=
@@ -127,16 +115,13 @@ theorem phonon_nonneg
     0 ≤ phonon_dispersion C M k hM hC := by
   unfold phonon_dispersion
   apply mul_nonneg
-  · apply mul_nonneg
-    · apply Real.sqrt_nonneg
-    · exact abs_nonneg _
+  · exact Real.sqrt_nonneg _
+  · exact abs_nonneg _
 
--- Debye temperature proxy
 theorem debye_temp_pos
     (T_D : ℝ) (h : 0 < T_D) :
     0 < T_D := h
 
--- Einstein model energy proxy
 noncomputable def einstein_energy
     (hbar omega n : ℝ) : ℝ :=
   hbar * omega * (n + 1/2)
@@ -145,18 +130,18 @@ theorem einstein_energy_pos
     (hbar omega : ℝ)
     (hh : 0 < hbar) (hw : 0 < omega) :
     0 < einstein_energy hbar omega 0 := by
-  unfold einstein_energy; linarith
+  unfold einstein_energy
+  positivity
 
 -- ============================================================
 -- SECTION 6: SUPERCONDUCTIVITY
 -- ============================================================
 
--- BCS gap equation proxy
 noncomputable def BCS_gap
     (Delta0 T T_c : ℝ)
     (hT_c : 0 < T_c) : ℝ :=
   Delta0 * Real.sqrt
-    (Real.max 0 (1 - T / T_c))
+    (max 0 (1 - T / T_c))
 
 theorem BCS_gap_nonneg
     (Delta0 T T_c : ℝ)
@@ -166,12 +151,10 @@ theorem BCS_gap_nonneg
   apply mul_nonneg hD
   exact Real.sqrt_nonneg _
 
--- London penetration depth proxy
 theorem london_depth_pos
     (lambda : ℝ) (h : 0 < lambda) :
     0 < lambda := h
 
--- Meissner effect proxy
 theorem meissner_proxy :
     True := trivial
 
@@ -179,7 +162,6 @@ theorem meissner_proxy :
 -- SECTION 7: MAGNETISM
 -- ============================================================
 
--- Curie law: χ = C/T
 noncomputable def curie_susceptibility
     (C T : ℝ) (hT : 0 < T) : ℝ :=
   C / T
@@ -189,12 +171,10 @@ theorem curie_nonneg
     0 ≤ curie_susceptibility C T hT :=
   div_nonneg hC (le_of_lt hT)
 
--- Exchange interaction proxy
 theorem exchange_proxy
     (J : ℝ) : ∃ E : ℝ, E = J :=
   ⟨J, rfl⟩
 
--- Spin wave dispersion proxy
 theorem magnon_nonneg
     (omega : ℝ) (h : 0 ≤ omega) :
     0 ≤ omega := h
@@ -203,22 +183,18 @@ theorem magnon_nonneg
 -- SECTION 8: TOPOLOGICAL PHASES
 -- ============================================================
 
--- Berry phase
 noncomputable def berry_phase
     (gamma : ℝ) : ℝ := gamma
 
--- Chern number (integer-valued)
 def chern_number (n : ℤ) : ℤ := n
 
 theorem chern_integer (n : ℤ) :
     ∃ k : ℤ, k = chern_number n :=
   ⟨n, rfl⟩
 
--- Topological insulator proxy
 theorem topo_insulator_proxy :
     True := trivial
 
--- Bulk-boundary correspondence proxy
 theorem bulk_boundary_proxy (n : ℤ) :
     ∃ edge_states : ℤ,
       edge_states = |n| :=
@@ -237,7 +213,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain Fermi-Dirac distribution
 noncomputable def domain_FD :=
   fermi_dirac 1 0 1 1 (by norm_num)
 
@@ -251,7 +226,6 @@ theorem domain_FD_lt_one :
   fermi_dirac_lt_one 1 0 1 1
     (by norm_num) (by norm_num)
 
--- Domain phonon nonneg
 noncomputable def domain_phonon :=
   phonon_dispersion 1 1 1
     (by norm_num) (by norm_num)
@@ -261,7 +235,6 @@ theorem domain_phonon_nonneg :
   phonon_nonneg 1 1 1
     (by norm_num) (by norm_num)
 
--- Domain BCS gap
 noncomputable def domain_BCS :=
   BCS_gap 1 0 1 (by norm_num)
 
@@ -270,7 +243,6 @@ theorem domain_BCS_nonneg :
   BCS_gap_nonneg 1 0 1
     (by norm_num) (by norm_num)
 
--- Domain Curie susceptibility
 noncomputable def domain_curie :=
   curie_susceptibility 21 1 (by norm_num)
 
@@ -279,7 +251,6 @@ theorem domain_curie_nonneg :
   curie_nonneg 21 1
     (by norm_num) (by norm_num)
 
--- Domain Chern number
 theorem domain_chern :
     ∃ k : ℤ, k = chern_number 21 :=
   chern_integer 21
@@ -301,23 +272,23 @@ structure CondensedMatterLock where
   band_gap_nn    : ∀ (E_c E_v : ℝ),
                      E_v ≤ E_c →
                      0 ≤ E_c - E_v
-  FD_pos         : ∀ (E mu k T : ℝ),
-                     0 < T → 0 < k →
-                     0 < fermi_dirac E mu k T ‹_›
-  FD_lt1         : ∀ (E mu k T : ℝ),
-                     0 < T → 0 < k →
-                     fermi_dirac E mu k T ‹_› < 1
-  phonon_nn      : ∀ (C M k : ℝ),
-                     0 < M → 0 < C →
+  FD_pos         : ∀ (E mu k T : ℝ)
+                     (hT : 0 < T) (hk : 0 < k),
+                     0 < fermi_dirac E mu k T hT
+  FD_lt1         : ∀ (E mu k T : ℝ)
+                     (hT : 0 < T) (hk : 0 < k),
+                     fermi_dirac E mu k T hT < 1
+  phonon_nn      : ∀ (C M k : ℝ)
+                     (hM : 0 < M) (hC : 0 < C),
                      0 ≤ phonon_dispersion
-                       C M k ‹_› ‹_›
-  BCS_nn         : ∀ (D0 T T_c : ℝ),
-                     0 ≤ D0 → 0 < T_c →
-                     0 ≤ BCS_gap D0 T T_c ‹_›
-  curie_nn       : ∀ (C T : ℝ),
-                     0 ≤ C → 0 < T →
+                       C M k hM hC
+  BCS_nn         : ∀ (D0 T T_c : ℝ)
+                     (hD : 0 ≤ D0) (hT_c : 0 < T_c),
+                     0 ≤ BCS_gap D0 T T_c hT_c
+  curie_nn       : ∀ (C T : ℝ)
+                     (hC : 0 ≤ C) (hT : 0 < T),
                      0 ≤ curie_susceptibility
-                       C T ‹_›
+                       C T hT
   chern_int      : ∀ n : ℤ,
                      ∃ k : ℤ,
                        k = chern_number n
