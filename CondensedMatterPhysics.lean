@@ -21,8 +21,7 @@ theorem lattice_vector_linear (n : ℕ)
     lattice_vector n a m1 +
     lattice_vector n a m2 := by
   unfold lattice_vector
-  simp [Finset.sum_add_distrib,
-        Int.cast_add, add_mul]
+  simp [Finset.sum_add_distrib, Int.cast_add, add_mul]
 
 theorem reciprocal_lattice_nonneg (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
@@ -86,18 +85,15 @@ theorem fermi_dirac_pos
     0 < fermi_dirac E mu k T hT := by
   unfold fermi_dirac
   apply div_pos one_pos
-  linarith [Real.exp_pos
-    ((E - mu) / (k * T))]
+  linarith [Real.exp_pos ((E - mu) / (k * T))]
 
 theorem fermi_dirac_lt_one
     (E mu k T : ℝ) (hT : 0 < T)
     (hk : 0 < k) :
     fermi_dirac E mu k T hT < 1 := by
   unfold fermi_dirac
-  rw [div_lt_one (by linarith
-    [Real.exp_pos ((E - mu) / (k * T))])]
-  linarith [Real.exp_pos
-    ((E - mu) / (k * T))]
+  rw [div_lt_one (by linarith [Real.exp_pos ((E - mu) / (k * T))])]
+  linarith [Real.exp_pos ((E - mu) / (k * T))]
 
 -- ============================================================
 -- SECTION 5: PHONONS
@@ -140,8 +136,7 @@ theorem einstein_energy_pos
 noncomputable def BCS_gap
     (Delta0 T T_c : ℝ)
     (hT_c : 0 < T_c) : ℝ :=
-  Delta0 * Real.sqrt
-    (max 0 (1 - T / T_c))
+  Delta0 * Real.sqrt (max 0 (1 - T / T_c))
 
 theorem BCS_gap_nonneg
     (Delta0 T T_c : ℝ)
@@ -218,38 +213,32 @@ noncomputable def domain_FD :=
 
 theorem domain_FD_pos :
     0 < domain_FD :=
-  fermi_dirac_pos 1 0 1 1
-    (by norm_num) (by norm_num)
+  fermi_dirac_pos 1 0 1 1 (by norm_num) (by norm_num)
 
 theorem domain_FD_lt_one :
     domain_FD < 1 :=
-  fermi_dirac_lt_one 1 0 1 1
-    (by norm_num) (by norm_num)
+  fermi_dirac_lt_one 1 0 1 1 (by norm_num) (by norm_num)
 
 noncomputable def domain_phonon :=
-  phonon_dispersion 1 1 1
-    (by norm_num) (by norm_num)
+  phonon_dispersion 1 1 1 (by norm_num) (by norm_num)
 
 theorem domain_phonon_nonneg :
     0 ≤ domain_phonon :=
-  phonon_nonneg 1 1 1
-    (by norm_num) (by norm_num)
+  phonon_nonneg 1 1 1 (by norm_num) (by norm_num)
 
 noncomputable def domain_BCS :=
   BCS_gap 1 0 1 (by norm_num)
 
 theorem domain_BCS_nonneg :
     0 ≤ domain_BCS :=
-  BCS_gap_nonneg 1 0 1
-    (by norm_num) (by norm_num)
+  BCS_gap_nonneg 1 0 1 (by norm_num) (by norm_num)
 
 noncomputable def domain_curie :=
   curie_susceptibility 21 1 (by norm_num)
 
 theorem domain_curie_nonneg :
     0 ≤ domain_curie :=
-  curie_nonneg 21 1
-    (by norm_num) (by norm_num)
+  curie_nonneg 21 1 (by norm_num) (by norm_num)
 
 theorem domain_chern :
     ∃ k : ℤ, k = chern_number 21 :=
@@ -280,15 +269,13 @@ structure CondensedMatterLock where
                      fermi_dirac E mu k T hT < 1
   phonon_nn      : ∀ (C M k : ℝ)
                      (hM : 0 < M) (hC : 0 < C),
-                     0 ≤ phonon_dispersion
-                       C M k hM hC
+                     0 ≤ phonon_dispersion C M k hM hC
   BCS_nn         : ∀ (D0 T T_c : ℝ)
                      (hD : 0 ≤ D0) (hT_c : 0 < T_c),
                      0 ≤ BCS_gap D0 T T_c hT_c
   curie_nn       : ∀ (C T : ℝ)
                      (hC : 0 ≤ C) (hT : 0 < T),
-                     0 ≤ curie_susceptibility
-                       C T hT
+                     0 ≤ curie_susceptibility C T hT
   chern_int      : ∀ n : ℤ,
                      ∃ k : ℤ,
                        k = chern_number n
