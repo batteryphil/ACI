@@ -83,15 +83,13 @@ theorem QL_derivative_neg_stable
   nlinarith [mul_pos hP hxsq]
 
 theorem exponential_stability
-    (P A x0 : ℝ) (hP : 0 < P) (hA : A < 0) :
+    (P A x0 : ℝ) (hP : 0 < P) (hA : A < 0) (hx0 : x0 ≠ 0) :
     ∀ t : ℝ, 0 ≤ t →
       0 < quadratic_lyapunov P
         (x0 * Real.exp (A * t)) := by
   intro t ht
-  by_cases hx : x0 = 0
-  · simp [hx, quadratic_lyapunov]; positivity
-  · apply quadratic_lyapunov_pos P _ hP
-    exact mul_ne_zero hx (Real.exp_pos _).ne'
+  apply quadratic_lyapunov_pos P _ hP
+  exact mul_ne_zero hx0 (Real.exp_pos _).ne'
 
 structure PIDGains where
   Kp : ℝ
@@ -189,7 +187,7 @@ theorem gain_decreases_with_frequency
   have hsq : omega1 ^ 2 < omega2 ^ 2 := by
     nlinarith [sq_abs omega1, sq_abs omega2, h, abs_nonneg omega1]
   apply Real.sqrt_lt_sqrt (by positivity)
-  rw [div_lt_div_iff hden2 hden1]
+  rw [div_lt_div_iff₀ hden2 hden1]
   nlinarith [hnum]
 
 noncomputable def closed_loop_A
