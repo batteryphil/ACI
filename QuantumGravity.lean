@@ -11,7 +11,7 @@ structure ADMDecomposition where
   lapse_pos : ∀ t, 0 < lapse t
   metric_symm : ∀ t i j,
     metric3 t i j = metric3 t j i
-  metric_pos  : ∀ t v : Fin 3 → ℝ,
+  metric_pos  : ∀ (t : ℝ) (v : Fin 3 → ℝ),
     0 ≤ univ.sum (fun i => univ.sum (fun j =>
       metric3 t i j * v i * v j))
 
@@ -45,12 +45,15 @@ noncomputable def dewitt_metric
 
 theorem dewitt_metric_symm
     (gamma : Fin 3 → Fin 3 → ℝ)
+    (hsym : ∀ a b : Fin 3, gamma a b = gamma b a)
     (i j k l : Fin 3) :
     dewitt_metric gamma i j k l =
     dewitt_metric gamma k l i j := by
-  unfold dewitt_metric; ring
+  unfold dewitt_metric
+  rw [hsym i k, hsym j l, hsym i l, hsym j k]
+  ring
 
-def universe_wavefunction (metric_space : ℝ) : ℝ :=
+noncomputable def universe_wavefunction (metric_space : ℝ) : ℝ :=
   Real.exp (-metric_space)
 
 theorem wavefunction_pos (x : ℝ) :
@@ -213,7 +216,6 @@ theorem hawking_temp_decreases
       hM1 hG hh hc hk := by
   unfold hawking_temperature
   gcongr
-  positivity
 
 noncomputable def BH_entropy
     (A l_P : ℝ) (hlP : 0 < l_P) : ℝ :=
@@ -374,9 +376,9 @@ theorem GUP_ge_HUP
     hbar / 2 ≤
     GUP_bound hbar beta Delta_p m_P c hh hm hc := by
   unfold GUP_bound
-  nlinarith [sq_nonneg Delta_p,
-             mul_nonneg hb (sq_nonneg Delta_p),
-             mul_pos (pow_pos hm 2) (pow_pos hc 2)]
+  have hkey : 0 ≤ hbar / 2 * (beta * Delta_p ^ 2 / (m_P ^ 2 * c ^ 2)) := by
+    positivity
+  nlinarith [hkey]
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
