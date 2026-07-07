@@ -26,7 +26,6 @@ CategoryTheoryAdvanced
 TopologyAdvanced
 ProbabilityTheory
 HarmonicAnalysis
-NumericalAnalysis
 PartialDifferentialEquations
 InformationTheoryAdvanced
 OperatorTheory

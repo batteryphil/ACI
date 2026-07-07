@@ -25,6 +25,7 @@ MoruzinLaw
 N7Spine
 NoncommutativeGeometry
 NumberTheoryCore
+NumericalAnalysis
 OptimalControl
 OptimalTransport
 Optimus7
