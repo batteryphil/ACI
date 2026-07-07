@@ -100,11 +100,11 @@ theorem rotational_energy_nonneg
     (hI : 0 < I) (hh : 0 < hbar) :
     0 ≤ rotational_energy hbar I J hI hh := by
   unfold rotational_energy
+  have hJ : (0:ℝ) ≤ (J:ℝ) := Nat.cast_nonneg J
+  have hJ1 : (0:ℝ) ≤ (J:ℝ) + 1 := by linarith
   apply div_nonneg _ (by linarith)
-  apply mul_nonneg
-  · exact mul_nonneg (sq_nonneg _)
-      (Nat.cast_nonneg J)
-  · exact Nat.cast_nonneg (J + 1)
+  have hsq : (0:ℝ) ≤ hbar ^ 2 := sq_nonneg _
+  exact mul_nonneg (mul_nonneg hsq hJ) hJ1
 
 noncomputable def vibrational_energy
     (hbar omega : ℝ) (v : ℕ) : ℝ :=
@@ -250,41 +250,35 @@ theorem domain_sigma_nonneg :
   cross_section_nonneg 1 (by norm_num)
 
 structure AtomicMolecularLock where
-  bohr_pos       : ∀ (hbar me e k : ℝ),
-                     0 < me → 0 < e →
-                     0 < k → 0 < hbar →
-                     0 < bohr_radius
-                       hbar me e k ‹_› ‹_› ‹_› ‹_›
-  H_energy_neg   : ∀ (n : ℕ), 0 < n →
-                     hydrogen_energy (-13.6) n ‹_›
-                     < 0
-  orbital_pos    : ∀ n : ℕ, 0 < n →
-                     0 < orbital_degeneracy n
-  morse_nn       : ∀ (D a r r0 : ℝ), 0 ≤ D →
-                     0 ≤ morse_potential D a r r0 ‹_›
-  rot_nn         : ∀ (hbar I : ℝ) (J : ℕ),
-                     0 < I → 0 < hbar →
-                     0 ≤ rotational_energy
-                       hbar I J ‹_› ‹_›
+  bohr_pos       : ∀ (hbar me e k : ℝ)
+                     (hme : 0 < me) (he : 0 < e)
+                     (hk : 0 < k) (hh : 0 < hbar),
+                     0 < bohr_radius hbar me e k hme he hk hh
+  H_energy_neg   : ∀ (n : ℕ) (hn : 0 < n),
+                     hydrogen_energy (-13.6) n hn < 0
+  orbital_pos    : ∀ (n : ℕ), 0 < n → 0 < orbital_degeneracy n
+  morse_nn       : ∀ (D a r r0 : ℝ) (hD : 0 ≤ D),
+                     0 ≤ morse_potential D a r r0 hD
+  rot_nn         : ∀ (hbar I : ℝ) (J : ℕ)
+                     (hI : 0 < I) (hh : 0 < hbar),
+                     0 ≤ rotational_energy hbar I J hI hh
   vib_pos        : ∀ (hbar omega : ℝ) (v : ℕ),
                      0 < hbar → 0 < omega →
-                     0 < vibrational_energy
-                       hbar omega v
+                     0 < vibrational_energy hbar omega v
   BL_pos         : ∀ (I0 alpha l : ℝ), 0 < I0 →
                      0 < beer_lambert I0 alpha l
   BL_le          : ∀ (I0 alpha l : ℝ),
                      0 ≤ I0 → 0 ≤ alpha → 0 ≤ l →
                      beer_lambert I0 alpha l ≤ I0
-  sigma_nn       : ∀ (r : ℝ), 0 ≤ r →
-                     0 ≤ geometric_cross_section r ‹_›
-  mfp_pos        : ∀ (n sigma : ℝ),
-                     0 < n → 0 < sigma →
-                     0 < mean_free_path n sigma ‹_› ‹_›
-  therm_pos      : ∀ (h m k T : ℝ),
-                     0 < m → 0 < k →
-                     0 < T → 0 < h →
-                     0 < thermal_wavelength
-                       h m k T ‹_› ‹_› ‹_› ‹_›
+  sigma_nn       : ∀ (r : ℝ) (hr : 0 ≤ r),
+                     0 ≤ geometric_cross_section r hr
+  mfp_pos        : ∀ (n sigma : ℝ)
+                     (hn : 0 < n) (hs : 0 < sigma),
+                     0 < mean_free_path n sigma hn hs
+  therm_pos      : ∀ (h m k T : ℝ)
+                     (hm : 0 < m) (hk : 0 < k)
+                     (hT : 0 < T) (hh : 0 < h),
+                     0 < thermal_wavelength h m k T hm hk hT hh
   dom_bohr_pos   : 0 < domain_bohr
   dom_orb_pos    : 0 < orbital_degeneracy 21
   dom_morse_nn   : 0 ≤ domain_morse
