@@ -14,16 +14,15 @@ def run_tier5_apex_phase5_stress_matrix():
     try:
         from VerifyBridge import VerifyBridge
         from lean_bounds import LeanBounds
-        import PrimeRuntimeV4 as engine_mod
-        
+        import PrimeRuntimeV4_backup as engine_mod
+
         bridge = VerifyBridge()
+        results_data = bridge.read_lean_result()
         print(f"[INIT] Apex Matrix Connected. Synced with Formal Theorem Registry.")
-        print(f"[INIT] Ingested Token Weight: {bridge.rt.lean_token_weight} Lean Specifications.")
     except ImportError as e:
         print(f" -> Architecture Connection Error: {e}")
         sys.exit(1)
 
-    # Configure spatial initial coordinates across all 21 domains
     for idx, node in enumerate(bridge.rt.nodes):
         node.state.x = np.array([float(idx * 0.15), float(-idx * 0.08), 2.5], dtype=float)
         node.state.p = np.array([1.2, -0.5, float(idx * 0.04)], dtype=float)
@@ -31,16 +30,15 @@ def run_tier5_apex_phase5_stress_matrix():
 
     dt = 0.02
     simulation_telemetry = []
+    node_count = len(bridge.rt.nodes)
 
     print("\n[PHASE 5 EXEC] Stepping Through 1500 Cycles under Unified Stress Vectors...")
     for step in range(1, 1501):
-        
-        # Stress Vector 1: Stochastic White Noise Injection into Resonance Nodes
+
         if step >= 100 and step <= 400:
             for n in bridge.rt.nodes:
                 n.noise_level = 0.85
 
-        # Stress Vector 2: Adversarial Policy Network Targeted Disruption Attack
         if step == 600:
             print("\n[!!!] ADVERSARIAL EVENT: Policy Loop targeting weakest Node...")
             margins = [float(n.state.local_margin) for n in bridge.rt.nodes]
@@ -49,20 +47,17 @@ def run_tier5_apex_phase5_stress_matrix():
             adv_node.state.x = np.full(3, 1200.0, dtype=float)
             adv_node.state.f = np.full(3, 2500.0, dtype=float)
 
-        # Stress Vector 3: Lawson Plasma Triple Product Transport Overload
         if step == 1100:
             print("\n[!!!] LAWSON OVERLOAD: Spiking Plasma Confinement Fields...")
             for n in bridge.rt.nodes:
                 n.state.fusion_density = 5e21
                 n.state.fusion_temp = 15.0
                 n.state.fusion_confinement = 2.0
-                # Evaluate saturation satisfied flag via code physics rules
-                satisfied = engine_mod.lawson_satisfied(n.state.fusion_density, n.state.fusion_temp, n.state.fusion_confinement)
+                satisfied = engine_mod.lawson_satisfied(
+                    n.state.fusion_density, n.state.fusion_temp, n.state.fusion_confinement)
                 if satisfied:
-                    # Drive plasma degradation compression into localized node space
                     n.state.local_margin *= 0.01
 
-        # Mitigation Engine Architecture 
         margin_values = [float(n.state.local_margin) for n in bridge.rt.nodes]
         status_str, bottleneck_idx = engine_mod.n7_gate_decision(margin_values, floor=0.05)
 
@@ -73,7 +68,7 @@ def run_tier5_apex_phase5_stress_matrix():
                     if isolated_node in neighbor.links:
                         neighbor.links.remove(isolated_node)
                 isolated_node.links = []
-            
+
             damping_ratio = 0.85
             isolated_node.state.x *= (1.0 - damping_ratio)
             isolated_node.state.u *= (1.0 - damping_ratio)
@@ -86,24 +81,24 @@ def run_tier5_apex_phase5_stress_matrix():
                 isolated_node.state.f = np.zeros(3)
                 isolated_node.state.p = np.zeros(3)
 
-        # Automated Re-stitching Protocol
-        for idx in range(bridge.rt.node_count):
+        for idx in range(node_count):
             n = bridge.rt.nodes[idx]
             if len(n.links) == 0 and float(np.linalg.norm(n.state.x)) == 0.0:
-                prev_idx = (idx - 1) % bridge.rt.node_count
-                next_idx = (idx + 1) % bridge.rt.node_count
+                prev_idx = (idx - 1) % node_count
+                next_idx = (idx + 1) % node_count
                 prev_node = bridge.rt.nodes[prev_idx]
                 next_node = bridge.rt.nodes[next_idx]
-                if n not in prev_node.links: prev_node.links.append(n)
-                if n not in next_node.links: next_node.links.append(n)
+                if n not in prev_node.links:
+                    prev_node.links.append(n)
+                if n not in next_node.links:
+                    next_node.links.append(n)
                 n.links = [prev_node, next_node]
 
-        # Execute physical state stepping via verification bridge loop layer
         step_res = bridge.verified_step(dt)
         current_margin = float(step_res.get('margin', 0.0))
-        
-        if (step == 1 or step == 100 or step == 400 or step == 600 or 
-            step == 601 or step == 1100 or step == 1101 or step == 1500):
+
+        if (step == 1 or step == 100 or step == 400 or step == 600 or
+                step == 601 or step == 1100 or step == 1101 or step == 1500):
             print(f"  -> Cycle {step:04d}/1500 | Core System Margin Calculation: {current_margin:.6f} | STATUS: {step_res['status']}")
 
         step_metrics = {
@@ -150,4 +145,3 @@ def run_tier5_apex_phase5_stress_matrix():
 
 if __name__ == "__main__":
     run_tier5_apex_phase5_stress_matrix()
-
