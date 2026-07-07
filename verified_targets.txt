@@ -33,6 +33,7 @@ Optimus7Quantum
 PhysicsCore
 PrimeMasterEngine
 QuantumCore
+QuantumErrorCorrection
 QuantumFieldTheory
 QuantumInformation
 SetTheory
