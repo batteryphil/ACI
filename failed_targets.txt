@@ -2,7 +2,6 @@ MyProject
 RenormalizationGroup
 ConformalFieldTheory
 WaveletAnalysis
-QuantumInformation
 CompressedSensing
 GameTheory
 QuantumErrorCorrection
