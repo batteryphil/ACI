@@ -1,4 +1,3 @@
--- TopologyAdvanced.lean
 import Mathlib
 
 namespace TopologyAdvanced
@@ -34,7 +33,6 @@ theorem topology_inter (X : Type*)
     U ∩ V ∈ τ.opens :=
   τ.inter_in U V hU hV
 
--- Discrete topology
 def discrete_topology (X : Type*) :
     Topology X where
   opens    := Set.univ
@@ -43,7 +41,6 @@ def discrete_topology (X : Type*) :
   union_in := fun _ _ => Set.mem_univ _
   inter_in := fun _ _ _ _ => Set.mem_univ _
 
--- Indiscrete topology
 def indiscrete_topology (X : Type*) :
     Topology X where
   opens    := {∅, Set.univ}
@@ -126,10 +123,9 @@ theorem empty_compact (X : Type*)
 theorem finite_compact (X : Type*)
     (τ : Topology X)
     (K : Finset X)
-    (hK : ∀ x ∈ K, x ∈ Set.univ) :
+    (_hK : ∀ x ∈ K, x ∈ Set.univ) :
     True := trivial
 
--- Heine-Borel proxy
 theorem heine_borel_proxy
     (a b : ℝ) (h : a ≤ b) :
     ∃ K : Set ℝ, K = Set.Icc a b := ⟨_, rfl⟩
@@ -156,7 +152,6 @@ theorem indiscrete_connected (X : Type*)
     · right; rfl
     · simp at hUVi
 
--- Path connectedness proxy
 def is_path_connected
     (X : Type*) (τ : Topology X)
     (S : Set X) : Prop :=
@@ -188,7 +183,6 @@ theorem metric_triangle (X : Type*)
     M.d x z ≤ M.d x y + M.d y z :=
   M.d_tri x y z
 
--- Cauchy sequence proxy
 def is_cauchy (X : Type*)
     (M : MetricSpace X)
     (seq : ℕ → X) : Prop :=
@@ -196,7 +190,6 @@ def is_cauchy (X : Type*)
     N ≤ m → N ≤ n →
     M.d (seq m) (seq n) < ε
 
--- Complete metric space proxy
 def is_complete (X : Type*)
     (M : MetricSpace X) : Prop :=
   ∀ seq : ℕ → X,
@@ -209,7 +202,6 @@ def is_complete (X : Type*)
 -- SECTION 6: HOMOTOPY THEORY
 -- ============================================================
 
--- Homotopy between maps
 def is_homotopic (X Y : Type*)
     (f g : X → Y) : Prop :=
   ∃ H : X → ℝ → Y,
@@ -230,7 +222,6 @@ theorem homotopy_sym (X Y : Type*)
     fun x => by simp [h1 x],
     fun x => by simp [h0 x]⟩
 
--- Fundamental group proxy
 def pi1_trivial (X : Type*) : Prop :=
   ∀ f g : ℝ → X,
     f 0 = g 0 → f 1 = g 1 →
@@ -244,7 +235,6 @@ theorem pi1_trivial_holds (X : Type*) :
 -- SECTION 7: FIBER BUNDLES
 -- ============================================================
 
--- Fiber bundle proxy
 structure FiberBundle where
   total : Type*
   base  : Type*
@@ -257,7 +247,6 @@ theorem bundle_proj_defined
     ∃ b : B.base, B.proj e = b :=
   ⟨B.proj e, rfl⟩
 
--- Trivial bundle
 def trivial_bundle (B F : Type*) :
     FiberBundle where
   total := B × F
@@ -265,7 +254,6 @@ def trivial_bundle (B F : Type*) :
   fiber := F
   proj  := Prod.fst
 
--- Vector bundle rank proxy
 def bundle_rank (n : ℕ) : ℕ := n
 
 theorem bundle_rank_pos (n : ℕ)
@@ -276,7 +264,6 @@ theorem bundle_rank_pos (n : ℕ)
 -- SECTION 8: COVERING SPACES
 -- ============================================================
 
--- Covering map proxy
 def is_covering_map (X Y : Type*)
     (p : Y → X) : Prop :=
   ∀ x : X, ∃ U : Set X,
@@ -291,7 +278,6 @@ theorem covering_sheets_pos
   let ⟨_, _, sheets, hs⟩ := h x
   ⟨sheets, hs⟩
 
--- Universal cover proxy
 def universal_cover_exists
     (X : Type*) : Prop :=
   ∃ Y : Type*, ∃ p : Y → X, True
@@ -313,7 +299,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain topology: discrete
 def domain_topology :
     Topology Domain21 :=
   discrete_topology Domain21
@@ -322,35 +307,52 @@ theorem domain_opens_univ :
     Set.univ ∈ domain_topology.opens :=
   domain_topology.univ_in
 
--- Domain metric space
+def domain_rank : Domain21 → ℕ
+  | .A_Energy => 0
+  | .B_Control => 1
+  | .C_Thermal => 2
+  | .D_Structural => 3
+  | .E_Boundary => 4
+  | .F_Diagnostics => 5
+  | .G_Governance => 6
+  | .H_Harmonic => 7
+  | .I_Information => 8
+  | .J_Joining => 9
+  | .K_Kernel => 10
+  | .L_Localization => 11
+  | .M_Morphogenic => 12
+  | .N_Node => 13
+  | .O_Operator => 14
+  | .P_Propagation => 15
+  | .Q_Quality => 16
+  | .R_Resonance => 17
+  | .S_State => 18
+  | .T_Temporal => 19
+  | .U_Unification => 20
+
 def domain_metric :
     MetricSpace Domain21 where
   d       := fun d1 d2 =>
-    |((d1.toCtorIdx : ℤ) -
-      (d2.toCtorIdx : ℤ))| : ℝ
-  d_nn    := fun _ _ => by positivity
+    |(domain_rank d1 : ℝ) - (domain_rank d2 : ℝ)|
+  d_nn    := fun _ _ => abs_nonneg _
   d_zero  := fun d => by simp
   d_sym   := fun d1 d2 => by
-    simp [abs_sub_comm]
-  d_tri   := fun d1 d2 d3 => by
-    simp
-    exact abs_sub_abs_le_abs_sub _ _
-      |>.trans (by linarith
-        [abs_nonneg
-          ((d1.toCtorIdx : ℤ) -
-           (d3.toCtorIdx : ℤ))])
+    rw [abs_sub_comm]
+  d_tri   := fun d1 d2 d3 =>
+    abs_sub_le
+      (domain_rank d1 : ℝ)
+      (domain_rank d2 : ℝ)
+      (domain_rank d3 : ℝ)
 
 theorem domain_metric_nn (d1 d2 : Domain21) :
     0 ≤ domain_metric.d d1 d2 :=
   domain_metric.d_nn d1 d2
 
--- Domain homotopy reflexivity
 theorem domain_homotopy_refl
     (f : Domain21 → Domain21) :
     is_homotopic Domain21 Domain21 f f :=
   homotopy_refl Domain21 Domain21 f
 
--- Domain bundle
 def domain_bundle : FiberBundle where
   total := Domain21 × ℕ
   base  := Domain21
@@ -363,7 +365,6 @@ theorem domain_bundle_proj
       domain_bundle.proj e = b :=
   bundle_proj_defined domain_bundle e
 
--- Domain covering
 theorem domain_covering :
     is_covering_map Domain21 Domain21 id := by
   intro x
