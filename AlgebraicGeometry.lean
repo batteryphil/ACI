@@ -162,8 +162,9 @@ theorem riemann_roch_proxy
 -- ============================================================
 
 structure EllipticCurve where
-  a b    : ℝ
-  disc   : 4 * a^3 + 27 * b^2 ≠ 0
+  a    : ℝ
+  b    : ℝ
+  disc : 4 * a^3 + 27 * b^2 ≠ 0
 
 def on_curve (E : EllipticCurve)
     (x y : ℝ) : Prop :=
