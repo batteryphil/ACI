@@ -395,7 +395,10 @@ theorem domain_KL_nonneg
     have e : dm1.probs d * (Real.log (dm2.probs d) - Real.log (dm1.probs d)) ≤
              dm1.probs d * (dm2.probs d / dm1.probs d - 1) :=
       mul_le_mul_of_nonneg_left hineq hp.le
-    rw [← Real.log_div hp.ne' hq.ne']
+    have hlogeq : Real.log (dm1.probs d / dm2.probs d) =
+        Real.log (dm1.probs d) - Real.log (dm2.probs d) :=
+      Real.log_div hp.ne' hq.ne'
+    rw [hlogeq]
     nlinarith [e, hcancel]
   calc (0 : ℝ)
       = Finset.univ.sum (fun d =>
