@@ -1,4 +1,3 @@
--- AlgebraicGeometry.lean
 import Mathlib
 
 namespace AlgebraicGeometry
@@ -9,7 +8,6 @@ open Finset Polynomial
 -- SECTION 1: AFFINE VARIETIES
 -- ============================================================
 
--- Affine variety: zero set of polynomials
 def AffineVariety (n : ℕ) :=
   Finset (Fin n → ℝ)
 
@@ -40,7 +38,6 @@ theorem vanishes_mul_left
 -- SECTION 2: IDEALS AND NULLSTELLENSATZ
 -- ============================================================
 
--- Ideal membership proxy
 def in_ideal (p : Polynomial ℝ)
     (generators : Finset (Polynomial ℝ)) :
     Prop :=
@@ -53,19 +50,16 @@ theorem zero_in_ideal
     in_ideal 0 generators :=
   ⟨fun _ => 0, by simp⟩
 
--- Hilbert basis theorem proxy
 theorem hilbert_basis_nonneg
     (n : ℕ) : 0 ≤ n :=
   Nat.zero_le n
 
--- Weak Nullstellensatz proxy
 theorem nullstellensatz_proxy
     (p : Polynomial ℝ)
     (h : ∀ x : ℝ, p.eval x = 0) :
     p.natDegree ≥ 0 :=
   Nat.zero_le _
 
--- Radical ideal proxy
 def is_radical_ideal
     (I : Polynomial ℝ → Prop)
     (hI : I 0) : Prop :=
@@ -75,14 +69,12 @@ def is_radical_ideal
 -- SECTION 3: PROJECTIVE VARIETIES
 -- ============================================================
 
--- Projective space P^n has dimension n
 def projective_dim (n : ℕ) : ℕ := n
 
 theorem projective_dim_nonneg (n : ℕ) :
     0 ≤ projective_dim n :=
   Nat.zero_le n
 
--- Homogeneous polynomial
 def is_homogeneous (p : Polynomial ℝ)
     (d : ℕ) : Prop :=
   p.natDegree = d
@@ -92,14 +84,12 @@ theorem homogeneous_zero :
   unfold is_homogeneous
   simp
 
--- Degree of projective variety
 def variety_degree (d n : ℕ) : ℕ := d
 
 theorem variety_degree_pos
     (d n : ℕ) (hd : 0 < d) :
     0 < variety_degree d n := hd
 
--- Bezout's theorem proxy
 theorem bezout_proxy
     (d1 d2 : ℕ) :
     d1 * d2 = d2 * d1 :=
@@ -109,7 +99,6 @@ theorem bezout_proxy
 -- SECTION 4: SHEAVES AND SCHEMES
 -- ============================================================
 
--- Sheaf of regular functions proxy
 structure RegularSheaf (n : ℕ) where
   sections : Finset ℕ → Polynomial ℝ
   restrict : ∀ U V : Finset ℕ,
@@ -118,18 +107,15 @@ structure RegularSheaf (n : ℕ) where
     (sections V).eval 0 ∨
     True
 
--- Structure sheaf sections nonneg
 theorem sheaf_eval_nonneg
     (n : ℕ) (sh : RegularSheaf n)
     (U : Finset ℕ)
     (hcoeff : ∀ k, 0 ≤
       (sh.sections U).coeff k) :
     0 ≤ (sh.sections U).eval 0 := by
-  simp [Polynomial.eval_eq_sum]
-  apply Finset.sum_nonneg; intro k _
-  exact mul_nonneg (hcoeff k) (by positivity)
+  rw [← Polynomial.coeff_zero_eq_eval_zero]
+  exact hcoeff 0
 
--- Scheme morphism proxy
 def scheme_morphism_nonneg
     (dim : ℕ) : Prop :=
   0 ≤ dim
@@ -142,7 +128,6 @@ theorem morphism_dim_nonneg (dim : ℕ) :
 -- SECTION 5: DIVISORS AND LINE BUNDLES
 -- ============================================================
 
--- Divisor: formal sum of subvarieties
 structure Divisor (n : ℕ) where
   coeffs : Fin n → ℤ
 
@@ -159,7 +144,6 @@ theorem divisor_degree_add (n : ℕ)
   unfold divisor_degree
   simp [Finset.sum_add_distrib]
 
--- Effective divisor: all coefficients nonneg
 def is_effective (n : ℕ)
     (D : Divisor n) : Prop :=
   ∀ i, 0 ≤ D.coeffs i
@@ -168,7 +152,6 @@ theorem zero_divisor_effective (n : ℕ) :
     is_effective n ⟨fun _ => 0⟩ := by
   intro i; simp
 
--- Riemann-Roch theorem proxy
 theorem riemann_roch_proxy
     (genus deg : ℤ) :
     deg - genus + 1 ≤
@@ -178,28 +161,23 @@ theorem riemann_roch_proxy
 -- SECTION 6: ELLIPTIC CURVES
 -- ============================================================
 
--- Weierstrass form: y² = x³ + ax + b
 structure EllipticCurve where
   a b    : ℝ
   disc   : 4 * a^3 + 27 * b^2 ≠ 0
 
--- Point on curve
 def on_curve (E : EllipticCurve)
     (x y : ℝ) : Prop :=
   y^2 = x^3 + E.a * x + E.b
 
--- Discriminant nonzero
 theorem disc_nonzero (E : EllipticCurve) :
     4 * E.a^3 + 27 * E.b^2 ≠ 0 :=
   E.disc
 
--- j-invariant
 noncomputable def j_invariant
     (E : EllipticCurve) : ℝ :=
   1728 * (4 * E.a^3) /
     (4 * E.a^3 + 27 * E.b^2)
 
--- Group law: identity element
 def ec_identity : Option (ℝ × ℝ) :=
   none
 
@@ -210,7 +188,6 @@ theorem ec_identity_is_none :
 -- SECTION 7: COHOMOLOGY
 -- ============================================================
 
--- De Rham cohomology proxy
 noncomputable def deRham_H
     (n k : ℕ) : ℕ :=
   if k = 0 then 1
@@ -221,7 +198,6 @@ theorem deRham_H0_is_one (n : ℕ) :
     deRham_H n 0 = 1 := by
   unfold deRham_H; simp
 
--- Hodge numbers proxy
 def hodge_number (p q : ℕ) : ℕ :=
   if p = q then 1 else 0
 
@@ -229,7 +205,6 @@ theorem hodge_diag_one (p : ℕ) :
     hodge_number p p = 1 := by
   unfold hodge_number; simp
 
--- Euler characteristic via cohomology
 def euler_char_cohom
     (betti : Fin 5 → ℕ) : ℤ :=
   (Finset.univ.sum fun i : Fin 5 =>
@@ -241,7 +216,6 @@ def euler_char_cohom
 -- SECTION 8: MODULI SPACES
 -- ============================================================
 
--- Moduli space dimension proxy
 def moduli_dim (genus : ℕ)
     (hg : 2 ≤ genus) : ℕ :=
   3 * genus - 3
@@ -251,14 +225,12 @@ theorem moduli_dim_pos
     0 < moduli_dim genus hg := by
   unfold moduli_dim; omega
 
--- Moduli of elliptic curves: dim 1
 def EC_moduli_dim : ℕ := 1
 
 theorem EC_moduli_pos :
     0 < EC_moduli_dim := by
   unfold EC_moduli_dim; norm_num
 
--- Gromov-Witten invariant proxy
 theorem GW_nonneg (n : ℕ) :
     0 ≤ (n : ℤ) :=
   Int.ofNat_nonneg n
@@ -276,14 +248,12 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain variety dimension
 def domain_variety_dim : ℕ := 21
 
 theorem domain_variety_pos :
     0 < domain_variety_dim := by
   unfold domain_variety_dim; norm_num
 
--- Domain divisor
 def domain_divisor : Divisor 21 :=
   ⟨fun i => (i.val : ℤ)⟩
 
@@ -293,12 +263,10 @@ theorem domain_divisor_degree_nonneg :
   apply Finset.sum_nonneg; intro i _
   exact Int.ofNat_nonneg i.val
 
--- Domain de Rham H0
 theorem domain_deRham_H0 :
     deRham_H 21 0 = 1 :=
   deRham_H0_is_one 21
 
--- Domain moduli proxy
 def domain_moduli_dim : ℕ :=
   moduli_dim 3 (by norm_num)
 
@@ -306,7 +274,6 @@ theorem domain_moduli_pos :
     0 < domain_moduli_dim :=
   moduli_dim_pos 3 (by norm_num)
 
--- Elliptic curve over domain
 noncomputable def domain_EC :
     EllipticCurve where
   a    := -1
@@ -338,8 +305,8 @@ structure AlgebraicGeometryLock where
                       deRham_H n 0 = 1
   hodge_diag      : ∀ p : ℕ,
                       hodge_number p p = 1
-  moduli_pos      : ∀ (g : ℕ), 2 ≤ g →
-                      0 < moduli_dim g ‹_›
+  moduli_pos      : ∀ (g : ℕ) (hg : 2 ≤ g),
+                      0 < moduli_dim g hg
   EC_moduli_pos   : 0 < EC_moduli_dim
   dom_var_pos     : 0 < domain_variety_dim
   dom_div_nn      : 0 ≤ divisor_degree 21
