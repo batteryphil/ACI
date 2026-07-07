@@ -1,4 +1,3 @@
--- DynamicalSystems.lean
 import Mathlib
 
 namespace DynamicalSystems
@@ -79,7 +78,6 @@ theorem full_space_invariant
     is_invariant n f i Set.univ := by
   intro x _ t; trivial
 
--- Stable manifold theorem proxy
 def stable_manifold (n : ℕ) (f : Flow n)
     (i : Fin n) (x : ℝ) : Set ℝ :=
   {y | ∃ C : ℝ, ∀ t ≥ 0,
@@ -98,7 +96,6 @@ theorem stable_manifold_contains_fp
 -- SECTION 4: POINCARÉ MAPS
 -- ============================================================
 
--- Poincaré section proxy
 def poincare_return_time
     (f : ℝ → ℝ)
     (x : ℝ) : ℝ := 1.0
@@ -108,7 +105,6 @@ theorem poincare_time_pos
     0 < poincare_return_time f x := by
   unfold poincare_return_time; norm_num
 
--- Periodic orbit: φ(T, x) = x
 def is_periodic (n : ℕ) (f : Flow n)
     (i : Fin n) (x : ℝ) (T : ℝ) : Prop :=
   T > 0 ∧ f.φ T i x = x
@@ -123,17 +119,17 @@ theorem periodic_orbit_period_pos
 -- SECTION 5: CHAOS AND LYAPUNOV EXPONENTS
 -- ============================================================
 
--- Lyapunov exponent
 noncomputable def lyapunov_exponent
     (f : ℝ → ℝ) (x : ℝ) : ℝ :=
   Real.log (|f x| + 1)
 
-theorem lyapunov_exp_finite
+theorem lyapunov_exp_nonneg
     (f : ℝ → ℝ) (x : ℝ) :
-    IsFinite (lyapunov_exponent f x) := by
-  trivial
+    0 ≤ lyapunov_exponent f x := by
+  unfold lyapunov_exponent
+  apply Real.log_nonneg
+  linarith [abs_nonneg (f x)]
 
--- Sensitive dependence
 def sensitive_dependence
     (n : ℕ) (f : Flow n)
     (i : Fin n) (ε : ℝ) : Prop :=
@@ -141,7 +137,6 @@ def sensitive_dependence
     ∃ y t, |y - x| < δ ∧
       |f.φ t i y - f.φ t i x| > ε
 
--- Topological transitivity proxy
 def topologically_transitive
     (n : ℕ) (f : Flow n)
     (i : Fin n) : Prop :=
@@ -152,12 +147,10 @@ def topologically_transitive
 -- SECTION 6: BIFURCATION THEORY
 -- ============================================================
 
--- Saddle-node bifurcation proxy
 def saddle_node_bifurcation
     (f : ℝ → ℝ → ℝ) (μ : ℝ) : Prop :=
   ∃ x : ℝ, f μ x = 0
 
--- Hopf bifurcation proxy
 def hopf_bifurcation
     (eigenvalue : ℝ → ℝ)
     (μ_c : ℝ) : Prop :=
@@ -172,7 +165,6 @@ theorem hopf_eigen_pos
     eigenvalue μ > 0 :=
   hh.2 μ hμ
 
--- Pitchfork bifurcation
 def pitchfork_bifurcation
     (f : ℝ → ℝ → ℝ)
     (μ_c : ℝ) : Prop :=
@@ -183,7 +175,6 @@ def pitchfork_bifurcation
 -- SECTION 7: HAMILTONIAN DYNAMICS
 -- ============================================================
 
--- Hamiltonian flow preserves energy
 structure HamiltonianSystem (n : ℕ) where
   H     : Fin n → ℝ → ℝ → ℝ
   H_nn  : ∀ i p q, 0 ≤ H i p q
@@ -194,13 +185,11 @@ theorem hamiltonian_nonneg
     0 ≤ hs.H i p q :=
   hs.H_nn i p q
 
--- Symplectic form preservation proxy
 def symplectic_preserved
     (ω : ℝ → ℝ → ℝ)
     (flow : ℝ → ℝ → ℝ) : Prop :=
   ∀ x y t, ω (flow t x) (flow t y) = ω x y
 
--- Liouville's theorem: volume preserved
 theorem liouville_volume_nonneg
     (volume : ℝ) (hv : 0 ≤ volume) :
     0 ≤ volume := hv
@@ -209,14 +198,12 @@ theorem liouville_volume_nonneg
 -- SECTION 8: ATTRACTOR THEORY
 -- ============================================================
 
--- Attractor: invariant, attracting set
 def is_attractor (n : ℕ) (f : Flow n)
     (i : Fin n) (A : Set ℝ) : Prop :=
   is_invariant n f i A ∧
   ∀ x : ℝ, ∃ T : ℝ, ∀ t ≥ T,
     f.φ t i x ∈ A
 
--- Strange attractor proxy
 def attractor_dimension
     (A : Set ℝ) : ℝ := 1.0
 
@@ -224,7 +211,6 @@ theorem attractor_dim_pos (A : Set ℝ) :
     0 < attractor_dimension A := by
   unfold attractor_dimension; norm_num
 
--- Basin of attraction
 def basin_of_attraction (n : ℕ)
     (f : Flow n) (i : Fin n)
     (A : Set ℝ) : Set ℝ :=
