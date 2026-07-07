@@ -267,8 +267,7 @@ def vonNeumann_stable
     (r : ℝ) : Prop := |r| ≤ 1
 
 theorem stable_implies_bounded
-    (r : ℝ) (hn : vonNeumann_stable r)
-    (n : ℕ) :
+    (r : ℝ) (n : ℕ) (hn : vonNeumann_stable r) :
     |r ^ n| ≤ 1 := by
   unfold vonNeumann_stable at hn
   rw [abs_pow]
