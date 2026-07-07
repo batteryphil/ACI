@@ -31,18 +31,18 @@ theorem error_triangle
     abs_error a c ≤
     abs_error a b + abs_error b c := by
   unfold abs_error
-  calc |a - c|
-      = |(a - b) + (b - c)| := by ring_nf
-    _ ≤ |a - b| + |b - c| :=
-        abs_add _ _
+  rcases abs_cases (a - c) with ⟨e1, _⟩ | ⟨e1, _⟩ <;>
+  rcases abs_cases (a - b) with ⟨e2, _⟩ | ⟨e2, _⟩ <;>
+  rcases abs_cases (b - c) with ⟨e3, _⟩ | ⟨e3, _⟩ <;>
+  linarith [e1, e2, e3]
 
-def machine_eps : ℝ := 2⁻¹⁵
+noncomputable def machine_eps : ℝ := 1 / 2 ^ 15
 
 theorem machine_eps_pos :
     0 < machine_eps := by
   unfold machine_eps; positivity
 
-def bisection_step (a b : ℝ) : ℝ :=
+noncomputable def bisection_step (a b : ℝ) : ℝ :=
   (a + b) / 2
 
 theorem bisection_in_interval
@@ -92,11 +92,20 @@ theorem riemann_sum_nonneg
   unfold riemann_sum_left
   apply Finset.sum_nonneg; intro i hi
   have hin : (i : ℝ) < n := by exact_mod_cast Finset.mem_range.mp hi
-  have hstep : 0 ≤ (b - a) / n := div_nonneg (by linarith) (Nat.cast_nonneg n)
+  have hn_pos : 0 < n := by
+    rcases Nat.eq_zero_or_pos n with h0 | h0
+    · exact absurd hi (by simp [h0])
+    · exact h0
+  have hnR : (0:ℝ) < (n:ℝ) := by exact_mod_cast hn_pos
+  have hstep : 0 ≤ (b - a) / n := div_nonneg (by linarith) hnR.le
   apply mul_nonneg
   · apply hf
     · nlinarith [mul_nonneg (Nat.cast_nonneg i : (0:ℝ) ≤ i) hstep]
-    · nlinarith [mul_le_mul_of_nonneg_right hin.le hstep]
+    · have hle : (i : ℝ) * ((b - a) / n) ≤ (n : ℝ) * ((b - a) / n) :=
+        mul_le_mul_of_nonneg_right hin.le hstep
+      have heq : (n : ℝ) * ((b - a) / n) = b - a := by field_simp
+      rw [heq] at hle
+      linarith
   · exact hstep
 
 noncomputable def trapezoid_rule
@@ -152,6 +161,7 @@ theorem lerp_at_x1
     lerp x0 x1 y0 y1 x1 h = y1 := by
   unfold lerp
   field_simp
+  ring
 
 noncomputable def lagrange_basis
     (nodes : Fin 3 → ℝ) (i : Fin 3)
@@ -188,9 +198,9 @@ theorem condition_number_ge_one
   linarith
 
 theorem power_iter_nonneg
-    (λ1 λ2 : ℝ)
-    (h : |λ2| < |λ1|) :
-    0 ≤ |λ2 / λ1| := abs_nonneg _
+    (lam1 lam2 : ℝ)
+    (h : |lam2| < |lam1|) :
+    0 ≤ |lam2 / lam1| := abs_nonneg _
 
 noncomputable def euler_step
     (f : ℝ → ℝ → ℝ) (t x dt : ℝ) : ℝ :=
@@ -234,16 +244,17 @@ noncomputable def grad_descent
   x - α * f' x
 
 theorem grad_descent_fixed_point
-    (f' : ℝ → ℝ) (x* α : ℝ)
-    (hx : f' x* = 0) :
-    grad_descent f' x* α = x* := by
+    (f' : ℝ → ℝ) (x_star α : ℝ)
+    (hx : f' x_star = 0) :
+    grad_descent f' x_star α = x_star := by
   unfold grad_descent; simp [hx]
 
 theorem grad_descent_rate
     (α L : ℝ) (hα : 0 < α)
     (hL : 0 < L) (hαL : α ≤ 1 / L) :
     1 - α * L ≥ 0 := by
-  nlinarith
+  have h1 : α * L ≤ 1 := (le_div_iff₀ hL).mp hαL
+  linarith
 
 theorem newton_conv_proxy
     (err : ℝ) (hErr : 0 ≤ err) :
@@ -297,7 +308,7 @@ noncomputable def domain_integral
 noncomputable def domain_euler
     (f : Domain21 → ℝ → ℝ)
     (d : Domain21) (x dt : ℝ) : ℝ :=
-  euler_step (f d) 0 x dt
+  euler_step (fun _ t => f d t) 0 x dt
 
 theorem domain_euler_nonneg
     (f : Domain21 → ℝ → ℝ)
@@ -306,6 +317,7 @@ theorem domain_euler_nonneg
     (hx : 0 ≤ x) (hdt : 0 ≤ dt) :
     0 ≤ domain_euler f d x dt := by
   unfold domain_euler euler_step
+  dsimp only
   linarith [hf d x, mul_nonneg hdt (hf d x)]
 
 noncomputable def domain_cond :=
@@ -358,9 +370,9 @@ structure NumericalAnalysisLock where
   stable_bound   : ∀ (r : ℝ) (n : ℕ),
                      vonNeumann_stable r →
                      |r ^ n| ≤ 1
-  euler_fixed    : ∀ (f' : ℝ → ℝ) (x* α : ℝ),
-                     f' x* = 0 →
-                     grad_descent f' x* α = x*
+  euler_fixed    : ∀ (f' : ℝ → ℝ) (x_star α : ℝ),
+                     f' x_star = 0 →
+                     grad_descent f' x_star α = x_star
   dom_cond_pos   : 0 < domain_cond
   dom_stable     : vonNeumann_stable (1/2)
   dom_error_nn   : ∀ h : ℝ, 0 ≤ h →
