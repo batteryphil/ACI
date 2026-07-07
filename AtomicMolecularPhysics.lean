@@ -1,15 +1,9 @@
--- AtomicMolecularPhysics.lean
 import Mathlib
 
 namespace AtomicMolecularPhysics
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: HYDROGEN ATOM
--- ============================================================
-
--- Bohr radius: a₀ = ℏ²/mₑe²
 noncomputable def bohr_radius
     (hbar me e k : ℝ)
     (hme : 0 < me) (he : 0 < e)
@@ -27,7 +21,6 @@ theorem bohr_radius_pos
   exact mul_pos (mul_pos hme hk)
     (pow_pos he 2)
 
--- Energy levels: Eₙ = -13.6 eV / n²
 noncomputable def hydrogen_energy
     (E1 : ℝ) (n : ℕ) (hn : 0 < n) : ℝ :=
   E1 / (n : ℝ) ^ 2
@@ -39,7 +32,6 @@ theorem hydrogen_energy_neg
   apply div_neg_of_neg_of_pos (by norm_num)
   positivity
 
--- Rydberg formula
 noncomputable def rydberg_wavelength
     (R_inf : ℝ) (n1 n2 : ℕ)
     (hn1 : 0 < n1) (hn2 : 0 < n2)
@@ -47,33 +39,20 @@ noncomputable def rydberg_wavelength
   1 / (R_inf * (1 / (n1 : ℝ) ^ 2 -
     1 / (n2 : ℝ) ^ 2))
 
--- ============================================================
--- SECTION 2: QUANTUM NUMBERS
--- ============================================================
-
--- Principal quantum number n ≥ 1
 theorem principal_QN_pos (n : ℕ)
     (hn : 0 < n) : 0 < n := hn
 
--- Angular momentum: l = 0, 1, ..., n-1
 theorem angular_QN_valid (n l : ℕ)
     (hn : 0 < n) (hl : l < n) :
     l < n := hl
 
--- Magnetic quantum number: |m| ≤ l
 theorem magnetic_QN_valid (l : ℕ)
     (m : ℤ) (hm : |m| ≤ l) :
     |m| ≤ (l : ℤ) := by exact_mod_cast hm
 
--- Spin quantum number: s = ±1/2
 theorem spin_half_proxy :
     (1 : ℝ) / 2 > 0 := by norm_num
 
--- ============================================================
--- SECTION 3: ATOMIC ORBITALS
--- ============================================================
-
--- Orbital degeneracy: 2n²
 def orbital_degeneracy (n : ℕ) : ℕ :=
   2 * n ^ 2
 
@@ -83,27 +62,18 @@ theorem orbital_degeneracy_pos (n : ℕ)
   unfold orbital_degeneracy
   positivity
 
--- Aufbau principle proxy
 theorem aufbau_proxy (n l : ℕ) :
     n + l ≥ 0 := Nat.zero_le _
 
--- Hund's rule proxy
 theorem hunds_rule_proxy :
     True := trivial
 
--- Ionization energy positive
 theorem ionization_energy_pos
     (IE : ℝ) (h : 0 < IE) : 0 < IE := h
 
--- ============================================================
--- SECTION 4: MOLECULAR BONDING
--- ============================================================
-
--- Bond energy positive
 theorem bond_energy_pos
     (E : ℝ) (h : 0 < E) : 0 < E := h
 
--- Morse potential: V = D(1 - exp(-a(r-r₀)))²
 noncomputable def morse_potential
     (D a r r0 : ℝ) (hD : 0 ≤ D) : ℝ :=
   D * (1 - Real.exp (-a * (r - r0))) ^ 2
@@ -114,19 +84,12 @@ theorem morse_nonneg
   unfold morse_potential
   exact mul_nonneg hD (sq_nonneg _)
 
--- LCAO-MO proxy
 theorem LCAO_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Bond length positive
 theorem bond_length_pos
     (r : ℝ) (h : 0 < r) : 0 < r := h
 
--- ============================================================
--- SECTION 5: MOLECULAR SPECTROSCOPY
--- ============================================================
-
--- Rotational energy: E_J = ℏ²J(J+1)/2I
 noncomputable def rotational_energy
     (hbar I : ℝ) (J : ℕ)
     (hI : 0 < I) (hh : 0 < hbar) : ℝ :=
@@ -143,7 +106,6 @@ theorem rotational_energy_nonneg
       (Nat.cast_nonneg J)
   · exact Nat.cast_nonneg (J + 1)
 
--- Vibrational energy: E_v = ℏω(v + 1/2)
 noncomputable def vibrational_energy
     (hbar omega : ℝ) (v : ℕ) : ℝ :=
   hbar * omega * (v + 1/2)
@@ -156,15 +118,9 @@ theorem vibrational_pos
   apply mul_pos (mul_pos hh hw)
   positivity
 
--- Selection rule proxy
 theorem selection_rule_proxy
     (delta_J : ℤ) : True := trivial
 
--- ============================================================
--- SECTION 6: LASER SPECTROSCOPY
--- ============================================================
-
--- Beer-Lambert law: I = I₀ exp(-αl)
 noncomputable def beer_lambert
     (I0 alpha l : ℝ) : ℝ :=
   I0 * Real.exp (-alpha * l)
@@ -180,23 +136,18 @@ theorem beer_lambert_le_I0
     (hl : 0 ≤ l) :
     beer_lambert I0 alpha l ≤ I0 := by
   unfold beer_lambert
+  have h0 : -alpha * l ≤ 0 := by nlinarith [mul_nonneg ha hl]
   calc I0 * Real.exp (-alpha * l)
       ≤ I0 * 1 := by
         apply mul_le_mul_of_nonneg_left _ hI
-        apply Real.exp_le_one
-        linarith [mul_nonneg ha hl]
+        calc Real.exp (-alpha * l) ≤ Real.exp 0 := Real.exp_le_exp.mpr h0
+          _ = 1 := Real.exp_zero
     _ = I0 := mul_one _
 
--- Doppler broadening proxy
 theorem doppler_broad_pos
     (delta_nu : ℝ) (h : 0 < delta_nu) :
     0 < delta_nu := h
 
--- ============================================================
--- SECTION 7: ATOMIC COLLISIONS
--- ============================================================
-
--- Cross section: σ = π r²
 noncomputable def geometric_cross_section
     (r : ℝ) (hr : 0 ≤ r) : ℝ :=
   Real.pi * r ^ 2
@@ -208,7 +159,6 @@ theorem cross_section_nonneg
   exact mul_nonneg (le_of_lt Real.pi_pos)
     (sq_nonneg r)
 
--- Mean free path: λ = 1/(nσ)
 noncomputable def mean_free_path
     (n sigma : ℝ)
     (hn : 0 < n) (hs : 0 < sigma) : ℝ :=
@@ -220,15 +170,9 @@ theorem mfp_pos
     0 < mean_free_path n sigma hn hs :=
   div_pos one_pos (mul_pos hn hs)
 
--- Collision rate proxy
 theorem collision_rate_nonneg
     (R : ℝ) (h : 0 ≤ R) : 0 ≤ R := h
 
--- ============================================================
--- SECTION 8: COLD ATOMS
--- ============================================================
-
--- de Broglie thermal wavelength
 noncomputable def thermal_wavelength
     (h m k T : ℝ)
     (hm : 0 < m) (hk : 0 < k)
@@ -243,20 +187,14 @@ theorem thermal_wavelength_pos
       hm hk hT hh := by
   unfold thermal_wavelength
   apply div_pos hh
-  apply Real.sqrt_pos_of_pos
+  apply Real.sqrt_pos.mpr
   positivity
 
--- BEC critical temperature proxy
 theorem BEC_Tc_pos
     (T_c : ℝ) (h : 0 < T_c) : 0 < T_c := h
 
--- Optical molasses proxy
 theorem optical_molasses_proxy :
     True := trivial
-
--- ============================================================
--- SECTION 9: AWM ATOMIC MOLECULAR BRIDGE
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -267,7 +205,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain Bohr radius
 noncomputable def domain_bohr :=
   bohr_radius 1 1 1 1
     (by norm_num) (by norm_num)
@@ -279,12 +216,10 @@ theorem domain_bohr_pos :
     (by norm_num) (by norm_num)
     (by norm_num) (by norm_num)
 
--- Domain orbital degeneracy (n=21)
 theorem domain_orbital_deg_pos :
     0 < orbital_degeneracy 21 :=
   orbital_degeneracy_pos 21 (by norm_num)
 
--- Domain Morse potential nonneg
 noncomputable def domain_morse :=
   morse_potential 1 1 2 1 (by norm_num)
 
@@ -292,7 +227,6 @@ theorem domain_morse_nonneg :
     0 ≤ domain_morse :=
   morse_nonneg 1 1 2 1 (by norm_num)
 
--- Domain vibrational energy
 noncomputable def domain_vib :=
   vibrational_energy 1 1 0
 
@@ -301,7 +235,6 @@ theorem domain_vib_pos :
   vibrational_pos 1 1 0
     (by norm_num) (by norm_num)
 
--- Domain Beer-Lambert
 noncomputable def domain_BL :=
   beer_lambert 1 1 1
 
@@ -309,17 +242,12 @@ theorem domain_BL_pos :
     0 < domain_BL :=
   beer_lambert_pos 1 1 1 (by norm_num)
 
--- Domain cross section
 noncomputable def domain_sigma :=
   geometric_cross_section 1 (by norm_num)
 
 theorem domain_sigma_nonneg :
     0 ≤ domain_sigma :=
   cross_section_nonneg 1 (by norm_num)
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure AtomicMolecularLock where
   bohr_pos       : ∀ (hbar me e k : ℝ),
