@@ -39,7 +39,7 @@ theorem big_O_trans (f g h : ℕ → ℝ)
           (h2 n (le_trans
             (Nat.le_max_right _ _) hn))
         exact Nat.cast_nonneg C1
-    _ = C1 * C2 * h n := by ring
+    _ = ↑(C1 * C2) * h n := by push_cast; ring
 
 -- ============================================================
 -- SECTION 2: TIME COMPLEXITY CLASSES
@@ -58,9 +58,6 @@ theorem quadratic_is_poly :
   ⟨2, 1, 0, Nat.one_pos,
    fun n _ => by simp⟩
 
--- Self-contained bound avoiding reliance on an unverified library
--- lemma name: n < 2^n, built from pow_pos (confirmed real, used in
--- prior passing CI) plus basic induction/omega.
 theorem nat_lt_two_pow_self (n : ℕ) : n < 2 ^ n := by
   induction n with
   | zero => decide
@@ -69,15 +66,13 @@ theorem nat_lt_two_pow_self (n : ℕ) : n < 2 ^ n := by
     have heq : (2 : ℕ) ^ (k + 1) = 2 ^ k + 2 ^ k := by ring
     omega
 
--- Exponential dominates all polynomials proxy
-theorem exp_not_poly_proxy (k : ℕ) :
+theorem exp_not_poly_proxy (_k : ℕ) :
     ∀ N : ℕ, ∃ n, N ≤ n ∧
         (n : ℝ) < 2 ^ n := by
   intro N
   refine ⟨N, le_refl _, ?_⟩
   exact_mod_cast nat_lt_two_pow_self N
 
--- Logarithmic is sublinear proxy
 theorem log_sublinear_proxy (n : ℕ)
     (hn : 0 < n) :
     Real.log n ≤ n := by
@@ -134,7 +129,7 @@ theorem reduces_trans
     reduces_to P R := by
   obtain ⟨f, hf⟩ := hPQ
   obtain ⟨g, hg⟩ := hQR
-  exact ⟨g ∘ f, fun n => by rw [hf, hg]⟩
+  exact ⟨g ∘ f, fun n => by rw [hf, hg, Function.comp_apply]⟩
 
 -- ============================================================
 -- SECTION 5: NP AND NP-COMPLETENESS
@@ -152,7 +147,7 @@ def is_NP_hard (P : DecisionProblem) : Prop :=
 theorem SAT_in_NP :
     in_NP (fun _ => true) :=
   ⟨fun _ _ => true,
-   fun n => ⟨fun _ => ⟨0, rfl⟩,
+   fun _n => ⟨fun _ => ⟨0, rfl⟩,
      fun _ => rfl⟩⟩
 
 theorem cook_levin_proxy :
@@ -183,7 +178,6 @@ theorem OR_assoc (a b c : Bool) :
   unfold OR_gate
   cases a <;> cases b <;> cases c <;> rfl
 
--- NOT gate involutive
 def NOT_gate (a : Bool) : Bool := !a
 
 theorem NOT_involutive (a : Bool) :
@@ -206,7 +200,7 @@ theorem derandom_proxy :
     True := trivial
 
 theorem schwartz_zippel_proxy
-    (n d q : ℕ) (hq : 0 < q) :
+    (_n d q : ℕ) (_hq : 0 < q) :
     d ≤ q ∨ True :=
   Or.inr trivial
 
@@ -241,7 +235,7 @@ inductive Domain21 : Type where
 
 theorem domain_size_poly :
     poly_time (fun _ => (21 : ℝ)) :=
-  ⟨0, 1, 0, Nat.one_pos,
+  ⟨0, 21, 0, by norm_num,
    fun n _ => by simp⟩
 
 def domain_decision :
@@ -290,7 +284,7 @@ structure ComputationalComplexityLock where
   poly_space_nn  : ∀ (k : ℕ),
                      space_bound
                        (fun n => (n : ℝ) ^ k)
-  exp_proxy      : ∀ (k N : ℕ),
+  exp_proxy      : ∀ (_k N : ℕ),
                      ∃ n, N ≤ n ∧
                        (n : ℝ) < 2 ^ n
   compl_invol    : ∀ (P : DecisionProblem)
