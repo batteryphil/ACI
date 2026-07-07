@@ -121,13 +121,13 @@ theorem empty_compact (X : Type*)
     by simp⟩
 
 theorem finite_compact (X : Type*)
-    (τ : Topology X)
+    (_τ : Topology X)
     (K : Finset X)
     (_hK : ∀ x ∈ K, x ∈ Set.univ) :
     True := trivial
 
 theorem heine_borel_proxy
-    (a b : ℝ) (h : a ≤ b) :
+    (a b : ℝ) (_h : a ≤ b) :
     ∃ K : Set ℝ, K = Set.Icc a b := ⟨_, rfl⟩
 
 -- ============================================================
@@ -155,7 +155,7 @@ theorem indiscrete_connected (X : Type*)
 def is_path_connected
     (X : Type*) (τ : Topology X)
     (S : Set X) : Prop :=
-  ∀ x y ∈ S, ∃ γ : ℝ → X,
+  ∀ x ∈ S, ∀ y ∈ S, ∃ γ : ℝ → X,
     γ 0 = x ∧ γ 1 = y
 
 -- ============================================================
@@ -265,7 +265,7 @@ theorem bundle_rank_pos (n : ℕ)
 -- ============================================================
 
 def is_covering_map (X Y : Type*)
-    (p : Y → X) : Prop :=
+    (_p : Y → X) : Prop :=
   ∀ x : X, ∃ U : Set X,
     x ∈ U ∧ ∃ sheets : ℕ,
       0 < sheets
@@ -278,11 +278,11 @@ theorem covering_sheets_pos
   let ⟨_, _, sheets, hs⟩ := h x
   ⟨sheets, hs⟩
 
-def universal_cover_exists
-    (X : Type*) : Prop :=
-  ∃ Y : Type*, ∃ p : Y → X, True
+def universal_cover_exists.{u}
+    (X : Type u) : Prop :=
+  ∃ Y : Type u, ∃ p : Y → X, True
 
-theorem univ_cover_proxy (X : Type*) :
+theorem univ_cover_proxy.{u} (X : Type u) :
     universal_cover_exists X :=
   ⟨X, id, trivial⟩
 
