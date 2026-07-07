@@ -48,7 +48,7 @@ theorem plasma_freq_pos
 
 theorem debye_number_pos
     (n lambda_D : ℝ)
-    (hn : 0 < n) (hλ : 0 < lambda_D) :
+    (hn : 0 < n) (hlam : 0 < lambda_D) :
     0 < n * (4 * Real.pi / 3) *
       lambda_D ^ 3 := by
   apply mul_pos
@@ -56,7 +56,7 @@ theorem debye_number_pos
     apply div_pos
     · apply mul_pos (by norm_num) Real.pi_pos
     · norm_num
-  · exact pow_pos hλ 3
+  · exact pow_pos hlam 3
 
 -- ============================================================
 -- SECTION 2: MHD EQUATIONS
@@ -111,14 +111,15 @@ noncomputable def EM_dispersion
   Real.sqrt (omega_p ^ 2 + k ^ 2 * c ^ 2)
 
 theorem EM_dispersion_pos
-    (omega_p k c : ℝ) (hc : 0 < c) :
+    (omega_p k c : ℝ) (hc : 0 < c)
+    (hop : 0 < omega_p) :
     0 < EM_dispersion omega_p k c hc := by
   unfold EM_dispersion
   apply Real.sqrt_pos.mpr
-  rcases eq_or_ne omega_p 0 with h0 | h0
-  · rw [h0]; simp; positivity
-  · nlinarith [sq_nonneg omega_p, sq_nonneg k,
-      mul_pos (mul_pos hc hc) (sq_nonneg k).lt_of_ne' h0]
+  have h1 : 0 < omega_p ^ 2 := pow_pos hop 2
+  have h2 : 0 ≤ k ^ 2 * c ^ 2 :=
+    mul_nonneg (sq_nonneg k) (sq_nonneg c)
+  linarith
 
 theorem langmuir_wave_nonneg
     (omega : ℝ) (h : 0 ≤ omega) :
@@ -360,7 +361,8 @@ structure PlasmaPhysicsLock where
                      (hrho : 0 < rho),
                      0 ≤ alfven_velocity
                        B mu0 rho hmu hrho
-  EM_disp_pos    : ∀ (op k c : ℝ) (hc : 0 < c),
+  EM_disp_pos    : ∀ (op k c : ℝ) (hc : 0 < c)
+                     (hop : 0 < op),
                      0 < EM_dispersion op k c hc
   cyclotron_pos  : ∀ (q B m : ℝ)
                      (hq : 0 < q) (hB : 0 < B) (hm : 0 < m),
