@@ -3,11 +3,15 @@ AM10
 AWM21
 AWMCore
 AntaresCategory
+AtomicMolecularPhysics
 BioinformaticsTheory
 CodingTheory
+ComputationalComplexity
+CondensedMatterPhysics
 ControlTheory
 ConvexAnalysis
 CryptographyTheory
+DynamicalSystems
 EnergyDomain
 ErgodicTheory
 FSI
@@ -19,11 +23,15 @@ InformationGeometry
 LinearAlgebra
 MC2Engine
 Manifold21
+MathematicalBiology
+MathematicalChemistry
+MathematicalEconomics
 Matrix7
 MeasureTheory
 MoruzinLaw
 N7Spine
 NoncommutativeGeometry
+NuclearPhysics
 NumberTheoryCore
 NumericalAnalysis
 OptimalControl
@@ -35,6 +43,7 @@ PrimeMasterEngine
 QuantumCore
 QuantumErrorCorrection
 QuantumFieldTheory
+QuantumGravity
 QuantumInformation
 SetTheory
 SovereignHamiltonian
@@ -44,4 +53,5 @@ StochasticDifferentialEquations
 Synaptic_Weights
 Thermodynamics
 TopologicalDataAnalysis
+TopologyAdvanced
 VerifyState
