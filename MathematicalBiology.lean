@@ -21,8 +21,8 @@ theorem exponential_growth_pos
 -- Logistic growth: N(t) = K/(1 + A exp(-rt))
 noncomputable def logistic_growth
     (K r t A : ℝ)
-    (hK : 0 < K) (hA : 0 < A)
-    (hr : 0 < r) : ℝ :=
+    (_hK : 0 < K) (_hA : 0 < A)
+    (_hr : 0 < r) : ℝ :=
   K / (1 + A * Real.exp (-r * t))
 
 theorem logistic_pos
@@ -40,10 +40,10 @@ theorem logistic_le_K
     (hr : 0 < r) :
     logistic_growth K r t A hK hA hr ≤ K := by
   unfold logistic_growth
-  rw [div_le_iff₀ (by linarith
-    [mul_pos hA (Real.exp_pos (-r * t))])]
-  linarith [mul_pos hA
-    (Real.exp_pos (-r * t))]
+  have hpos : 0 < A * Real.exp (-r * t) :=
+    mul_pos hA (Real.exp_pos (-r * t))
+  rw [div_le_iff₀ (by linarith)]
+  nlinarith [mul_pos hK hpos]
 
 -- Carrying capacity positive
 theorem carrying_capacity_pos
@@ -67,8 +67,8 @@ theorem population_nonneg
 -- Equilibrium: (γ/δ, α/β)
 noncomputable def LV_equilibrium
     (alpha beta gamma delta : ℝ)
-    (hbeta : 0 < beta)
-    (hdelta : 0 < delta) : ℝ × ℝ :=
+    (_hbeta : 0 < beta)
+    (_hdelta : 0 < delta) : ℝ × ℝ :=
   (gamma / delta, alpha / beta)
 
 theorem LV_equil_pos
@@ -100,7 +100,7 @@ theorem SIR_nonneg_total
 -- Basic reproduction number R₀
 noncomputable def R0
     (beta gamma N : ℝ)
-    (hgamma : 0 < gamma) : ℝ :=
+    (_hgamma : 0 < gamma) : ℝ :=
   beta * N / gamma
 
 theorem R0_pos
@@ -117,7 +117,7 @@ theorem epidemic_threshold
 
 -- Herd immunity proxy
 noncomputable def herd_immunity_threshold
-    (R : ℝ) (hR : 0 < R) : ℝ :=
+    (R : ℝ) (_hR : 0 < R) : ℝ :=
   1 - 1 / R
 
 theorem HIT_nonneg
@@ -213,7 +213,7 @@ theorem nash_proxy (n : ℕ) :
 -- Michaelis-Menten: v = Vmax*S/(Km + S)
 noncomputable def michaelis_menten
     (Vmax Km S : ℝ)
-    (hKm : 0 < Km) (hS : 0 ≤ S) : ℝ :=
+    (_hKm : 0 < Km) (_hS : 0 ≤ S) : ℝ :=
   Vmax * S / (Km + S)
 
 theorem MM_nonneg
@@ -238,7 +238,7 @@ theorem MM_le_Vmax
 -- Hill equation proxy
 noncomputable def hill_equation
     (Vmax S Kd : ℝ) (n : ℕ)
-    (hKd : 0 < Kd) : ℝ :=
+    (_hKd : 0 < Kd) : ℝ :=
   Vmax * S ^ n / (Kd ^ n + S ^ n)
 
 -- ============================================================
