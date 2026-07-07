@@ -71,6 +71,8 @@ theorem decay_law_decreasing
   unfold decay_law
   apply mul_le_mul_of_nonneg_left _ (le_of_lt hN)
   apply Real.exp_le_exp.mpr
+  have key : lambda * s ≤ lambda * t :=
+    mul_le_mul_of_nonneg_left hst (le_of_lt hl)
   linarith
 
 noncomputable def half_life
@@ -245,7 +247,7 @@ theorem resolution_nonneg
     0 ≤ energy_resolution delta_E E hE :=
   div_nonneg hd (le_of_lt hE)
 
-def detection_efficiency
+noncomputable def detection_efficiency
     (N_det N_total : ℕ)
     (hN : 0 < N_total) : ℝ :=
   N_det / N_total
@@ -365,8 +367,9 @@ theorem domain_DT_pos :
 -- ============================================================
 
 structure NuclearPhysicsLock where
-  radius_nn      : ∀ (R0 : ℝ) (A : ℕ),
+  radius_nn      : ∀ (R0 : ℝ),
                      0 ≤ R0 →
+                     ∀ (A : ℕ),
                      0 ≤ nuclear_radius R0 A
   decay_pos      : ∀ (N0 lambda t : ℝ)
                      (hN : 0 < N0) (hl : 0 < lambda),
