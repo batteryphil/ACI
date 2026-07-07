@@ -1,4 +1,3 @@
--- MathematicalBiology.lean
 import Mathlib
 
 namespace MathematicalBiology
@@ -41,7 +40,7 @@ theorem logistic_le_K
     (hr : 0 < r) :
     logistic_growth K r t A hK hA hr ≤ K := by
   unfold logistic_growth
-  rw [div_le_iff (by linarith
+  rw [div_le_iff₀ (by linarith
     [mul_pos hA (Real.exp_pos (-r * t))])]
   linarith [mul_pos hA
     (Real.exp_pos (-r * t))]
@@ -155,7 +154,7 @@ theorem fisher_term_nonneg
   unfold fisher_term
   apply mul_nonneg (mul_nonneg hr hu0)
   rw [sub_nonneg]
-  exact div_le_one_of_le huK (le_of_lt hK)
+  exact div_le_one_of_le₀ huK (le_of_lt hK)
 
 -- ============================================================
 -- SECTION 5: NEURAL MODELS
@@ -191,8 +190,7 @@ def replicator_constraint (n : ℕ)
   ∀ i, 0 ≤ x i
 
 theorem simplex_valid (n : ℕ)
-    (x : Fin n → ℝ)
-    (h : replicator_constraint n x)
+    (x : Fin n → ℝ) (h : replicator_constraint n x)
     (i : Fin n) :
     0 ≤ x i := h.2 i
 
@@ -234,7 +232,7 @@ theorem MM_le_Vmax
     michaelis_menten Vmax Km S hKm hS
     ≤ Vmax := by
   unfold michaelis_menten
-  rw [div_le_iff (by linarith)]
+  rw [div_le_iff₀ (by linarith)]
   nlinarith
 
 -- Hill equation proxy
@@ -334,38 +332,34 @@ structure MathematicalBiologyLock where
   exp_growth_pos : ∀ (N0 r t : ℝ), 0 < N0 →
                      0 < exponential_growth
                        N0 r t
-  logistic_pos   : ∀ (K r t A : ℝ),
-                     0 < K → 0 < A → 0 < r →
-                     0 < logistic_growth
-                       K r t A ‹_› ‹_› ‹_›
-  logistic_le_K  : ∀ (K r t A : ℝ),
-                     0 < K → 0 < A → 0 < r →
-                     logistic_growth
-                       K r t A ‹_› ‹_› ‹_› ≤ K
+  logistic_pos   : ∀ (K r t A : ℝ)
+                     (hK : 0 < K) (hA : 0 < A) (hr : 0 < r),
+                     0 < logistic_growth K r t A hK hA hr
+  logistic_le_K  : ∀ (K r t A : ℝ)
+                     (hK : 0 < K) (hA : 0 < A) (hr : 0 < r),
+                     logistic_growth K r t A hK hA hr ≤ K
   SIR_nn         : ∀ (S I R : ℝ),
                      0 ≤ S → 0 ≤ I → 0 ≤ R →
                      0 ≤ S + I + R
-  R0_pos         : ∀ (beta gamma N : ℝ),
-                     0 < beta → 0 < gamma →
-                     0 < N →
-                     0 < R0 beta gamma N ‹_›
-  HIT_nn         : ∀ (R : ℝ), 1 < R →
+  R0_pos         : ∀ (beta gamma N : ℝ)
+                     (hbeta : 0 < beta) (hgamma : 0 < gamma)
+                     (hN : 0 < N),
+                     0 < R0 beta gamma N hgamma
+  HIT_nn         : ∀ (R : ℝ) (hR : 1 < R),
                      0 ≤ herd_immunity_threshold
-                       R (by linarith)
+                       R (lt_trans one_pos hR)
   fisher_nn      : ∀ (r K u : ℝ),
                      0 ≤ r → 0 < K →
                      0 ≤ u → u ≤ K →
                      0 ≤ fisher_term r K u
-  MM_nn          : ∀ (Vmax Km S : ℝ),
-                     0 ≤ Vmax → 0 < Km →
-                     0 ≤ S →
-                     0 ≤ michaelis_menten
-                       Vmax Km S ‹_› ‹_›
-  MM_le_Vmax     : ∀ (Vmax Km S : ℝ),
-                     0 ≤ Vmax → 0 < Km →
-                     0 ≤ S →
-                     michaelis_menten
-                       Vmax Km S ‹_› ‹_›
+  MM_nn          : ∀ (Vmax Km S : ℝ)
+                     (hV : 0 ≤ Vmax) (hKm : 0 < Km)
+                     (hS : 0 ≤ S),
+                     0 ≤ michaelis_menten Vmax Km S hKm hS
+  MM_le_Vmax     : ∀ (Vmax Km S : ℝ)
+                     (hV : 0 ≤ Vmax) (hKm : 0 < Km)
+                     (hS : 0 ≤ S),
+                     michaelis_menten Vmax Km S hKm hS
                      ≤ Vmax
   simplex_valid  : ∀ (n : ℕ)
                      (x : Fin n → ℝ),
