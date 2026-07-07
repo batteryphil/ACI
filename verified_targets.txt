@@ -5,6 +5,7 @@ AWMCore
 AntaresCategory
 BioinformaticsTheory
 CodingTheory
+ControlTheory
 ConvexAnalysis
 CryptographyTheory
 EnergyDomain

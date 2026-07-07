@@ -1,5 +1,4 @@
 MyProject
-ControlTheory
 RenormalizationGroup
 ConformalFieldTheory
 WaveletAnalysis
