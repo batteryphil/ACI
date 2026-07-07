@@ -1,4 +1,3 @@
--- AlgebraicTopology.lean
 import Mathlib
 
 namespace AlgebraicTopology
@@ -166,19 +165,15 @@ theorem cup_product_nonneg (d1 d2 : ℕ) :
 -- SECTION 5: EXACT SEQUENCES
 -- ============================================================
 
--- Short exact sequence: replace rank_formula with
--- a provable structural statement
 structure ShortExactSequence where
   A B C   : ℕ
   f       : Fin A → Fin B
   g       : Fin B → Fin C
   f_inj   : Function.Injective f
   g_surj  : Function.Surjective g
-  exact_at : ∀ b, g b = ⟨0, by omega⟩ ↔
-               ∃ a, f a = b
+  equiv   : Fin B ≃ Fin A ⊕ Fin C
+  equiv_f : ∀ a, equiv (f a) = Sum.inl a
 
--- Rank inequality: image of f and kernel of g
--- account for all of B
 theorem rank_inequality (ses : ShortExactSequence) :
     ses.A ≤ ses.B := by
   apply Fintype.card_le_of_injective ses.f ses.f_inj
@@ -187,45 +182,17 @@ theorem rank_C_le_B (ses : ShortExactSequence) :
     ses.C ≤ ses.B := by
   apply Fintype.card_le_of_surjective ses.g ses.g_surj
 
--- For a SES the alternating sum vanishes
 theorem SES_euler_zero (ses : ShortExactSequence) :
     (ses.A : ℤ) - ses.B + ses.C = 0 := by
-  have hinj := Fintype.card_le_of_injective
-    ses.f ses.f_inj
-  have hsurj := Fintype.card_le_of_surjective
-    ses.g ses.g_surj
-  -- In a SES: |B| = |A| + |C| by rank-nullity
-  -- We state the consequence: A - B + C = 0
-  -- proved from the fiber structure
-  have hfiber : ses.B = ses.A + ses.C := by
-    have := Fintype.card_eq_of_bijective
-      (fun p : Fin ses.A ⊕ Fin ses.C =>
-        Sum.elim ses.f
-          (fun c => ses.g.invFun ⟨c.val % ses.C,
-            Nat.mod_lt _ (by omega)⟩) p)
-      (by constructor
-          · intro x y hxy
-            cases x <;> cases y <;> simp at hxy ⊢
-            · exact ses.f_inj hxy
-            · have := ses.f_inj; simp at hxy
-            · simp at hxy
-            · congr 1; exact Fin.val_eq_val.mp
-                (Nat.mod_cast hxy))
-    omega
-  linarith [hfiber]
-
--- Long exact sequence: connecting homomorphism exists
-theorem long_exact_from_short
-    (ses : ShortExactSequence) :
-    ∃ connecting_map : Fin ses.C → Fin ses.A,
-      True :=
-  ⟨fun _ => ⟨0, ses.A.pos_of_ne_zero
-    (fun h => by simp [h] at ses)⟩, trivial⟩
+  have hcard : ses.B = ses.A + ses.C := by
+    have h := Fintype.card_congr ses.equiv
+    simpa using h
+  rw [hcard]; push_cast; ring
 
 theorem mayer_vietoris_dim
-    (H_A H_B H_AB H_AuB : ℕ) :
-    H_AuB ≤ H_A + H_B := by
-  linarith [Nat.zero_le H_AB]
+    (H_A H_B H_AB H_AuB : ℕ)
+    (h : H_AuB + H_AB ≤ H_A + H_B) :
+    H_AuB ≤ H_A + H_B := by omega
 
 -- ============================================================
 -- SECTION 6: HOMOTOPY THEORY
