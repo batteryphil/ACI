@@ -1,0 +1,24 @@
+{
+  "suite": "PHASE_35_LATENCY",
+  "timestamp": 1783152790.127053,
+  "latency_metrics": {
+    "max_evaluated_lag": 12,
+    "coupling_gain_alpha": 0.7,
+    "critical_lag_threshold": null,
+    "delay_variance_map": {
+      "lag_k_1": 1.6714761672324267e-63,
+      "lag_k_2": 2.409901013843303e-51,
+      "lag_k_3": 1.220335608864443e-42,
+      "lag_k_4": 2.991559651955812e-36,
+      "lag_k_5": 4.81942494845091e-31,
+      "lag_k_6": 1.3513745890919005e-29,
+      "lag_k_7": 4.048448511087442e-28,
+      "lag_k_8": 1.3872910795984385e-23,
+      "lag_k_9": 2.4262947649840566e-21,
+      "lag_k_10": 2.41708215104845e-20,
+      "lag_k_11": 7.02047424588292e-19,
+      "lag_k_12": 1.6741454855198978e-18
+    }
+  },
+  "system_status": "APEX_TEMPORAL_LATENCY_BOUND_SECURE"
+}

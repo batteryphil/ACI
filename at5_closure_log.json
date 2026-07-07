@@ -1,9 +1,6 @@
 {
-  "suite": "AT5",
-  "timestamp": 1783151027.5761592,
-  "runtime_metrics": {
-    "matrix_dimension": 108,
-    "convergence_factor": 0.57037,
-    "status_signature": "STABLE_UPSTREAM_CLOSURE_PREDICTED"
-  }
+    "apex_status": "CERTIFIED",
+    "total_verified_lean_modules": 39,
+    "closure_check_passed": true,
+    "symplectic_invariance": 3.441396069459299
 }

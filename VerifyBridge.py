@@ -1,7 +1,8 @@
 import json
-import subprocess
-from PrimeRuntimeV4_backup import PrimeRuntimeV4
+import sys
+import numpy as np
 from lean_bounds import LeanBounds
+from PrimeRuntimeV4 import PrimeRuntimeV4
 
 class VerifyBridge:
     def __init__(self):
@@ -25,7 +26,7 @@ class VerifyBridge:
             json.dump(self.obligations, f, indent=2)
         return f"EXPORTED:{len(self.obligations)}_OBLIGATIONS->{path}"
 
-    def read_lean_result(self, path: str = "lean_results.json") -> dict:
+    def read_lean_result(self, path: str = "all_verified_runs.json") -> dict:
         try:
             with open(path) as f:
                 self.results = json.load(f)
@@ -34,13 +35,15 @@ class VerifyBridge:
             return {"status": "LEAN_RESULTS_NOT_FOUND"}
 
     def verify_state(self) -> str:
-        if self.rt.verify_all():
-            return "BRIDGE:RUNTIME_VERIFIED_AWAITING_LEAN"
-        return "BRIDGE:RUNTIME_FAULT"
+        report_str = self.rt.verify_all()
+        if "STATUS:HALT" in report_str:
+            return "BRIDGE:RUNTIME_FAULT"
+        return "BRIDGE:RUNTIME_VERIFIED_AWAITING_LEAN"
 
     def full_report(self) -> dict:
+        report_str = self.rt.verify_all()
         return {
-            "runtime": self.rt.verify_all(),
+            "runtime": report_str,
             "manifold": self.rt.manifold_state,
             "obligations": len(self.obligations),
             "lean_results": self.results
@@ -74,3 +77,4 @@ class VerifyBridge:
             "status": "STABLE",
             "margin": margin
         }
+

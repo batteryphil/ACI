@@ -1,1 +1,0 @@
-BROADCAST_STATE: Apex_Paradox_Resolution | TARGET: ALL_DOMAINS

@@ -1,0 +1,7 @@
+{
+  "suite": "TIER_5_APEX_ADVERSARIAL_ATTACK",
+  "frame": 40,
+  "timestamp": 1783227052.6469753,
+  "manifold_coordinate": "21-DOMAIN-ACTIVE MARGIN:1.0000",
+  "claim_signature": "0 <= T_kinetic + V_potential"
+}
