@@ -88,14 +88,14 @@ theorem below_threshold_suppressed
 theorem logical_error_decreases_with_d
     (p p_th : ℝ) (d1 d2 : ℕ)
     (hd1 : 0 < d1) (hd2 : 0 < d2)
-    (_hp : 0 < p) (hpth : 0 < p_th)
+    (hp : 0 < p) (hpth : 0 < p_th)
     (h : p < p_th) (hd : d1 < d2) :
     logical_error_rate p p_th d2 hd2 <
     logical_error_rate p p_th d1 hd1 := by
   unfold logical_error_rate
   have hratio : p / p_th < 1 := by rw [div_lt_one hpth]; exact h
-  have hratio_nonneg : 0 ≤ p / p_th := by positivity
-  exact pow_lt_pow_right_of_lt_one₀ hratio_nonneg hratio hd
+  have hratio_pos : 0 < p / p_th := div_pos hp hpth
+  exact pow_lt_pow_right_of_lt_one₀ hratio_pos hratio hd
 
 theorem threshold_exists :
     ∃ p_th : ℝ, 0 < p_th ∧ p_th < 1 :=
@@ -184,17 +184,17 @@ noncomputable def concatenated_error_rate
 
 theorem concatenated_suppression
     (p p_th : ℝ) (levels : ℕ)
-    (_hp : 0 < p) (hpth : 0 < p_th)
+    (hp : 0 < p) (hpth : 0 < p_th)
     (h : p < p_th) :
     concatenated_error_rate p p_th (levels + 1) <
     concatenated_error_rate p p_th levels := by
   unfold concatenated_error_rate
   have hratio : p / p_th < 1 := by rw [div_lt_one hpth]; exact h
-  have hratio_nonneg : 0 ≤ p / p_th := by positivity
+  have hratio_pos : 0 < p / p_th := div_pos hp hpth
   have hlt : 2 ^ levels < 2 ^ (levels + 1) :=
     Nat.pow_lt_pow_right (by norm_num) (Nat.lt_succ_self levels)
   exact mul_lt_mul_of_pos_left
-    (pow_lt_pow_right_of_lt_one₀ hratio_nonneg hratio hlt) hpth
+    (pow_lt_pow_right_of_lt_one₀ hratio_pos hratio hlt) hpth
 
 noncomputable def surface_physical (n : ℕ) : ℕ := n * n
 noncomputable def surface_logical (n : ℕ) : ℕ := (n - 2) * (n - 2)
