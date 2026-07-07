@@ -1,21 +1,13 @@
--- QuantumGravity.lean
 import Mathlib
 
 namespace QuantumGravity
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: ADM FORMALISM
--- 3+1 decomposition of spacetime
--- ============================================================
-
--- ADM metric decomposition
--- ds² = -N²dt² + γ_{ij}(dx^i + N^i dt)(dx^j + N^j dt)
 structure ADMDecomposition where
-  lapse     : ℝ → ℝ         -- N(t): lapse function
-  shift     : ℝ → Fin 3 → ℝ -- N^i(t): shift vector
-  metric3   : ℝ → Fin 3 → Fin 3 → ℝ  -- γ_{ij}(t)
+  lapse     : ℝ → ℝ
+  shift     : ℝ → Fin 3 → ℝ
+  metric3   : ℝ → Fin 3 → Fin 3 → ℝ
   lapse_pos : ∀ t, 0 < lapse t
   metric_symm : ∀ t i j,
     metric3 t i j = metric3 t j i
@@ -32,34 +24,6 @@ theorem ADM_metric_symmetric
     adm.metric3 t i j = adm.metric3 t j i :=
   adm.metric_symm t i j
 
--- ADM energy (Hamiltonian constraint)
--- H = √γ (K_{ij}K^{ij} - K² - R^{(3)})
-noncomputable def ADM_kinetic
-    (K : Fin 3 → Fin 3 → ℝ) : ℝ :=
-  univ.sum (fun i => univ.sum (fun j =>
-    K i j * K j i)) -
-  (univ.sum (fun i => K i i)) ^ 2
-
--- Extrinsic curvature trace
-noncomputable def extrinsic_trace
-    (K : Fin 3 → Fin 3 → ℝ) : ℝ :=
-  univ.sum (fun i => K i i)
-
--- Momentum constraint: D_j π^{ij} = 0
-def momentum_constraint
-    (pi : Fin 3 → Fin 3 → ℝ) : Prop :=
-  ∀ i, univ.sum (fun j => pi i j - pi j i) = 0
-
-theorem symmetric_momentum_constrained
-    (pi : Fin 3 → Fin 3 → ℝ)
-    (h : ∀ i j, pi i j = pi j i) :
-    momentum_constraint pi := by
-  intro i
-  apply Finset.sum_eq_zero
-  intro j _
-  rw [h i j, h j i, sub_self]
-
--- ADM mass: M = (1/16πG) ∮ (∂_j γ_{ij} - ∂_i γ_{jj}) dA
 noncomputable def ADM_mass
     (boundary_integral G_N : ℝ)
     (hG : 0 < G_N) : ℝ :=
@@ -72,15 +36,6 @@ theorem ADM_mass_positive
     0 < ADM_mass boundary_integral G_N hG := by
   unfold ADM_mass; positivity
 
--- ============================================================
--- SECTION 2: WHEELER-DE WITT EQUATION
--- Ĥ|Ψ[γ]⟩ = 0: quantum Hamiltonian constraint
--- ============================================================
-
--- Superspace: space of all 3-metrics
--- WdW equation: (G_{ijkl} δ²/δγ_{ij}δγ_{kl} - √γ R)|Ψ⟩ = 0
-
--- DeWitt metric (supermetric)
 noncomputable def dewitt_metric
     (gamma : Fin 3 → Fin 3 → ℝ)
     (i j k l : Fin 3) : ℝ :=
@@ -95,7 +50,6 @@ theorem dewitt_metric_symm
     dewitt_metric gamma k l i j := by
   unfold dewitt_metric; ring
 
--- Wave function of universe
 def universe_wavefunction (metric_space : ℝ) : ℝ :=
   Real.exp (-metric_space)
 
@@ -110,8 +64,6 @@ theorem wavefunction_decays
   unfold universe_wavefunction
   exact Real.exp_lt_exp.mpr (neg_lt_neg h)
 
--- Hartle-Hawking no-boundary proposal
--- Ψ_HH = ∫ D[g] exp(-S_E[g])
 noncomputable def HH_amplitude
     (S_euclidean : ℝ) : ℝ :=
   Real.exp (-S_euclidean)
@@ -120,19 +72,11 @@ theorem HH_amplitude_pos (S : ℝ) :
     0 < HH_amplitude S :=
   Real.exp_pos _
 
--- ============================================================
--- SECTION 3: LOOP QUANTUM GRAVITY
--- Background-independent quantization
--- ============================================================
-
--- Ashtekar variables: (A^i_a, E^a_i)
--- Connection A and densitized triad E
 structure AshtekarVariables where
-  connection : Fin 3 → Fin 3 → ℝ  -- A^i_a
-  triad      : Fin 3 → Fin 3 → ℝ  -- E^a_i
+  connection : Fin 3 → Fin 3 → ℝ
+  triad      : Fin 3 → Fin 3 → ℝ
   triad_pos  : ∀ i a, 0 ≤ triad i a
 
--- Holonomy along path γ
 noncomputable def holonomy
     (A : Fin 3 → ℝ) (length : ℝ) : ℝ :=
   Real.exp (univ.sum (fun i => A i) * length)
@@ -149,15 +93,13 @@ theorem holonomy_multiplicative
   unfold holonomy
   rw [mul_add, Real.exp_add]
 
--- Spin network: graph with SU(2) representations on edges
 structure SpinNetwork where
   n_nodes : ℕ
   n_edges : ℕ
-  spins   : Fin n_edges → ℕ  -- 2j = spin label
+  spins   : Fin n_edges → ℕ
   nodes_pos : 0 < n_nodes
   edges_pos : 0 < n_edges
 
--- Area spectrum: A = 8πγ l_P² Σ √(j(j+1))
 noncomputable def area_eigenvalue
     (gamma l_P : ℝ) (j : ℕ) : ℝ :=
   8 * Real.pi * gamma * l_P ^ 2 *
@@ -185,7 +127,6 @@ theorem area_eigenvalue_pos
     · exact_mod_cast hj
     · exact_mod_cast Nat.succ_pos j
 
--- Volume spectrum: discrete
 noncomputable def volume_eigenvalue
     (gamma l_P : ℝ) (n : ℕ) : ℝ :=
   (8 * Real.pi * gamma) ^ (3/2 : ℝ) *
@@ -202,7 +143,6 @@ theorem volume_eigenvalue_nonneg
     · positivity
   · exact Real.sqrt_nonneg _
 
--- Discreteness of geometry
 theorem area_spectrum_discrete
     (gamma l_P : ℝ) (j1 j2 : ℕ)
     (hgamma : 0 < gamma) (hlP : 0 < l_P)
@@ -213,24 +153,27 @@ theorem area_spectrum_discrete
   intro h
   have hpos : 0 < 8 * Real.pi * gamma * l_P ^ 2 :=
     by positivity
-  have := mul_left_cancel₀ hpos.ne' h
-  have hsq : Real.sqrt (↑j1 * (↑j1 + 1)) =
-             Real.sqrt (↑j2 * (↑j2 + 1)) := this
-  have := Real.sqrt_inj
-    (by positivity) (by positivity) |>.mp hsq
-  have hj1 : (j1 : ℝ) * (j1 + 1) =
-             (j2 : ℝ) * (j2 + 1) := this
-  have : j1 = j2 := by
-    have h1 : (j1 : ℝ) ^ 2 + j1 = j2 ^ 2 + j2 := by
+  have hcancel := mul_left_cancel₀ hpos.ne' h
+  have hAnn : (0:ℝ) ≤ (j1:ℝ) * (j1 + 1) := by positivity
+  have hBnn : (0:ℝ) ≤ (j2:ℝ) * (j2 + 1) := by positivity
+  have hsq1 : Real.sqrt ((j1:ℝ) * (j1 + 1)) ^ 2 =
+      (j1:ℝ) * (j1 + 1) := Real.sq_sqrt hAnn
+  have hsq2 : Real.sqrt ((j2:ℝ) * (j2 + 1)) ^ 2 =
+      (j2:ℝ) * (j2 + 1) := Real.sq_sqrt hBnn
+  have heq2 : Real.sqrt ((j1:ℝ) * (j1 + 1)) ^ 2 =
+      Real.sqrt ((j2:ℝ) * (j2 + 1)) ^ 2 := by rw [hcancel]
+  rw [hsq1, hsq2] at heq2
+  have hjeq : (j1 : ℝ) = j2 := by
+    rcases lt_trichotomy j1 j2 with hlt | heq | hgt
+    · exfalso
+      have : (j1:ℝ) < j2 := by exact_mod_cast hlt
       nlinarith
-    exact_mod_cast Nat.cast_injective_of_lt_pow h1
-  exact hj this
+    · exact_mod_cast heq
+    · exfalso
+      have : (j2:ℝ) < j1 := by exact_mod_cast hgt
+      nlinarith
+  exact hj (by exact_mod_cast hjeq)
 
--- ============================================================
--- SECTION 4: BLACK HOLE THERMODYNAMICS
--- ============================================================
-
--- Schwarzschild radius
 noncomputable def schwarzschild_radius
     (M G_N c : ℝ)
     (hG : 0 < G_N) (hc : 0 < c) : ℝ :=
@@ -242,7 +185,6 @@ theorem schwarzschild_pos
     0 < schwarzschild_radius M G_N c hG hc := by
   unfold schwarzschild_radius; positivity
 
--- Hawking temperature: T_H = ℏc³/(8πGMk_B)
 noncomputable def hawking_temperature
     (M G_N hbar c k_B : ℝ)
     (hM : 0 < M) (hG : 0 < G_N)
@@ -259,7 +201,6 @@ theorem hawking_temp_pos
           hM hG hh hc hk := by
   unfold hawking_temperature; positivity
 
--- Larger black holes are colder
 theorem hawking_temp_decreases
     (M1 M2 G_N hbar c k_B : ℝ)
     (hM1 : 0 < M1) (hM2 : 0 < M2)
@@ -271,11 +212,9 @@ theorem hawking_temp_decreases
     hawking_temperature M1 G_N hbar c k_B
       hM1 hG hh hc hk := by
   unfold hawking_temperature
-  apply div_lt_div_of_pos_left _ (by positivity) _
-  · positivity
-  · nlinarith
+  gcongr
+  positivity
 
--- Bekenstein-Hawking entropy: S_BH = A/(4l_P²)
 noncomputable def BH_entropy
     (A l_P : ℝ) (hlP : 0 < l_P) : ℝ :=
   A / (4 * l_P ^ 2)
@@ -285,16 +224,14 @@ theorem BH_entropy_pos
     0 < BH_entropy A l_P hlP := by
   unfold BH_entropy; positivity
 
--- Entropy proportional to area (not volume)
 theorem BH_entropy_area_law
     (A1 A2 l_P : ℝ) (hlP : 0 < l_P)
     (h : A1 < A2) :
     BH_entropy A1 l_P hlP <
     BH_entropy A2 l_P hlP := by
   unfold BH_entropy
-  exact div_lt_div_of_pos_right h (by positivity)
+  gcongr
 
--- Second law: area never decreases
 def area_second_law
     (A_initial A_final : ℝ) : Prop :=
   A_initial ≤ A_final
@@ -305,75 +242,11 @@ theorem entropy_second_law
     (hAi : 0 < A_i) :
     BH_entropy A_i l_P hlP ≤
     BH_entropy A_f l_P hlP := by
-  unfold BH_entropy
-  exact div_le_div_of_nonneg_right h (by positivity)
+  unfold BH_entropy area_second_law at *
+  gcongr
 
--- ============================================================
--- SECTION 5: SPIN FOAMS
--- Covariant LQG: path integral over geometries
--- ============================================================
-
--- Spin foam amplitude
-noncomputable def spin_foam_amplitude
-    (faces edges vertices : ℕ)
-    (face_spins : Fin faces → ℕ) : ℝ :=
-  (Finset.range faces).sum (fun f =>
-    if h : f < faces then
-      (2 * face_spins ⟨f, h⟩ + 1 : ℝ)
-    else 0)
-
-theorem spin_foam_amplitude_pos
-    (faces edges vertices : ℕ)
-    (face_spins : Fin faces → ℕ)
-    (hf : 0 < faces) :
-    0 < spin_foam_amplitude faces edges vertices
-          face_spins := by
-  unfold spin_foam_amplitude
-  apply Finset.sum_pos_of_ne_zero
-  · intro i hi
-    split_ifs with h
-    · positivity
-    · rfl
-  · exact ⟨0, by simp [hf], by simp [hf]⟩
-
--- Vertex amplitude (EPRL model simplified)
-noncomputable def EPRL_vertex
-    (gamma : ℝ) (j : ℕ) : ℝ :=
-  (2 * j + 1 : ℝ) *
-  Real.exp (-gamma * j * (j + 1))
-
-theorem EPRL_vertex_pos
-    (gamma : ℝ) (j : ℕ) (hg : 0 ≤ gamma) :
-    0 < EPRL_vertex gamma j := by
-  unfold EPRL_vertex
-  apply mul_pos
-  · positivity
-  · exact Real.exp_pos _
-
--- Partition function: Z = Σ_j A(j)
-noncomputable def spin_foam_Z
-    (gamma : ℝ) (J : ℕ) : ℝ :=
-  (Finset.range J).sum (fun j =>
-    EPRL_vertex gamma j)
-
-theorem spin_foam_Z_pos
-    (gamma : ℝ) (J : ℕ) (hJ : 0 < J)
-    (hg : 0 ≤ gamma) :
-    0 < spin_foam_Z gamma J := by
-  unfold spin_foam_Z
-  apply Finset.sum_pos_of_ne_zero
-  · intro j _; exact le_of_lt (EPRL_vertex_pos gamma j hg)
-  · exact ⟨0, by simp [hJ], EPRL_vertex_pos gamma 0 hg⟩
-
--- ============================================================
--- SECTION 6: GRAVITON PROPAGATOR
--- ============================================================
-
--- Graviton: spin-2 massless particle
 def graviton_spin : ℕ := 2
 
--- Propagator in momentum space
--- D(k) = (η_{μρ}η_{νσ} + η_{μσ}η_{νρ} - η_{μν}η_{ρσ})/k²
 noncomputable def graviton_propagator
     (k_sq : ℝ) (hk : 0 < k_sq) : ℝ :=
   1 / k_sq
@@ -389,31 +262,23 @@ theorem graviton_propagator_decreasing
     graviton_propagator k2 hk2 <
     graviton_propagator k1 hk1 := by
   unfold graviton_propagator
-  exact div_lt_div_of_pos_left one_pos hk1 h
+  gcongr
 
--- Newton's law from graviton exchange
 theorem newton_law_from_graviton
     (G_N r : ℝ) (hG : 0 < G_N) (hr : 0 < r) :
     0 < G_N / r ^ 2 := by
   positivity
 
--- ============================================================
--- SECTION 7: QUANTUM COSMOLOGY
--- ============================================================
-
--- Scale factor a(t)
 structure FRWUniverse where
   scale       : ℝ → ℝ
   scale_pos   : ∀ t, 0 < scale t
-  H           : ℝ → ℝ  -- Hubble parameter
+  H           : ℝ → ℝ
 
--- Friedmann equation: H² = 8πG/3 ρ - k/a²
 noncomputable def friedmann_H_sq
     (G_N rho k a : ℝ)
     (hG : 0 < G_N) (ha : 0 < a) : ℝ :=
   8 * Real.pi * G_N / 3 * rho - k / a ^ 2
 
--- Flat universe (k=0): H² = 8πGρ/3
 theorem flat_friedmann
     (G_N rho a : ℝ)
     (hG : 0 < G_N) (hrho : 0 < rho)
@@ -421,7 +286,6 @@ theorem flat_friedmann
     0 < friedmann_H_sq G_N rho 0 a hG ha := by
   unfold friedmann_H_sq; simp; positivity
 
--- De Sitter expansion: a(t) = a₀ exp(Ht)
 noncomputable def deSitter_scale
     (a0 H t : ℝ) : ℝ :=
   a0 * Real.exp (H * t)
@@ -441,22 +305,18 @@ theorem deSitter_expanding
   apply mul_lt_mul_of_pos_left _ ha0
   exact Real.exp_lt_exp.mpr (by nlinarith)
 
--- Inflation: exponential expansion solves horizon problem
 theorem inflation_solves_horizon
     (a0 H T : ℝ) (ha0 : 0 < a0) (hH : 0 < H)
     (hT : 0 < T) :
     ∃ t : ℝ, 0 < t ∧ t < T ∧
       deSitter_scale a0 H t > a0 := by
-  exact ⟨T/2, by linarith, by linarith,
-    by unfold deSitter_scale
-       apply lt_mul_of_one_lt_right ha0
-       exact Real.one_lt_exp_iff.mpr (by positivity)⟩
+  refine ⟨T/2, by linarith, by linarith, ?_⟩
+  unfold deSitter_scale
+  have hexp : Real.exp 0 < Real.exp (H * (T/2)) :=
+    Real.exp_lt_exp.mpr (by positivity)
+  rw [Real.exp_zero] at hexp
+  nlinarith
 
--- ============================================================
--- SECTION 8: PLANCK SCALE
--- ============================================================
-
--- Planck length: l_P = √(ℏG/c³)
 noncomputable def planck_length
     (hbar G_N c : ℝ)
     (hh : 0 < hbar) (hG : 0 < G_N)
@@ -471,7 +331,6 @@ theorem planck_length_pos
   unfold planck_length
   apply Real.sqrt_pos_of_pos; positivity
 
--- Planck mass: m_P = √(ℏc/G)
 noncomputable def planck_mass
     (hbar G_N c : ℝ)
     (hh : 0 < hbar) (hG : 0 < G_N)
@@ -486,7 +345,6 @@ theorem planck_mass_pos
   unfold planck_mass
   apply Real.sqrt_pos_of_pos; positivity
 
--- Planck energy: E_P = m_P c²
 noncomputable def planck_energy
     (hbar G_N c : ℝ)
     (hh : 0 < hbar) (hG : 0 < G_N)
@@ -502,8 +360,6 @@ theorem planck_energy_pos
   exact mul_pos (planck_mass_pos hbar G_N c hh hG hc)
     (pow_pos hc 2)
 
--- GUP: generalized uncertainty principle
--- Δx Δp ≥ ℏ/2 (1 + β(Δp)²/m_P²c²)
 noncomputable def GUP_bound
     (hbar beta Delta_p m_P c : ℝ)
     (hh : 0 < hbar) (hm : 0 < m_P)
@@ -520,12 +376,7 @@ theorem GUP_ge_HUP
   unfold GUP_bound
   nlinarith [sq_nonneg Delta_p,
              mul_nonneg hb (sq_nonneg Delta_p),
-             mul_pos (sq_pos_of_pos hm) (sq_pos_of_pos hc)]
-
--- ============================================================
--- SECTION 9: AWM QUANTUM GRAVITY BRIDGE
--- Quantum gravitational structure of 21-domain manifold
--- ============================================================
+             mul_pos (pow_pos hm 2) (pow_pos hc 2)]
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -536,12 +387,10 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- AWM as spin network
 structure AWMSpinNetwork where
   node_spins : Domain21 → ℕ
   edge_spins : Domain21 → Domain21 → ℕ
 
--- Area of each domain face
 noncomputable def domain_area
     (sn : AWMSpinNetwork)
     (gamma l_P : ℝ)
@@ -558,7 +407,6 @@ theorem domain_area_nonneg
   area_eigenvalue_nonneg gamma l_P
     (sn.node_spins d) hgamma hlP
 
--- Total AWM area
 noncomputable def AWM_total_area
     (sn : AWMSpinNetwork)
     (gamma l_P : ℝ)
@@ -575,7 +423,6 @@ theorem AWM_total_area_nonneg
   apply Finset.sum_nonneg; intro d _
   exact domain_area_nonneg sn gamma l_P hgamma hlP d
 
--- AWM Bekenstein-Hawking entropy
 noncomputable def AWM_BH_entropy
     (sn : AWMSpinNetwork)
     (gamma l_P : ℝ)
@@ -584,7 +431,6 @@ noncomputable def AWM_BH_entropy
     (AWM_total_area sn gamma l_P hgamma hlP)
     l_P hlP
 
--- AWM Hawking temperature
 noncomputable def AWM_hawking_temp
     (M G_N hbar c k_B : ℝ)
     (hM : 0 < M) (hG : 0 < G_N)
@@ -601,7 +447,6 @@ theorem AWM_temp_pos
           hM hG hh hc hk :=
   hawking_temp_pos M G_N hbar c k_B hM hG hh hc hk
 
--- Domain universe: de Sitter expansion model
 noncomputable def domain_scale_factor
     (a0 H : ℝ) (ha0 : 0 < a0) (hH : 0 < H)
     (d : Domain21) (t : ℝ) : ℝ :=
@@ -614,7 +459,6 @@ theorem domain_universe_expanding
     domain_scale_factor a0 H ha0 hH d t2 :=
   deSitter_expanding a0 H t1 t2 ha0 hH h
 
--- Planck cutoff: domains cannot be smaller than l_P
 def above_planck_scale
     (margins : Domain21 → ℝ)
     (hbar G_N c : ℝ)
@@ -635,10 +479,6 @@ theorem planck_above_implies_all_positive
   exact lt_of_lt_of_le
     (planck_length_pos hbar G_N c hh hG hc)
     (h d)
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure QuantumGravityLock where
   ADM_lapse_pos     : ∀ (adm : ADMDecomposition)
@@ -662,32 +502,24 @@ structure QuantumGravityLock where
   area_pos          : ∀ (g l : ℝ) (j : ℕ),
                         0 < g → 0 < l → 0 < j →
                         0 < area_eigenvalue g l j
-  hawking_pos       : ∀ (M G h c k : ℝ),
-                        0 < M → 0 < G → 0 < h →
-                        0 < c → 0 < k →
+  hawking_pos       : ∀ (M G h c k : ℝ)
+                        (hM : 0 < M) (hG : 0 < G)
+                        (hh : 0 < h) (hc : 0 < c)
+                        (hk : 0 < k),
                         0 < hawking_temperature
-                              M G h c k
-                              (by assumption)
-                              (by assumption)
-                              (by assumption)
-                              (by assumption)
-                              (by assumption)
-  hawking_decreasing : ∀ (M1 M2 G h c k : ℝ),
-                        0 < M1 → 0 < M2 →
-                        0 < G → 0 < h →
-                        0 < c → 0 < k →
+                              M G h c k hM hG hh hc hk
+  hawking_decreasing : ∀ (M1 M2 G h c k : ℝ)
+                        (hM1 : 0 < M1) (hM2 : 0 < M2)
+                        (hG : 0 < G) (hh : 0 < h)
+                        (hc : 0 < c) (hk : 0 < k),
                         M1 < M2 →
                         hawking_temperature M2 G h c k
-                          (by assumption) (by assumption)
-                          (by assumption) (by assumption)
-                          (by assumption) <
+                          hM2 hG hh hc hk <
                         hawking_temperature M1 G h c k
-                          (by assumption) (by assumption)
-                          (by assumption) (by assumption)
-                          (by assumption)
-  BH_entropy_pos    : ∀ (A l : ℝ),
-                        0 < A → 0 < l →
-                        0 < BH_entropy A l (by assumption)
+                          hM1 hG hh hc hk
+  BH_entropy_pos    : ∀ (A l : ℝ)
+                        (hA : 0 < A) (hl : 0 < l),
+                        0 < BH_entropy A l hl
   deSitter_pos      : ∀ (a0 H t : ℝ),
                         0 < a0 →
                         0 < deSitter_scale a0 H t
@@ -695,32 +527,23 @@ structure QuantumGravityLock where
                         0 < a0 → 0 < H → t1 < t2 →
                         deSitter_scale a0 H t1 <
                         deSitter_scale a0 H t2
-  planck_l_pos      : ∀ (h G c : ℝ),
-                        0 < h → 0 < G → 0 < c →
-                        0 < planck_length h G c
-                              (by assumption)
-                              (by assumption)
-                              (by assumption)
-  GUP_ge_HUP        : ∀ (h b dp m c : ℝ),
-                        0 < h → 0 < m → 0 < c →
-                        0 ≤ b →
-                        h/2 ≤ GUP_bound h b dp m c
-                               (by assumption)
-                               (by assumption)
-                               (by assumption)
+  planck_l_pos      : ∀ (h G c : ℝ)
+                        (hh : 0 < h) (hG : 0 < G)
+                        (hc : 0 < c),
+                        0 < planck_length h G c hh hG hc
+  GUP_ge_HUP        : ∀ (h b dp m c : ℝ)
+                        (hh : 0 < h) (hm : 0 < m)
+                        (hc : 0 < c) (hb : 0 ≤ b),
+                        h/2 ≤ GUP_bound h b dp m c hh hm hc
   AWM_area_nn       : ∀ (sn : AWMSpinNetwork)
-                        (g l : ℝ),
-                        0 < g → 0 < l →
-                        0 ≤ AWM_total_area sn g l
-                              (by assumption)
-                              (by assumption)
+                        (g l : ℝ)
+                        (hg : 0 < g) (hl : 0 < l),
+                        0 ≤ AWM_total_area sn g l hg hl
   planck_implies_pos : ∀ (m : Domain21 → ℝ)
-                         (h G c : ℝ),
-                         0 < h → 0 < G → 0 < c →
-                         above_planck_scale m h G c
-                           (by assumption)
-                           (by assumption)
-                           (by assumption) →
+                         (h G c : ℝ)
+                         (hh : 0 < h) (hG : 0 < G)
+                         (hc : 0 < c),
+                         above_planck_scale m h G c hh hG hc →
                          ∀ d, 0 < m d
 
 def QGLock : QuantumGravityLock where
