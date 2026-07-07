@@ -1,4 +1,3 @@
--- MathematicalChemistry.lean
 import Mathlib
 
 namespace MathematicalChemistry
@@ -56,11 +55,11 @@ theorem decay_le_initial
     (ht : 0 ≤ t) :
     first_order_decay A0 k t ≤ A0 := by
   unfold first_order_decay
+  have hexp : Real.exp (-k * t) ≤ 1 := by
+    rw [← Real.exp_zero]
+    exact Real.exp_le_exp.mpr (by linarith [mul_nonneg hk ht])
   calc A0 * Real.exp (-k * t)
-      ≤ A0 * 1 := by
-        apply mul_le_mul_of_nonneg_left _ hA
-        apply Real.exp_le_one
-        linarith [mul_nonneg hk ht]
+      ≤ A0 * 1 := mul_le_mul_of_nonneg_left hexp hA
     _ = A0 := mul_one _
 
 -- ============================================================
@@ -135,7 +134,7 @@ theorem DFT_components_add
 -- Lennard-Jones potential
 noncomputable def LJ_potential
     (eps sigma r : ℝ)
-    (hr : 0 < r) : ℝ :=
+    (_hr : 0 < r) : ℝ :=
   4 * eps * ((sigma / r) ^ 12 -
     (sigma / r) ^ 6)
 
@@ -163,7 +162,7 @@ theorem total_KE_nonneg (n : ℕ)
 -- Temperature from kinetic energy
 noncomputable def temperature
     (KE n k_B : ℝ)
-    (hn : 0 < n) (hk : 0 < k_B) : ℝ :=
+    (_hn : 0 < n) (_hk : 0 < k_B) : ℝ :=
   2 * KE / (3 * n * k_B)
 
 theorem temp_nonneg
@@ -217,14 +216,14 @@ theorem mol_weight_nonneg
 -- Nernst equation: E = E° - (RT/nF) ln Q
 noncomputable def nernst_potential
     (E0 R T n F Q : ℝ)
-    (hn : 0 < n) (hF : 0 < F)
-    (hQ : 0 < Q) : ℝ :=
+    (_hn : 0 < n) (_hF : 0 < F)
+    (_hQ : 0 < Q) : ℝ :=
   E0 - (R * T) / (n * F) * Real.log Q
 
 -- Butler-Volmer current proxy
 noncomputable def butler_volmer
     (i0 alpha eta F R T : ℝ)
-    (hT : 0 < T) (hR : 0 < R) : ℝ :=
+    (_hT : 0 < T) (_hR : 0 < R) : ℝ :=
   i0 * (Real.exp (alpha * F * eta /
     (R * T)) -
     Real.exp (-(1-alpha) * F * eta /
@@ -288,7 +287,8 @@ theorem transmittance_le_one
     (A : ℝ) (hA : 0 ≤ A) :
     transmittance A ≤ 1 := by
   unfold transmittance
-  apply Real.exp_le_one; linarith
+  rw [← Real.exp_zero]
+  exact Real.exp_le_exp.mpr (by linarith)
 
 -- ============================================================
 -- SECTION 9: AWM CHEMISTRY BRIDGE
@@ -379,18 +379,16 @@ structure MathematicalChemistryLock where
                      0 ≤ k →
                      (∀ i, 0 ≤ conc i) →
                      0 ≤ reaction_rate k conc ord
-  arrhenius_pos  : ∀ (A Ea R T : ℝ),
-                     0 < A → 0 < T → 0 < R →
-                     0 < arrhenius A Ea R T ‹_› ‹_›
+  arrhenius_pos  : ∀ (A Ea R T : ℝ) (hA : 0 < A)
+                     (hT : 0 < T) (hR : 0 < R),
+                     0 < arrhenius A Ea R T hT hR
   decay_pos      : ∀ (A0 k t : ℝ), 0 < A0 →
                      0 < first_order_decay A0 k t
   decay_le_init  : ∀ (A0 k t : ℝ),
                      0 ≤ A0 → 0 ≤ k → 0 ≤ t →
                      first_order_decay A0 k t ≤ A0
-  K_pos          : ∀ (dG R T : ℝ),
-                     0 < R → 0 < T →
-                     0 < equilibrium_constant
-                       dG R T ‹_› ‹_›
+  K_pos          : ∀ (dG R T : ℝ) (hR : 0 < R) (hT : 0 < T),
+                     0 < equilibrium_constant dG R T hR hT
   KE_nn          : ∀ (n : ℕ) (m : ℝ)
                      (v : Fin n → ℝ),
                      0 ≤ m →
@@ -404,8 +402,8 @@ structure MathematicalChemistryLock where
                      0 < transmittance A
   trans_le1      : ∀ A : ℝ, 0 ≤ A →
                      transmittance A ≤ 1
-  ETE_nn         : ∀ (n : ℕ) (l : ℝ), 0 ≤ l →
-                     0 ≤ end_to_end_rms n l ‹_›
+  ETE_nn         : ∀ (n : ℕ) (l : ℝ) (hl : 0 ≤ l),
+                     0 ≤ end_to_end_rms n l hl
   dom_rate_nn    : 0 ≤ domain_rate
   dom_arr_pos    : 0 < domain_arrhenius
   dom_K_pos      : 0 < domain_K
