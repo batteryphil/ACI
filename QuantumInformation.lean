@@ -29,10 +29,17 @@ theorem shannon_entropy_nonneg
 theorem shannon_entropy_max_uniform :
     let p := fun (_ : Fin 7) => (1 : ℝ) / 7
     shannon_entropy p = Real.log 7 := by
+  show shannon_entropy (fun (_ : Fin 7) => (1:ℝ)/7) = Real.log 7
   unfold shannon_entropy
-  simp [Finset.sum_const, Finset.card_univ]
-  rw [Real.log_inv]
-  push_cast; ring
+  have hsum : (univ : Finset (Fin 7)).sum (fun _ : Fin 7 => (1:ℝ)/7 * Real.log ((1:ℝ)/7))
+      = 7 * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
+    push_cast; ring
+  rw [hsum]
+  have h7 : (7:ℝ) * ((1:ℝ)/7 * Real.log ((1:ℝ)/7)) = Real.log ((1:ℝ)/7) := by
+    field_simp
+  rw [h7, show (1:ℝ)/7 = (7:ℝ)⁻¹ from by norm_num, Real.log_inv]
+  ring
 
 theorem joint_entropy_ge_marginal
     (H_X H_Y H_XY : ℝ)
@@ -75,15 +82,11 @@ theorem vN_entropy_nonneg
     (lambda : ℝ) (h0 : 0 < lambda) (h1 : lambda < 1) :
     0 ≤ vN_entropy_binary lambda := by
   unfold vN_entropy_binary
-  simp [h0.ne', h1.ne]
-  apply add_nonneg
-  · apply neg_nonneg.mpr
-    exact mul_nonpos_of_nonneg_of_nonpos
-      h0.le (Real.log_nonpos h0.le h1.le)
-  · apply neg_nonneg.mpr
-    apply mul_nonpos_of_nonneg_of_nonpos
-    · linarith
-    · exact Real.log_nonpos (by linarith) (by linarith)
+  rw [if_neg (by push_neg; exact ⟨h0.ne', h1.ne⟩)]
+  have hl1 : Real.log lambda ≤ 0 := Real.log_nonpos h0.le h1.le
+  have hl2 : Real.log (1 - lambda) ≤ 0 := Real.log_nonpos (by linarith) (by linarith)
+  nlinarith [mul_nonpos_of_nonneg_of_nonpos h0.le hl1,
+             mul_nonpos_of_nonneg_of_nonpos (by linarith : (0:ℝ) ≤ 1 - lambda) hl2]
 
 theorem vN_entropy_pure_state :
     vN_entropy_binary 0 = 0 := by
@@ -92,10 +95,11 @@ theorem vN_entropy_pure_state :
 theorem vN_entropy_max_mixed :
     vN_entropy_binary (1/2) = Real.log 2 := by
   unfold vN_entropy_binary
-  simp [show (1:ℝ)/2 ≠ 0 from by norm_num,
-        show (1:ℝ)/2 ≠ 1 from by norm_num]
-  rw [show (1 : ℝ) - 1/2 = 1/2 from by ring]
-  rw [Real.log_inv]; ring
+  rw [if_neg (by push_neg; constructor <;> norm_num)]
+  have h1 : (1:ℝ) - 1/2 = 2⁻¹ := by norm_num
+  have h2 : (1:ℝ)/2 = 2⁻¹ := by norm_num
+  rw [h1, h2, Real.log_inv]
+  ring
 
 theorem vN_concavity
     (S1 S2 t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1)
@@ -164,15 +168,13 @@ theorem klein_inequality_2x2
   have h2 := log_le_sub_one (q2/p2) (div_pos hq2 hp2)
   rw [Real.log_div hq1.ne' hp1.ne'] at h1
   rw [Real.log_div hq2.ne' hp2.ne'] at h2
-  have bound1 : p1 - q1 ≤ p1 * (Real.log p1 - Real.log q1) := by
-    have hmul := mul_le_mul_of_nonneg_left h1 hp1.le
-    have hcancel : p1 * (q1 / p1) = q1 := mul_div_cancel₀ q1 hp1.ne'
-    rw [mul_sub, hcancel] at hmul; linarith
-  have bound2 : p2 - q2 ≤ p2 * (Real.log p2 - Real.log q2) := by
-    have hmul := mul_le_mul_of_nonneg_left h2 hp2.le
-    have hcancel : p2 * (q2 / p2) = q2 := mul_div_cancel₀ q2 hp2.ne'
-    rw [mul_sub, hcancel] at hmul; linarith
-  linarith
+  have hcancel1 : p1 * (q1 / p1) = q1 := mul_div_cancel₀ q1 hp1.ne'
+  have hcancel2 : p2 * (q2 / p2) = q2 := mul_div_cancel₀ q2 hp2.ne'
+  have e1 : p1 * (Real.log q1 - Real.log p1) ≤ p1 * (q1 / p1 - 1) :=
+    mul_le_mul_of_nonneg_left h1 hp1.le
+  have e2 : p2 * (Real.log q2 - Real.log p2) ≤ p2 * (q2 / p2 - 1) :=
+    mul_le_mul_of_nonneg_left h2 hp2.le
+  nlinarith [e1, e2, hcancel1, hcancel2]
 
 def strong_subadditivity_holds
     (S_ABC S_B S_AB S_BC : ℝ) : Prop :=
@@ -233,8 +235,14 @@ noncomputable def EoF (concur : ℝ) : ℝ :=
     ((1 + Real.sqrt (1 - concur ^ 2)) / 2)
 
 theorem EoF_zero_at_zero_concurrence :
-    EoF 0 = vN_entropy_binary (1/2) := by
-  unfold EoF; simp
+    EoF 0 = 0 := by
+  unfold EoF
+  have h : (1 + Real.sqrt (1 - (0:ℝ) ^ 2)) / 2 = 1 := by
+    have h1 : (1:ℝ) - (0:ℝ) ^ 2 = 1 := by ring
+    rw [h1, Real.sqrt_one]; ring
+  rw [h]
+  unfold vN_entropy_binary
+  simp
 
 noncomputable def depolarizing_output
     (rho_diag p : ℝ) : ℝ :=
@@ -255,7 +263,7 @@ noncomputable def amplitude_damping
 
 theorem amplitude_damping_nonneg
     (rho11 gamma : ℝ)
-    (h11 : 0 ≤ rho11) (hg : 0 ≤ gamma) :
+    (h11 : 0 ≤ rho11) (hg : 0 ≤ gamma) (hg1 : gamma ≤ 1) :
     0 ≤ amplitude_damping rho11 gamma := by
   unfold amplitude_damping; nlinarith
 
@@ -277,9 +285,9 @@ theorem phase_damping_magnitude_decreases
   rw [abs_mul,
       abs_of_pos (Real.sqrt_pos_of_pos (by linarith))]
   apply mul_lt_of_lt_one_left (abs_pos.mpr h01.ne')
-  rw [show (1:ℝ) - gamma < 1 ^ 2 from by nlinarith,
-      show (1:ℝ) = 1 ^ 2 from by norm_num] at *
-  exact Real.sqrt_lt_sqrt (by linarith) (by nlinarith)
+  calc Real.sqrt (1 - gamma) < Real.sqrt 1 :=
+        Real.sqrt_lt_sqrt (by linarith) (by linarith)
+    _ = 1 := Real.sqrt_one
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -337,7 +345,7 @@ theorem domain_max_entropy_bound
     Finset.sum_le_sum (fun d _ => key d)
   have hlhs : Finset.univ.sum (fun d => dis.probs d - (1:ℝ)/21) = 0 := by
     rw [Finset.sum_sub_distrib, dis.sum_one, Finset.sum_const, hcard]
-    push_cast; ring
+    ring
   have hrhs : Finset.univ.sum (fun d => dis.probs d * (Real.log 21 + Real.log (dis.probs d))) =
       Real.log 21 + Finset.univ.sum (fun d => dis.probs d * Real.log (dis.probs d)) := by
     have expand : ∀ d : Domain21, dis.probs d * (Real.log 21 + Real.log (dis.probs d)) =
@@ -382,12 +390,13 @@ theorem domain_KL_nonneg
     have hineq := log_le_sub_one
       (dm2.probs d / dm1.probs d) (div_pos hq hp)
     rw [Real.log_div hq.ne' hp.ne'] at hineq
-    have hmul := mul_le_mul_of_nonneg_left hineq hp.le
     have hcancel : dm1.probs d * (dm2.probs d / dm1.probs d) =
                    dm2.probs d := mul_div_cancel₀ _ hp.ne'
-    rw [mul_sub, hcancel] at hmul
+    have e : dm1.probs d * (Real.log (dm2.probs d) - Real.log (dm1.probs d)) ≤
+             dm1.probs d * (dm2.probs d / dm1.probs d - 1) :=
+      mul_le_mul_of_nonneg_left hineq hp.le
     rw [← Real.log_div hp.ne' hq.ne']
-    linarith
+    nlinarith [e, hcancel]
   calc (0 : ℝ)
       = Finset.univ.sum (fun d =>
           dm1.probs d - dm2.probs d) := by
@@ -425,7 +434,7 @@ structure QInfoLock where
                     0 ≤ p → p ≤ 1 →
                     0 ≤ depolarizing_output rho p
   amp_damp_nn   : ∀ (rho11 gamma : ℝ),
-                    0 ≤ rho11 → 0 ≤ gamma →
+                    0 ≤ rho11 → 0 ≤ gamma → gamma ≤ 1 →
                     0 ≤ amplitude_damping rho11 gamma
   dom_ent_nn    : ∀ (dis : DomainInfoState),
                     0 ≤ domain_entropy dis
