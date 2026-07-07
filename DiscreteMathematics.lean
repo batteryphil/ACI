@@ -14,7 +14,7 @@ theorem binom_pos (n k : ℕ) (h : k ≤ n) :
 
 theorem binom_sym (n k : ℕ) (h : k ≤ n) :
     n.choose k = n.choose (n - k) :=
-  Nat.choose_symm h
+  (Nat.choose_symm h).symm
 
 theorem pascal (n k : ℕ) :
     (n + 1).choose (k + 1) =
@@ -40,8 +40,8 @@ theorem pigeonhole (n m : ℕ)
 
 theorem perm_count (n : ℕ) :
     Fintype.card (Equiv.Perm (Fin n)) =
-    n.factorial :=
-  Fintype.card_perm
+    n.factorial := by
+  rw [Fintype.card_perm, Fintype.card_fin]
 
 theorem factorial_pos (n : ℕ) :
     0 < n.factorial :=
@@ -85,22 +85,27 @@ theorem fib_pos (n : ℕ) (hn : 0 < n) :
       simp only [fib]
       omega
 
+theorem fib_step_mono (n : ℕ) : fib n ≤ fib (n + 1) := by
+  cases n with
+  | zero => simp [fib]
+  | succ k => simp only [fib]; omega
+
 theorem fib_mono (m n : ℕ) (h : m ≤ n) :
     fib m ≤ fib n := by
-  induction h with
-  | refl => le_refl _
-  | step h ih =>
-    apply le_trans ih
-    cases n with
-    | zero => simp [fib]
-    | succ n =>
-      simp [fib]
-      omega
+  induction n, h using Nat.le_induction with
+  | base => exact le_refl _
+  | succ n hn ih => exact le_trans ih (fib_step_mono n)
 
 def catalan : ℕ → ℕ
   | 0 => 1
-  | n + 1 => (Finset.range (n + 1)).sum
-    (fun i => catalan i * catalan (n - i))
+  | n + 1 =>
+    ((Finset.range (n + 1)).attach).sum
+      (fun i => catalan i.1 * catalan (n - i.1))
+  termination_by n => n
+  decreasing_by
+    all_goals
+      have hi := Finset.mem_range.mp i.2
+      omega
 
 theorem catalan_pos (n : ℕ) :
     0 < catalan n := by
@@ -110,18 +115,24 @@ theorem catalan_pos (n : ℕ) :
     | zero => simp [catalan]
     | succ n =>
       simp only [catalan]
+      rw [Finset.sum_attach (Finset.range (n + 1))
+        (fun i => catalan i * catalan (n - i))]
       apply Finset.sum_pos
       · intro i hi
         have hi' : i ≤ n := Nat.lt_succ_iff.mp (Finset.mem_range.mp hi)
-        exact Nat.mul_pos
-          (ih i (by omega))
-          (ih (n - i) (by omega))
+        exact Nat.mul_pos (ih i (by omega)) (ih (n - i) (by omega))
       · exact ⟨0, Finset.mem_range.mpr (Nat.succ_pos n)⟩
 
 def bell : ℕ → ℕ
   | 0 => 1
-  | n + 1 => (Finset.range (n + 1)).sum
-    (fun k => n.choose k * bell k)
+  | n + 1 =>
+    ((Finset.range (n + 1)).attach).sum
+      (fun k => n.choose k.1 * bell k.1)
+  termination_by n => n
+  decreasing_by
+    all_goals
+      have hk := Finset.mem_range.mp k.2
+      omega
 
 theorem bell_pos (n : ℕ) :
     0 < bell n := by
@@ -131,12 +142,12 @@ theorem bell_pos (n : ℕ) :
     | zero => simp [bell]
     | succ n =>
       simp only [bell]
+      rw [Finset.sum_attach (Finset.range (n + 1))
+        (fun k => n.choose k * bell k)]
       apply Finset.sum_pos
       · intro k hk
         have hk' : k ≤ n := Nat.lt_succ_iff.mp (Finset.mem_range.mp hk)
-        exact Nat.mul_pos
-          (Nat.choose_pos hk')
-          (ih k (by omega))
+        exact Nat.mul_pos (Nat.choose_pos hk') (ih k (by omega))
       · exact ⟨0, Finset.mem_range.mpr (Nat.succ_pos n)⟩
 
 -- ============================================================
@@ -205,15 +216,17 @@ theorem ramsey_2_2 :
   by_cases h : f 0 1 = true
   · left; exact ⟨0, 1, by decide, h⟩
   · right
-    push_neg at h
-    rw [Bool.not_eq_true] at h
-    exact ⟨0, 1, by decide, h⟩
+    have h' : f 0 1 = false := by
+      cases hf : f 0 1
+      · rfl
+      · exact absurd hf h
+    exact ⟨0, 1, by decide, h'⟩
 
 theorem ramsey_3_3_proxy :
     ∃ N : ℕ, N = 6 := ⟨6, rfl⟩
 
 theorem ramsey_mult_proxy (s t : ℕ) :
-    0 < s + t := by omega
+    0 ≤ s + t := Nat.zero_le _
 
 -- ============================================================
 -- SECTION 7: CODING THEORY BASICS
@@ -234,7 +247,9 @@ theorem hamming_dist_sym (n : ℕ)
     hamming_dist n x y =
     hamming_dist n y x := by
   unfold hamming_dist
-  congr 1; ext i; exact ne_comm
+  congr 1
+  ext i
+  simp [ne_comm]
 
 theorem hamming_dist_zero (n : ℕ)
     (x : Fin n → Bool) :
@@ -247,24 +262,24 @@ theorem hamming_dist_zero (n : ℕ)
 
 theorem bool_and_comm (a b : Bool) :
     a && b = b && a := by
-  cases a <;> cases b <;> rfl
+  cases a <;> cases b <;> decide
 
 theorem bool_or_comm (a b : Bool) :
     a || b = b || a := by
-  cases a <;> cases b <;> rfl
+  cases a <;> cases b <;> decide
 
 theorem bool_demorgan_and (a b : Bool) :
     !(a && b) = !a || !b := by
-  cases a <;> cases b <;> rfl
+  cases a <;> cases b <;> decide
 
 theorem bool_demorgan_or (a b : Bool) :
     !(a || b) = !a && !b := by
-  cases a <;> cases b <;> rfl
+  cases a <;> cases b <;> decide
 
 theorem bool_distrib (a b c : Bool) :
     a && (b || c) =
     (a && b) || (a && c) := by
-  cases a <;> cases b <;> cases c <;> rfl
+  cases a <;> cases b <;> cases c <;> decide
 
 -- ============================================================
 -- SECTION 9: AWM DISCRETE MATHEMATICS BRIDGE
@@ -282,7 +297,7 @@ inductive Domain21 : Type where
 theorem domain_perm_count :
     Fintype.card
       (Equiv.Perm (Fin 21)) =
-    21.factorial :=
+    (21).factorial :=
   perm_count 21
 
 theorem domain_fib_pos :
@@ -367,7 +382,7 @@ structure DiscreteMathematicsLock where
                      !(a || b) = !a && !b
   dom_perm       : Fintype.card
                      (Equiv.Perm (Fin 21)) =
-                   21.factorial
+                   (21).factorial
   dom_fib_pos    : 0 < fib 21
   dom_catalan_pos : 0 < catalan 5
   dom_binom      : (21 : ℕ).choose 7 = 116280
