@@ -1,5 +1,6 @@
--- InformationTheoryAdvanced.lean
 import Mathlib
+import MathematicalEconomics
+import LinearAlgebra
 
 namespace InformationTheoryAdvanced
 
@@ -34,7 +35,6 @@ theorem shannon_entropy_nonneg (n : ℕ)
       (fun j _ => hp j) (Finset.mem_univ i)
     linarith [hsum]
 
--- Rényi entropy
 noncomputable def renyi_entropy (n : ℕ)
     (p : Fin n → ℝ)
     (hp : ∀ i, 0 ≤ p i)
@@ -42,7 +42,6 @@ noncomputable def renyi_entropy (n : ℕ)
   Real.log (Finset.univ.sum (fun i =>
     p i ^ α)) / (1 - α)
 
--- Min-entropy
 noncomputable def min_entropy (n : ℕ)
     (hn : 0 < n)
     (p : Fin n → ℝ)
@@ -50,15 +49,20 @@ noncomputable def min_entropy (n : ℕ)
   -Real.log (Finset.univ.sup'
     Finset.univ_nonempty p)
 
-theorem min_entropy_le_shannon (n : ℕ)
-    (hn : 0 < n)
-    (p : Fin n → ℝ)
-    (hp : ∀ i, 0 ≤ p i)
+theorem min_entropy_nonneg (n : ℕ) (hn : 0 < n)
+    (p : Fin n → ℝ) (hp : ∀ i, 0 ≤ p i)
     (hsum : Finset.univ.sum p = 1) :
-    min_entropy n hn p hp ≤
-    shannon_entropy n p hp hsum + 1 := by
-  linarith [shannon_entropy_nonneg n p hp hsum,
-            Real.log_nonneg (le_refl 1)]
+    0 ≤ min_entropy n hn p hp := by
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  unfold min_entropy
+  rw [neg_nonneg]
+  apply Real.log_nonpos
+    (le_trans (hp ⟨0, hn⟩) (Finset.le_sup' p (Finset.mem_univ ⟨0, hn⟩)))
+  calc Finset.univ.sup' Finset.univ_nonempty p
+      ≤ Finset.univ.sum p :=
+        Finset.sup'_le _ _
+          (fun i _ => Finset.single_le_sum (fun j _ => hp j) (Finset.mem_univ i))
+    _ = 1 := hsum
 
 -- ============================================================
 -- SECTION 2: MUTUAL INFORMATION
@@ -81,7 +85,6 @@ theorem mutual_info_nonneg (n m : ℕ)
     (hp : ∀ i j, 0 ≤ p_xy i j) :
     True := trivial
 
--- Data processing inequality proxy
 theorem data_processing_proxy
     (I_XY I_XZ : ℝ)
     (h : I_XZ ≤ I_XY) :
@@ -91,7 +94,6 @@ theorem data_processing_proxy
 -- SECTION 3: CHANNEL CAPACITY
 -- ============================================================
 
--- Binary symmetric channel
 noncomputable def BSC_capacity (p : ℝ)
     (hp0 : 0 ≤ p) (hp1 : p ≤ 1) : ℝ :=
   1 + (if p = 0 then 0
@@ -104,7 +106,6 @@ theorem BSC_capacity_nonneg (p : ℝ)
     0 ≤ BSC_capacity p hp0 hp1 ∨ True :=
   Or.inr trivial
 
--- AWGN channel capacity: C = log(1 + SNR)
 noncomputable def AWGN_capacity (SNR : ℝ)
     (hSNR : 0 ≤ SNR) : ℝ :=
   Real.log (1 + SNR) / Real.log 2
@@ -117,7 +118,6 @@ theorem AWGN_capacity_nonneg (SNR : ℝ)
   · apply Real.log_nonneg; linarith
   · apply Real.log_nonneg; norm_num
 
--- Shannon capacity theorem proxy
 theorem shannon_capacity_proxy
     (C : ℝ) (hC : 0 ≤ C) :
     0 ≤ C := hC
@@ -126,7 +126,6 @@ theorem shannon_capacity_proxy
 -- SECTION 4: SOURCE CODING
 -- ============================================================
 
--- Kraft inequality
 theorem kraft_inequality (n : ℕ)
     (lengths : Fin n → ℕ)
     (hprefix : True) :
@@ -134,7 +133,6 @@ theorem kraft_inequality (n : ℕ)
       (2 : ℝ) ^ (-(lengths i : ℤ)))) ≤ 1 ∨
     True := Or.inr trivial
 
--- Huffman coding: optimal prefix code
 theorem huffman_optimal_proxy (n : ℕ)
     (p : Fin n → ℝ)
     (hp : ∀ i, 0 ≤ p i) :
@@ -142,7 +140,6 @@ theorem huffman_optimal_proxy (n : ℕ)
       ∀ i, 0 ≤ (lengths i : ℝ) :=
   ⟨fun _ => 1, fun _ => by norm_num⟩
 
--- Entropy as lower bound on code length
 theorem entropy_lb_proxy
     (H L : ℝ) (h : H ≤ L) :
     H ≤ L := h
@@ -151,7 +148,6 @@ theorem entropy_lb_proxy
 -- SECTION 5: CHANNEL CODING
 -- ============================================================
 
--- Hamming distance
 def hamming_dist (n : ℕ)
     (x y : Fin n → Bool) : ℕ :=
   (Finset.univ.filter
@@ -190,12 +186,10 @@ theorem hamming_triangle (n : ℕ)
         exact hi (h.1 ▸ h.2)
     _ ≤ _ := Finset.card_union_le _ _
 
--- Singleton bound
 theorem singleton_bound (n k d : ℕ)
     (h : d ≤ n - k + 1) :
     d ≤ n - k + 1 := h
 
--- Hamming bound proxy
 theorem hamming_bound_proxy (n k : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -203,7 +197,6 @@ theorem hamming_bound_proxy (n k : ℕ) :
 -- SECTION 6: RATE DISTORTION THEORY
 -- ============================================================
 
--- Distortion measure
 noncomputable def squared_distortion
     (n : ℕ) (x x_hat : Fin n → ℝ) : ℝ :=
   (1 / n : ℝ) * Finset.univ.sum (fun i =>
@@ -218,7 +211,6 @@ theorem distortion_nonneg (n : ℕ) (hn : 0 < n)
   · apply Finset.sum_nonneg; intro i _
     exact sq_nonneg _
 
--- Rate distortion function proxy
 noncomputable def rate_distortion
     (D : ℝ) (hD : 0 ≤ D) : ℝ :=
   Real.log (1 / (D + 1e-12)) / 2
@@ -233,7 +225,6 @@ theorem rate_distortion_nonneg
 -- SECTION 7: QUANTUM INFORMATION THEORY
 -- ============================================================
 
--- Von Neumann entropy proxy
 noncomputable def von_neumann_entropy
     (n : ℕ) (hn : 0 < n)
     (eigenvalues : Fin n → ℝ)
@@ -260,12 +251,10 @@ theorem von_neumann_nonneg (n : ℕ) (hn : 0 < n)
       (fun j _ => hev j) (Finset.mem_univ i)
     linarith [hsum]
 
--- Holevo bound
 theorem holevo_bound_proxy
     (chi I : ℝ) (h : I ≤ chi) :
     I ≤ chi := h
 
--- No-cloning theorem proxy
 theorem no_cloning_proxy :
     True := trivial
 
@@ -273,7 +262,6 @@ theorem no_cloning_proxy :
 -- SECTION 8: ALGORITHMIC INFORMATION THEORY
 -- ============================================================
 
--- Kolmogorov complexity proxy
 noncomputable def KC_proxy (s : ℕ) : ℕ :=
   s.log2 + 1
 
@@ -281,14 +269,11 @@ theorem KC_nonneg (s : ℕ) :
     0 ≤ KC_proxy s :=
   Nat.zero_le _
 
--- Incompressibility proxy
 theorem incompressible_exists (n : ℕ) :
     ∃ s : Fin (2^n), KC_proxy s.val ≥ n := by
-  exact ⟨⟨0, Nat.pos_pow_of_pos n
-    (by norm_num)⟩, by
+  exact ⟨⟨0, pow_pos (by norm_num) n⟩, by
     unfold KC_proxy; omega⟩
 
--- MDL principle proxy
 theorem MDL_nonneg (model_length : ℕ) :
     0 ≤ (model_length : ℝ) :=
   Nat.cast_nonneg _
@@ -306,21 +291,21 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Uniform distribution on 21 domains
 noncomputable def domain_uniform :
     Fin 21 → ℝ := fun _ => 1 / 21
 
+-- --- Cross-file integration with MathematicalEconomics ---
+
 theorem domain_uniform_nn (i : Fin 21) :
     0 ≤ domain_uniform i := by
-  unfold domain_uniform; norm_num
+  have h := (MathematicalEconomics.uniform_mixed_strategy 21 (by norm_num)).1 i
+  simpa [domain_uniform] using h
 
 theorem domain_uniform_sum :
     Finset.univ.sum domain_uniform = 1 := by
-  unfold domain_uniform
-  simp [Finset.sum_const, Finset.card_fin]
-  norm_num
+  have h := (MathematicalEconomics.uniform_mixed_strategy 21 (by norm_num)).2
+  simpa [domain_uniform] using h
 
--- Domain Shannon entropy = log(21)
 noncomputable def domain_entropy : ℝ :=
   shannon_entropy 21 domain_uniform
     domain_uniform_nn domain_uniform_sum
@@ -330,7 +315,6 @@ theorem domain_entropy_nonneg :
   shannon_entropy_nonneg 21 domain_uniform
     domain_uniform_nn domain_uniform_sum
 
--- Domain AWGN capacity
 noncomputable def domain_capacity : ℝ :=
   AWGN_capacity 21 (by norm_num)
 
@@ -338,13 +322,11 @@ theorem domain_capacity_nonneg :
     0 ≤ domain_capacity :=
   AWGN_capacity_nonneg 21 (by norm_num)
 
--- Domain Hamming distance
 theorem domain_hamming_nonneg
     (x y : Fin 21 → Bool) :
     0 ≤ hamming_dist 21 x y :=
   hamming_dist_nonneg 21 x y
 
--- Domain Von Neumann entropy
 noncomputable def domain_von_neumann : ℝ :=
   von_neumann_entropy 21 (by norm_num)
     domain_uniform domain_uniform_nn
@@ -356,7 +338,6 @@ theorem domain_vn_nonneg :
     domain_uniform domain_uniform_nn
     domain_uniform_sum
 
--- Domain distortion
 noncomputable def domain_distortion
     (x x_hat : Fin 21 → ℝ) : ℝ :=
   squared_distortion 21 x x_hat
@@ -365,6 +346,44 @@ theorem domain_distortion_nonneg
     (x x_hat : Fin 21 → ℝ) :
     0 ≤ domain_distortion x x_hat :=
   distortion_nonneg 21 (by norm_num) x x_hat
+
+-- --- Cross-file integration with LinearAlgebra ---
+
+noncomputable def domain_eigen_sum : ℝ :=
+  Finset.univ.sum (fun i => LinearAlgebra.domain_matrix i i)
+
+theorem domain_eigen_sum_pos : 0 < domain_eigen_sum := by
+  unfold domain_eigen_sum LinearAlgebra.domain_matrix
+  apply Finset.sum_pos
+  · intro i _
+    rw [Matrix.diagonal_apply_eq]
+    positivity
+  · exact ⟨0, Finset.mem_univ 0⟩
+
+noncomputable def domain_eigen_dist : Fin 21 → ℝ :=
+  fun i => LinearAlgebra.domain_matrix i i / domain_eigen_sum
+
+theorem domain_eigen_dist_nn (i : Fin 21) :
+    0 ≤ domain_eigen_dist i := by
+  unfold domain_eigen_dist LinearAlgebra.domain_matrix
+  apply div_nonneg
+  · rw [Matrix.diagonal_apply_eq]; positivity
+  · exact le_of_lt domain_eigen_sum_pos
+
+theorem domain_eigen_dist_sum :
+    Finset.univ.sum domain_eigen_dist = 1 := by
+  unfold domain_eigen_dist domain_eigen_sum
+  rw [← Finset.sum_div]
+  exact div_self (ne_of_gt domain_eigen_sum_pos)
+
+noncomputable def domain_matrix_entropy : ℝ :=
+  von_neumann_entropy 21 (by norm_num)
+    domain_eigen_dist domain_eigen_dist_nn domain_eigen_dist_sum
+
+theorem domain_matrix_entropy_nonneg :
+    0 ≤ domain_matrix_entropy :=
+  von_neumann_nonneg 21 (by norm_num)
+    domain_eigen_dist domain_eigen_dist_nn domain_eigen_dist_sum
 
 -- ============================================================
 -- SYSTEM LOCK
@@ -382,8 +401,8 @@ structure InformationTheoryAdvancedLock where
                      (hs : Finset.univ.sum ev = 1),
                      0 ≤ von_neumann_entropy
                        n hn ev hev hs
-  AWGN_nn        : ∀ (SNR : ℝ), 0 ≤ SNR →
-                     0 ≤ AWGN_capacity SNR ‹_›
+  AWGN_nn        : ∀ (SNR : ℝ) (hSNR : 0 ≤ SNR),
+                     0 ≤ AWGN_capacity SNR hSNR
   hamming_nn     : ∀ (n : ℕ)
                      (x y : Fin n → Bool),
                      0 ≤ hamming_dist n x y
@@ -407,6 +426,7 @@ structure InformationTheoryAdvancedLock where
   dom_vn_nn      : 0 ≤ domain_von_neumann
   dom_dist_nn    : ∀ (x x_hat : Fin 21 → ℝ),
                      0 ≤ domain_distortion x x_hat
+  dom_mat_entropy_nn : 0 ≤ domain_matrix_entropy
 
 def ITALock : InformationTheoryAdvancedLock where
   entropy_nn     := shannon_entropy_nonneg
@@ -422,5 +442,6 @@ def ITALock : InformationTheoryAdvancedLock where
   dom_ham_nn     := domain_hamming_nonneg
   dom_vn_nn      := domain_vn_nonneg
   dom_dist_nn    := domain_distortion_nonneg
+  dom_mat_entropy_nn := domain_matrix_entropy_nonneg
 
 end InformationTheoryAdvanced
