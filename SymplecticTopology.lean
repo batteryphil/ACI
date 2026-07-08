@@ -23,6 +23,8 @@ theorem standard_J_antisym (n : ℕ) :
     -(standard_J n) := by
   ext i j
   simp only [Matrix.transpose_apply, Matrix.neg_apply, standard_J, Matrix.of_apply]
+  have hi : (i : ℕ) < 2 * n := i.is_lt
+  have hj : (j : ℕ) < 2 * n := j.is_lt
   split_ifs <;> omega
 
 theorem symplectic_pairing_proxy (n : ℕ)
