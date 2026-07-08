@@ -1,4 +1,3 @@
--- HomologicalAlgebra.lean
 import Mathlib
 
 namespace HomologicalAlgebra
@@ -18,7 +17,6 @@ structure ChainComplex (n : ℕ) where
     boundary i.succ (boundary i.castSucc x) =
     boundary i.succ (boundary i.castSucc x)
 
--- Concrete chain complex over ℤ
 structure IntChainComplex (n : ℕ) where
   C        : Fin n → Finset ℤ
   d        : ∀ i : Fin (n-1), ℤ → ℤ
@@ -78,8 +76,6 @@ theorem boundary_closed_add
 -- SECTION 3: HOMOLOGY GROUPS
 -- ============================================================
 
--- Homology = ker(d_n) / im(d_{n+1})
--- In our discrete setting, rank of homology
 noncomputable def homology_rank
     (d_n d_np1 : ℤ → ℤ)
     (hlin_n   : ∀ a b, d_n (a + b) =
@@ -99,7 +95,6 @@ theorem homology_rank_nonneg
       hlin_n hlin_np1 h_sq := by
   unfold homology_rank; omega
 
--- Euler characteristic
 def euler_characteristic
     (betti : Fin 3 → ℕ) : ℤ :=
   (betti 0 : ℤ) - betti 1 + betti 2
@@ -122,7 +117,6 @@ def is_exact_at
     (hg : ∀ a b, g (a + b) = g a + g b) : Prop :=
   ∀ x, g x = 0 → ∃ y, f y = x
 
--- Short exact sequence 0 → A → B → C → 0
 structure ShortExactSeq where
   f       : ℤ → ℤ
   g       : ℤ → ℤ
@@ -136,7 +130,6 @@ theorem ses_gf_is_zero
     ses.g (ses.f x) = 0 :=
   ses.gf_zero x
 
--- Splitting lemma instance
 theorem ses_splits_trivial
     (f : ℤ → ℤ)
     (hf : ∀ a b, f (a + b) = f a + f b)
@@ -149,7 +142,6 @@ theorem ses_splits_trivial
 -- SECTION 5: LONG EXACT SEQUENCE
 -- ============================================================
 
--- Connecting homomorphism
 def connecting_map
     (d1 d2 : ℤ → ℤ)
     (h : ∀ x, d2 (d1 x) = 0)
@@ -169,7 +161,6 @@ theorem long_exact_nonneg_rank :
 -- SECTION 6: TOR AND EXT PROXIES
 -- ============================================================
 
--- Tor^1 proxy: measures failure of flatness
 noncomputable def tor_proxy
     (f : ℤ → ℤ)
     (hf : ∀ a b, f (a + b) = f a + f b)
@@ -181,7 +172,6 @@ theorem tor_proxy_zero
     (x : ℤ) :
     tor_proxy f hf x = 0 := rfl
 
--- Ext^1 proxy: measures failure of injectivity
 noncomputable def ext_proxy
     (f : ℤ → ℤ)
     (hf : ∀ a b, f (a + b) = f a + f b)
@@ -193,7 +183,6 @@ theorem ext_proxy_zero
     (x : ℤ) :
     ext_proxy f hf x = 0 := rfl
 
--- Universal coefficient theorem proxy
 theorem UCT_rank_nonneg
     (betti : Fin 3 → ℕ) :
     0 ≤ (betti 0 : ℤ) := Int.ofNat_nonneg _
@@ -215,7 +204,6 @@ theorem spectral_page_nonneg
     0 ≤ ss.E p q :=
   ss.E_nn p q
 
--- Convergence: E_∞ term nonneg
 theorem spectral_limit_nonneg
     (E_inf : ℕ → ℕ → ℤ)
     (hnn : ∀ p q, 0 ≤ E_inf p q)
@@ -227,13 +215,11 @@ theorem spectral_limit_nonneg
 -- SECTION 8: DERIVED FUNCTORS
 -- ============================================================
 
--- Projective resolution proxy
 structure ProjectiveRes where
   P        : ℕ → Type*
   d        : ∀ n, P (n+1) → P n
   acyclic  : True
 
--- Left derived functor proxy
 noncomputable def L_derived
     (F : ℤ → ℤ)
     (hF : ∀ a b, F (a + b) = F a + F b)
@@ -268,7 +254,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain chain complex
 structure DomainChain where
   C        : Domain21 → ℤ
   d        : Domain21 → Domain21 → ℤ → ℤ
@@ -283,7 +268,6 @@ theorem domain_chain_d_sq
     dc.d b c (dc.d a b x) = 0 :=
   dc.d_sq a b c x
 
--- Domain homology nonneg proxy
 noncomputable def domain_H0
     (dc : DomainChain) : ℕ :=
   Fintype.card Domain21
@@ -294,7 +278,6 @@ theorem domain_H0_pos
   unfold domain_H0
   native_decide
 
--- Euler characteristic of domain complex
 def domain_euler
     (b0 b1 b2 : ℕ) : ℤ :=
   (b0 : ℤ) - b1 + b2
