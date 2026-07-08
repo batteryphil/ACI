@@ -271,8 +271,20 @@ theorem KC_nonneg (s : ℕ) :
 
 theorem incompressible_exists (n : ℕ) :
     ∃ s : Fin (2^n), KC_proxy s.val ≥ n := by
-  exact ⟨⟨0, pow_pos (by norm_num) n⟩, by
-    unfold KC_proxy; omega⟩
+  have h2n : 0 < 2^n := pow_pos (by norm_num) n
+  have hlt : 2^n - 1 < 2^n := by omega
+  refine ⟨⟨2^n - 1, hlt⟩, ?_⟩
+  unfold KC_proxy
+  rcases Nat.eq_zero_or_pos n with hn0 | hn0
+  · simp [hn0]
+  · have hpow_le : 2 ^ (n - 1) ≤ 2^n - 1 := by
+      have heq : 2 ^ (n-1) * 2 = 2^n := by
+        rw [← pow_succ]; congr 1; omega
+      omega
+    have hlog_ge : n - 1 ≤ Nat.log 2 (2^n - 1) :=
+      Nat.le_log_of_pow_le (by norm_num) hpow_le
+    have heq2 : (2^n - 1).log2 = Nat.log 2 (2^n - 1) := Nat.log2_eq_log_two
+    omega
 
 theorem MDL_nonneg (model_length : ℕ) :
     0 ≤ (model_length : ℝ) :=
