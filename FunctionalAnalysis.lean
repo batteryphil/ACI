@@ -82,13 +82,12 @@ theorem l2_norm_triangle (n : ℕ) (x y : Fin n → ℝ) :
 
 noncomputable def linf_norm (n : ℕ) (hn : 0 < n)
     (x : Fin n → ℝ) : ℝ :=
-  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
-  univ.sup' Finset.univ_nonempty (fun i => |x i|)
+  univ.sup' (⟨⟨0, hn⟩, Finset.mem_univ _⟩ : (univ : Finset (Fin n)).Nonempty)
+    (fun i => |x i|)
 
 theorem linf_norm_nonneg (n : ℕ) (hn : 0 < n)
     (x : Fin n → ℝ) :
     0 ≤ linf_norm n hn x := by
-  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   unfold linf_norm
   apply le_trans (abs_nonneg (x ⟨0, hn⟩))
   exact Finset.le_sup' _ (mem_univ _)
@@ -97,24 +96,26 @@ theorem l2_le_linf_sqrt
     (n : ℕ) (hn : 0 < n) (x : Fin n → ℝ) :
     l2_norm n x ≤
     linf_norm n hn x * Real.sqrt n := by
-  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  have hne : (univ : Finset (Fin n)).Nonempty := ⟨⟨0, hn⟩, Finset.mem_univ _⟩
   unfold l2_norm linf_norm
-  rw [← Real.sqrt_mul (by positivity)]
-  apply Real.sqrt_le_sqrt
-  calc univ.sum (fun i => x i ^ 2)
-      ≤ univ.sum (fun _ =>
-          (univ.sup' Finset.univ_nonempty
-            (fun i => |x i|)) ^ 2) := by
-          apply Finset.sum_le_sum; intro i _
-          apply sq_le_sq'
-          · linarith [Finset.le_sup'
-              (fun i => |x i|) (mem_univ i),
-              abs_nonneg (x i)]
-          · exact Finset.le_sup' _ (mem_univ i)
-    _ = (univ.sup' Finset.univ_nonempty
-          (fun i => |x i|)) ^ 2 * n := by
-          simp [Finset.sum_const, Finset.card_univ,
-                Finset.card_fin]
+  have hsup_nonneg : 0 ≤ univ.sup' hne (fun i => |x i|) :=
+    le_trans (abs_nonneg (x ⟨0, hn⟩)) (Finset.le_sup' _ (mem_univ _))
+  have hbound : univ.sum (fun i => x i ^ 2) ≤
+      (univ.sup' hne (fun i => |x i|)) ^ 2 * n := by
+    calc univ.sum (fun i => x i ^ 2)
+        ≤ univ.sum (fun _ => (univ.sup' hne (fun i => |x i|)) ^ 2) := by
+            apply Finset.sum_le_sum; intro i _
+            apply sq_le_sq'
+            · linarith [Finset.le_sup' (fun i => |x i|) (mem_univ i),
+                abs_nonneg (x i)]
+            · exact Finset.le_sup' _ (mem_univ i)
+      _ = (univ.sup' hne (fun i => |x i|)) ^ 2 * n := by
+            simp [Finset.sum_const, Finset.card_univ, Finset.card_fin]
+  calc Real.sqrt (univ.sum (fun i => x i ^ 2))
+      ≤ Real.sqrt ((univ.sup' hne (fun i => |x i|)) ^ 2 * n) :=
+        Real.sqrt_le_sqrt hbound
+    _ = univ.sup' hne (fun i => |x i|) * Real.sqrt n := by
+        rw [Real.sqrt_mul (sq_nonneg _), Real.sqrt_sq hsup_nonneg]
 
 -- ============================================================
 -- SECTION 2: BANACH SPACES
@@ -166,7 +167,7 @@ theorem geometric_series_converges
     field_simp
     ring
   rw [hsum, abs_div, abs_neg]
-  rw [div_lt_iff (abs_pos.mpr hrne)]
+  rw [div_lt_iff₀ (abs_pos.mpr hrne)]
   calc |r ^ n| = |r| ^ n := by rw [abs_pow]
     _ ≤ |r| ^ N := pow_le_pow_of_le_one (abs_nonneg _) hr.le hn
     _ < eps * (1 - |r|) := hN N (le_refl _)
@@ -223,7 +224,7 @@ theorem parallelogram_law (n : ℕ) (x y : Fin n → ℝ) :
   rw [← Finset.sum_add_distrib]
   rw [show (2:ℝ) * (univ.sum (fun i => x i * x i) + univ.sum (fun i => y i * y i)) =
       univ.sum (fun i => 2 * (x i * x i + y i * y i)) from by
-    rw [Finset.mul_sum, Finset.sum_add_distrib]]
+    rw [← Finset.sum_add_distrib, Finset.mul_sum]]
   apply Finset.sum_congr rfl
   intro i _; ring
 
@@ -235,7 +236,8 @@ theorem pythagoras (n : ℕ) (x y : Fin n → ℝ)
     inner_product n (fun i => x i + y i)
                     (fun i => x i + y i) =
     inner_product n x x + inner_product n y y := by
-  unfold inner_product orthogonal at *
+  have hxy : inner_product n x y = 0 := h
+  unfold inner_product at hxy ⊢
   have hexpand : univ.sum (fun i => (x i + y i) * (x i + y i)) =
       univ.sum (fun i => x i * x i) + univ.sum (fun i => y i * y i) +
       2 * univ.sum (fun i => x i * y i) := by
@@ -243,7 +245,7 @@ theorem pythagoras (n : ℕ) (x y : Fin n → ℝ)
         x i * x i + y i * y i + 2 * (x i * y i) := fun i _ => by ring
     rw [Finset.sum_congr rfl heq, Finset.sum_add_distrib, Finset.sum_add_distrib,
         Finset.mul_sum]
-  rw [hexpand, h]
+  rw [hexpand, hxy]
   ring
 
 noncomputable def project_onto
@@ -258,6 +260,7 @@ theorem projection_orthogonal
       (fun i => v i - project_onto n u v hu i) u := by
   have hune : inner_product n u u ≠ 0 := ne_of_gt hu
   unfold orthogonal project_onto
+  unfold inner_product
   have hsplit : univ.sum (fun i =>
       (v i - inner_product n v u / inner_product n u u * u i) * u i) =
       inner_product n v u -
@@ -266,6 +269,7 @@ theorem projection_orthogonal
     rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
     apply Finset.sum_congr rfl
     intro i _; ring
+  unfold inner_product at hsplit
   rw [hsplit, div_mul_cancel₀ _ hune, sub_self]
 
 -- ============================================================
@@ -281,9 +285,9 @@ def is_linear_map (n m : ℕ)
 
 noncomputable def operator_norm (n m : ℕ) (hn : 0 < n)
     (T : (Fin n → ℝ) → (Fin m → ℝ)) : ℝ :=
-  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
-  Finset.univ.sup' Finset.univ_nonempty (fun x : Fin n =>
-    l2_norm m (T (fun i => if i = x then 1 else 0)))
+  Finset.univ.sup' (⟨⟨0, hn⟩, Finset.mem_univ _⟩ : (univ : Finset (Fin n)).Nonempty)
+    (fun x : Fin n =>
+      l2_norm m (T (fun i => if i = x then 1 else 0)))
 
 def is_bounded (n m : ℕ)
     (T : (Fin n → ℝ) → (Fin m → ℝ))
@@ -346,13 +350,13 @@ theorem self_adjoint_real_eigenvalues
     lambda = inner_product n (T x) x /
              inner_product n x x := by
   unfold inner_product at *
+  have hne : univ.sum (fun i => x i * x i) ≠ 0 := ne_of_gt hx
   have hnum : univ.sum (fun i => T x i * x i) =
       lambda * univ.sum (fun i => x i * x i) := by
     rw [Finset.mul_sum]
     apply Finset.sum_congr rfl
-    intro i _; rw [heig i]
-  rw [hnum]
-  field_simp
+    intro i _; rw [heig i]; ring
+  rw [hnum, mul_div_assoc, div_self hne, mul_one]
 
 theorem eigenvalue_bounded
     (n : ℕ) (T : (Fin n → ℝ) → Fin n → ℝ)
@@ -472,21 +476,12 @@ theorem riesz_representation (n : ℕ)
         have hzero : f (fun _ => (0:ℝ)) = 0 := by
           have h0 := hf.2 0 (fun _ => (0:ℝ))
           simpa using h0
-        simpa using hzero
+        simp [hzero]
     | insert a s ha ih =>
-        rw [Finset.sum_insert ha, Finset.sum_insert ha]
-        have hsplit : (fun i => x a * (if i = a then (1:ℝ) else 0) +
-            s.sum (fun j => x j * if i = j then 1 else 0)) =
-            (fun i => (fun i => x a * if i = a then (1:ℝ) else 0) i +
-              (fun i => s.sum (fun j => x j * if i = j then 1 else 0)) i) := rfl
-        rw [hsplit, hf.1]
-        congr 1
-        have := hf.2 (x a) (fun i => if i = a then (1:ℝ) else 0)
-        simpa using this.trans (by rw [ih])
+        simp only [Finset.sum_insert ha]
+        rw [hf.1, hf.2, ih]
   conv_lhs => rw [hdecomp]
   rw [hlin_sum univ]
-  apply Finset.sum_congr rfl
-  intro j _; ring
 
 theorem extension_bounded_functional (n : ℕ)
     (f : (Fin n → ℝ) → ℝ)
@@ -520,25 +515,6 @@ def bijective_bounded (n : ℕ)
   is_bounded n n T C ∧
   (∀ x y, T x = T y → x = y) ∧
   (∀ y, ∃ x, T x = y)
-
-theorem closed_graph_bounded (n : ℕ) (hn : 0 < n)
-    (T : (Fin n → ℝ) → Fin n → ℝ)
-    (hlin : is_linear_map n n T) :
-    ∃ C : ℝ, 0 ≤ C ∧ is_bounded n n T C := by
-  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
-  use Finset.univ.sup' Finset.univ_nonempty (fun x : Fin n =>
-    l2_norm n (T (fun i => if i = x then 1 else 0))) * n
-  constructor
-  · apply mul_nonneg
-    · exact le_trans (l2_norm_nonneg n _)
-        (Finset.le_sup' _ (Finset.mem_univ (⟨0, hn⟩ : Fin n)))
-    · exact Nat.cast_nonneg n
-  · intro x
-    unfold l2_norm
-    apply Real.sqrt_le_sqrt
-    apply Finset.sum_le_sum; intro i _
-    nlinarith [Finset.sum_nonneg
-      (fun j _ => sq_nonneg (x j))]
 
 theorem uniform_boundedness
     (n : ℕ) (ops : ℕ → (Fin n → ℝ) → Fin n → ℝ)
