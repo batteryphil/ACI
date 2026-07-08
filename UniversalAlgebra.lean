@@ -4,14 +4,12 @@ namespace UniversalAlgebra
 
 open Finset
 
-universe u v
-
 structure Signature where
-  ops    : Type u
+  ops    : Type
   arity  : ops → ℕ
 
 structure Algebra (σ : Signature) where
-  carrier : Type*
+  carrier : Type
   interp  : ∀ op : σ.ops,
     (Fin (σ.arity op) → carrier) →
     carrier
@@ -93,8 +91,7 @@ theorem free_algebra_pos (σ : Signature)
     (n : ℕ) (hn : 0 < n) :
     0 < free_algebra_dim σ n := hn
 
-inductive Term (σ : Signature) (vars : Type v) :
-    Type (max u v) where
+inductive Term (σ : Signature) (vars : Type) : Type where
   | var  : vars → Term σ vars
   | app  : ∀ op : σ.ops,
     (Fin (σ.arity op) → Term σ vars) →
