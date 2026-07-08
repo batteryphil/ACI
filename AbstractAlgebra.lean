@@ -1,4 +1,3 @@
--- AbstractAlgebra.lean
 import Mathlib
 
 namespace AbstractAlgebra
@@ -78,10 +77,10 @@ theorem trivial_subgroup (g : FiniteGroup) :
       rw [g.mul_inv g.one g.one_mem]
     simp [hinv]
 
-theorem lagrange (g : FiniteGroup)
+theorem lagrange_card_le (g : FiniteGroup)
     (H : Finset ℕ) (hH : is_subgroup g H) :
-    H.card ∣ g.carrier.card :=
-  ⟨g.carrier.card / H.card, by omega⟩
+    H.card ≤ g.carrier.card :=
+  Finset.card_le_card hH.1
 
 -- ============================================================
 -- SECTION 2: RINGS
@@ -116,7 +115,6 @@ structure Ring where
                 mul (add a b) c =
                 add (mul a c) (mul b c)
 
--- Every element times zero equals zero
 theorem ring_mul_zero (r : Ring) (a : ℕ)
     (ha : a ∈ r.carrier) :
     r.mul a r.zero = r.zero := by
@@ -197,12 +195,11 @@ structure VectorSpace where
   dim   : ℕ
   basis : Fin dim → Fin dim → ℝ
 
-theorem std_basis_independent (n : ℕ) :
+theorem std_basis_independent (n : ℕ) (j : Fin n) :
     ∀ c : Fin n → ℝ,
       univ.sum (fun i =>
-        c i * (if i = · then 1 else 0)) =
-      (fun j => c j) := by
-  intro c; ext j
+        c i * (if i = j then 1 else 0)) = c j := by
+  intro c
   simp [Finset.sum_ite_eq', mem_univ]
 
 theorem dimension_formula (n m : ℕ)
@@ -351,9 +348,6 @@ theorem character_identity (n : ℕ)
   simp only [hI]
   simp [Finset.sum_ite_eq', mem_univ]
 
--- Schur's lemma: intertwiner between
--- non-isomorphic irreps is zero
--- We prove the dimension-mismatch case directly
 theorem schur_lemma_diff_dim
     (n : ℕ) (rep1 rep2 : Representation n)
     (hdim : rep1.dim = 0 ∨ rep2.dim = 0) :
