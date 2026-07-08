@@ -238,7 +238,7 @@ theorem kernel_is_subgroup
     is_subgroup g (group_hom_kernel g h f) := by
   unfold group_hom_kernel is_subgroup
   refine ⟨Finset.filter_subset _ _, ?_, ?_, ?_⟩
-  · simp [hf.2.1]
+  · exact Finset.mem_filter.mpr ⟨g.one_mem, hf.2.1⟩
   · intro a b ha hb
     simp [Finset.mem_filter] at *
     exact ⟨g.mul_mem a b ha.1 hb.1,
@@ -462,9 +462,10 @@ theorem AWM_basis_orthonormal
     if d1 = d2 then 1 else 0 := by
   unfold AWM_module_basis
   rw [Finset.sum_eq_single d2
-    (fun b _ hb => by simp [Ne.symm hb])
-    (fun h => absurd (Finset.mem_univ d2) h)]
-  simp
+    (fun b _ hb => by simp [Ne.symm hb]),
+    if_pos rfl, mul_one]
+  intro h
+  exact absurd (Finset.mem_univ d2) h
 
 theorem AWM_basis_spans :
     ∀ v : Domain21 → ℝ,
@@ -474,9 +475,10 @@ theorem AWM_basis_spans :
   funext d
   unfold AWM_module_basis
   rw [Finset.sum_eq_single d
-    (fun b _ hb => by simp [hb])
-    (fun h => absurd (Finset.mem_univ d) h)]
-  simp
+    (fun b _ hb => by simp [hb]),
+    if_pos rfl, mul_one]
+  intro h
+  exact absurd (Finset.mem_univ d) h
 
 -- ============================================================
 -- SYSTEM LOCK
