@@ -138,8 +138,8 @@ theorem euler_product_nonneg
   apply div_nonneg (by norm_num)
   rcases Nat.eq_zero_or_pos p with hp0 | hp1
   · subst hp0
-    have hz : (0:ℝ) ^ s = 0 := Real.zero_rpow (by linarith)
-    rw [hz]
+    push_cast
+    rw [Real.zero_rpow (by linarith : s ≠ 0)]
     simp
   · have hp1' : (1:ℝ) ≤ (p:ℝ) := by exact_mod_cast hp1
     have hps1 : (1:ℝ) ^ s ≤ (p:ℝ) ^ s :=
