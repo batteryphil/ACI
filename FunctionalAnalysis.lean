@@ -108,7 +108,8 @@ theorem l2_le_linf_sqrt
             apply sq_le_sq'
             · linarith [Finset.le_sup' (fun i => |x i|) (mem_univ i),
                 neg_abs_le (x i)]
-            · exact Finset.le_sup' (fun i => |x i|) (mem_univ i)
+            · exact le_trans (le_abs_self (x i))
+                (Finset.le_sup' (fun i => |x i|) (mem_univ i))
       _ = (univ.sup' hne (fun i => |x i|)) ^ 2 * n := by
             simp [Finset.sum_const, Finset.card_univ]
             ring
