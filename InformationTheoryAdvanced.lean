@@ -47,18 +47,18 @@ noncomputable def min_entropy (n : ℕ)
     (p : Fin n → ℝ)
     (hp : ∀ i, 0 ≤ p i) : ℝ :=
   -Real.log (Finset.univ.sup'
-    Finset.univ_nonempty p)
+    (⟨⟨0, hn⟩, Finset.mem_univ _⟩ : (Finset.univ : Finset (Fin n)).Nonempty) p)
 
 theorem min_entropy_nonneg (n : ℕ) (hn : 0 < n)
     (p : Fin n → ℝ) (hp : ∀ i, 0 ≤ p i)
     (hsum : Finset.univ.sum p = 1) :
     0 ≤ min_entropy n hn p hp := by
-  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  have hne : (Finset.univ : Finset (Fin n)).Nonempty := ⟨⟨0, hn⟩, Finset.mem_univ _⟩
   unfold min_entropy
   rw [neg_nonneg]
   apply Real.log_nonpos
     (le_trans (hp ⟨0, hn⟩) (Finset.le_sup' p (Finset.mem_univ ⟨0, hn⟩)))
-  calc Finset.univ.sup' Finset.univ_nonempty p
+  calc Finset.univ.sup' hne p
       ≤ Finset.univ.sum p :=
         Finset.sup'_le _ _
           (fun i _ => Finset.single_le_sum (fun j _ => hp j) (Finset.mem_univ i))
@@ -274,6 +274,7 @@ theorem incompressible_exists (n : ℕ) :
   have h2n : 0 < 2^n := pow_pos (by norm_num) n
   have hlt : 2^n - 1 < 2^n := by omega
   refine ⟨⟨2^n - 1, hlt⟩, ?_⟩
+  show KC_proxy (2^n - 1) ≥ n
   unfold KC_proxy
   rcases Nat.eq_zero_or_pos n with hn0 | hn0
   · simp [hn0]
