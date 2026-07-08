@@ -29,9 +29,9 @@ theorem group_one_unique (g : FiniteGroup)
     (e : ℕ) (he : e ∈ g.carrier)
     (h : ∀ a, a ∈ g.carrier → g.mul e a = a) :
     e = g.one := by
-  have := h g.one g.one_mem
-  rw [g.one_mul e he] at this
-  exact this.symm
+  have h1 := h g.one g.one_mem
+  rw [g.mul_one e he] at h1
+  exact h1
 
 theorem group_inv_unique (g : FiniteGroup)
     (a b : ℕ) (ha : a ∈ g.carrier)
@@ -72,9 +72,10 @@ theorem trivial_subgroup (g : FiniteGroup) :
     simp at ha
     rw [ha]
     have hinv : g.inv g.one = g.one := by
-      apply group_inv_unique g g.one (g.inv g.one)
-        g.one_mem (g.inv_mem g.one g.one_mem)
-      rw [g.mul_inv g.one g.one_mem]
+      have h0 := group_inv_unique g g.one g.one
+        g.one_mem g.one_mem
+        (g.one_mul g.one g.one_mem)
+      exact h0.symm
     simp [hinv]
 
 theorem lagrange_card_le (g : FiniteGroup)
@@ -185,7 +186,7 @@ theorem field_no_zero_divisors (f : Field) :
 theorem finite_field_order (p n : ℕ)
     (hp : Nat.Prime p) (hn : 0 < n) :
     ∃ q : ℕ, q = p ^ n ∧ 0 < q :=
-  ⟨p ^ n, rfl, Nat.pos_pow_of_pos n hp.pos⟩
+  ⟨p ^ n, rfl, pow_pos hp.pos n⟩
 
 -- ============================================================
 -- SECTION 4: MODULES AND VECTOR SPACES
@@ -249,9 +250,9 @@ theorem kernel_is_subgroup
     refine ⟨g.inv_mem a ha.1, ?_⟩
     rw [hom_preserves_inv g h f hf a ha.1, ha.2]
     have hinv_one : h.inv h.one = h.one :=
-      group_inv_unique h h.one h.one
+      (group_inv_unique h h.one h.one
         h.one_mem h.one_mem
-        (h.mul_one h.one h.one_mem)
+        (h.mul_one h.one h.one_mem)).symm
     exact hinv_one
 
 theorem image_is_subgroup
@@ -260,22 +261,19 @@ theorem image_is_subgroup
     is_subgroup h (g.carrier.image f) := by
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro a ha
-    simp [Finset.mem_image] at ha
-    obtain ⟨b, hb, rfl⟩ := ha
+    obtain ⟨b, hb, rfl⟩ := Finset.mem_image.mp ha
     exact hf.1 b hb
-  · simp [hf.2.1, Finset.mem_image]
-    exact ⟨g.one, g.one_mem, rfl⟩
+  · rw [← hf.2.1]
+    exact Finset.mem_image.mpr ⟨g.one, g.one_mem, rfl⟩
   · intro a b ha hb
-    simp [Finset.mem_image] at *
-    obtain ⟨x, hx, rfl⟩ := ha
-    obtain ⟨y, hy, rfl⟩ := hb
-    exact ⟨g.mul x y, g.mul_mem x y hx hy,
-           hf.2.2 x y hx hy⟩
+    obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp ha
+    obtain ⟨y, hy, rfl⟩ := Finset.mem_image.mp hb
+    exact Finset.mem_image.mpr
+      ⟨g.mul x y, g.mul_mem x y hx hy, hf.2.2 x y hx hy⟩
   · intro a ha
-    simp [Finset.mem_image] at *
-    obtain ⟨x, hx, rfl⟩ := ha
-    exact ⟨g.inv x, g.inv_mem x hx,
-           hom_preserves_inv g h f hf x hx⟩
+    obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp ha
+    exact Finset.mem_image.mpr
+      ⟨g.inv x, g.inv_mem x hx, hom_preserves_inv g h f hf x hx⟩
 
 theorem first_iso_theorem
     (g h : FiniteGroup) (f : ℕ → ℕ)
@@ -406,9 +404,9 @@ theorem monoid_id_unique
     (m : DomainMonoid) (e : Domain21)
     (h : ∀ a, m.compose e a = a) :
     e = m.identity := by
-  have := h m.identity
-  rw [m.id_right] at this
-  exact this.symm
+  have h1 := h m.identity
+  rw [m.id_right] at h1
+  exact h1
 
 structure DomainGroup extends DomainMonoid where
   inv     : Domain21 → Domain21
@@ -426,7 +424,7 @@ theorem domain_group_inv_unique
     rw [h]
   rw [← g.assoc (g.inv a) a b] at h2
   rw [h1, g.id_left, g.id_right] at h2
-  exact h2.symm
+  exact h2
 
 noncomputable def domain_symmetry_order : ℕ :=
   Fintype.card (Equiv.Perm Domain21)
@@ -463,16 +461,22 @@ theorem AWM_basis_orthonormal
       AWM_module_basis d2 d) =
     if d1 = d2 then 1 else 0 := by
   unfold AWM_module_basis
-  simp [Finset.sum_ite_eq', mem_univ]
-  split_ifs <;> rfl
+  rw [Finset.sum_eq_single d2
+    (fun b _ hb => by simp [Ne.symm hb])
+    (fun h => absurd (Finset.mem_univ d2) h)]
+  simp
 
 theorem AWM_basis_spans :
     ∀ v : Domain21 → ℝ,
       v = fun d => Finset.univ.sum (fun d' =>
         v d' * AWM_module_basis d' d) := by
-  intro v; ext d
+  intro v
+  funext d
   unfold AWM_module_basis
-  simp [Finset.sum_ite_eq', mem_univ]
+  rw [Finset.sum_eq_single d
+    (fun b _ hb => by simp [hb])
+    (fun h => absurd (Finset.mem_univ d) h)]
+  simp
 
 -- ============================================================
 -- SYSTEM LOCK
