@@ -10,16 +10,16 @@ open Finset
 
 structure IntChainComplex (n : ℕ) where
   C        : Fin n → Finset ℤ
-  d        : ∀ i : Fin (n-1), ℤ → ℤ
-  d_linear : ∀ i : Fin (n-1), ∀ a b : ℤ,
+  d        : ℕ → ℤ → ℤ
+  d_linear : ∀ i : ℕ, ∀ a b : ℤ,
     d i (a + b) = d i a + d i b
-  d_sq     : ∀ i : Fin (n-2), ∀ x : ℤ,
-    d i.succ (d i.castSucc x) = 0
+  d_sq     : ∀ i : ℕ, ∀ x : ℤ,
+    d (i + 1) (d i x) = 0
 
 theorem d_sq_zero (n : ℕ)
     (C : IntChainComplex n)
-    (i : Fin (n-2)) (x : ℤ) :
-    C.d i.succ (C.d i.castSucc x) = 0 :=
+    (i : ℕ) (x : ℤ) :
+    C.d (i + 1) (C.d i x) = 0 :=
   C.d_sq i x
 
 -- ============================================================
@@ -283,8 +283,8 @@ theorem domain_euler_AWM :
 
 structure HomologicalAlgebraLock where
   d_sq_zero     : ∀ (C : IntChainComplex 5)
-                    (i : Fin 3) (x : ℤ),
-                    C.d i.succ (C.d i.castSucc x) = 0
+                    (i : ℕ) (x : ℤ),
+                    C.d (i + 1) (C.d i x) = 0
   boundary_cycle : ∀ (d_prev d_next : ℤ → ℤ),
                     (∀ x, d_next (d_prev x) = 0) →
                     ∀ x, is_boundary d_prev x →
