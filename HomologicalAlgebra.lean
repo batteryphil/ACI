@@ -8,15 +8,6 @@ open Finset
 -- SECTION 1: CHAIN COMPLEXES
 -- ============================================================
 
-structure ChainComplex (n : ℕ) where
-  groups   : Fin n → Type*
-  boundary : ∀ i : Fin (n-1),
-    groups i.castSucc → groups i.succ
-  d_sq     : ∀ i : Fin (n-2),
-    ∀ x : groups i.castSucc.castSucc,
-    boundary i.succ (boundary i.castSucc x) =
-    boundary i.succ (boundary i.castSucc x)
-
 structure IntChainComplex (n : ℕ) where
   C        : Fin n → Finset ℤ
   d        : ∀ i : Fin (n-1), ℤ → ℤ
@@ -185,7 +176,7 @@ theorem ext_proxy_zero
 
 theorem UCT_rank_nonneg
     (betti : Fin 3 → ℕ) :
-    0 ≤ (betti 0 : ℤ) := Int.ofNat_nonneg _
+    0 ≤ (betti 0 : ℤ) := Int.natCast_nonneg _
 
 -- ============================================================
 -- SECTION 7: SPECTRAL SEQUENCES
