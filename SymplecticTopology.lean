@@ -23,7 +23,12 @@ theorem standard_J_antisym (n : ℕ) :
     -(standard_J n) := by
   ext i j
   simp only [Matrix.transpose_apply, Matrix.neg_apply, standard_J, Matrix.of_apply]
-  split_ifs <;> first | rfl | norm_num | omega
+  split_ifs with h1 h2 h3 h4 <;>
+    (try obtain ⟨h1a, h1b⟩ := h1) <;>
+    (try obtain ⟨h2a, h2b⟩ := h2) <;>
+    (try obtain ⟨h3a, h3b⟩ := h3) <;>
+    (try obtain ⟨h4a, h4b⟩ := h4) <;>
+    first | rfl | norm_num | omega
 
 theorem symplectic_pairing_proxy (n : ℕ)
     (omega : Matrix (Fin (2*n))
@@ -35,7 +40,7 @@ theorem symplectic_pairing_proxy (n : ℕ)
 
 theorem darboux_proxy (n : ℕ) :
     ∃ coords : Fin (2*n) → ℝ,
-      ∀ i, True :=
+      ∀ i : Fin (2*n), True :=
   ⟨fun _ => 0, fun _ => trivial⟩
 
 noncomputable def liouville_volume (n : ℕ)
@@ -59,9 +64,9 @@ theorem bilinear_antisym_aux (n : ℕ)
   have hJij : ∀ i j : Fin (2*n), J j i = -J i j := by
     intro i j
     have h := congrFun (congrFun hJ i) j
-    simpa [Matrix.transpose_apply, Matrix.neg_apply] using h.symm
+    simpa [Matrix.transpose_apply, Matrix.neg_apply] using h
   have hsum : f ⬝ᵥ (J.mulVec g) + g ⬝ᵥ (J.mulVec f) = 0 := by
-    unfold Matrix.dotProduct Matrix.mulVec
+    unfold dotProduct Matrix.mulVec
     simp only [Finset.mul_sum]
     rw [show (∑ i : Fin (2*n), ∑ j : Fin (2*n), g i * (J i j * f j)) =
         ∑ i : Fin (2*n), ∑ j : Fin (2*n), g j * (J j i * f i) from
@@ -132,7 +137,7 @@ theorem symplecto_comp (n : ℕ)
     is_symplectomorphism n (phi * psi) omega := by
   unfold is_symplectomorphism at *
   rw [Matrix.transpose_mul]
-  have key : psi.transpose * phi.transpose * (omega * (phi * psi)) =
+  have key : psi.transpose * phi.transpose * omega * (phi * psi) =
       psi.transpose * (phi.transpose * omega * phi) * psi := by
     simp only [Matrix.mul_assoc]
   rw [key, h1, h2]
