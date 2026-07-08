@@ -4,8 +4,10 @@ namespace UniversalAlgebra
 
 open Finset
 
+universe u v
+
 structure Signature where
-  ops    : Type*
+  ops    : Type u
   arity  : ops → ℕ
 
 structure Algebra (σ : Signature) where
@@ -20,8 +22,7 @@ def trivial_algebra (σ : Signature) :
   interp  := fun _ _ => ()
 
 theorem trivial_carrier :
-    (trivial_algebra ⟨Unit, fun _ => 0⟩)
-      .carrier = Unit := rfl
+    (trivial_algebra ⟨Unit, fun _ => 0⟩).carrier = Unit := rfl
 
 structure Homomorphism (σ : Signature)
     (A B : Algebra σ) where
@@ -47,16 +48,15 @@ def comp_hom (σ : Signature)
     Homomorphism σ A C where
   map       := g.map ∘ f.map
   preserves := fun op args => by
-    simp [Function.comp,
-          f.preserves, g.preserves]
+    simp [Function.comp, f.preserves, g.preserves,
+          Function.comp_assoc]
 
 theorem comp_hom_map (σ : Signature)
     (A B C : Algebra σ)
     (f : Homomorphism σ A B)
     (g : Homomorphism σ B C)
     (x : A.carrier) :
-    (comp_hom σ A B C f g).map x =
-    g.map (f.map x) := rfl
+    (comp_hom σ A B C f g).map x = g.map (f.map x) := rfl
 
 structure Congruence (σ : Signature)
     (A : Algebra σ) where
@@ -93,8 +93,8 @@ theorem free_algebra_pos (σ : Signature)
     (n : ℕ) (hn : 0 < n) :
     0 < free_algebra_dim σ n := hn
 
-inductive Term (σ : Signature)
-    (vars : Type*) : Type* where
+inductive Term (σ : Signature) (vars : Type v) :
+    Type (max u v) where
   | var  : vars → Term σ vars
   | app  : ∀ op : σ.ops,
     (Fin (σ.arity op) → Term σ vars) →
@@ -163,12 +163,9 @@ def product_algebra (σ : Signature)
 
 theorem product_fst (σ : Signature)
     (A B : Algebra σ) (op : σ.ops)
-    (args : Fin (σ.arity op) →
-      A.carrier × B.carrier) :
-    (product_algebra σ A B).interp op
-      args |>.1 =
-    A.interp op (fun i => (args i).1) :=
-  rfl
+    (args : Fin (σ.arity op) → A.carrier × B.carrier) :
+    ((product_algebra σ A B).interp op args).1 =
+    A.interp op (fun i => (args i).1) := rfl
 
 theorem coproduct_proxy (σ : Signature) :
     True := trivial
@@ -194,7 +191,7 @@ noncomputable def AWM_algebra :
   carrier := Domain21
   interp  := fun _ _ => Domain21.U_Unification
 
-def AWM_id_hom :
+noncomputable def AWM_id_hom :
     Homomorphism AWM_signature
       AWM_algebra AWM_algebra :=
   id_hom AWM_signature AWM_algebra
@@ -202,7 +199,7 @@ def AWM_id_hom :
 theorem AWM_id_hom_map (d : Domain21) :
     AWM_id_hom.map d = d := rfl
 
-def AWM_eq_cong :
+noncomputable def AWM_eq_cong :
     Congruence AWM_signature AWM_algebra :=
   eq_congruence AWM_signature AWM_algebra
 
@@ -217,11 +214,9 @@ noncomputable def AWM_product :=
 
 theorem AWM_product_fst
     (op : AWM_signature.ops)
-    (args : Fin (AWM_signature.arity op) →
-      Domain21 × Domain21) :
-    (AWM_product).interp op args |>.1 =
-    AWM_algebra.interp op
-      (fun i => (args i).1) :=
+    (args : Fin (AWM_signature.arity op) → Domain21 × Domain21) :
+    ((AWM_product).interp op args).1 =
+    AWM_algebra.interp op (fun i => (args i).1) :=
   product_fst AWM_signature
     AWM_algebra AWM_algebra op args
 
@@ -246,25 +241,19 @@ structure UniversalAlgebraLock where
                      (f : Homomorphism σ A B)
                      (g : Homomorphism σ B C)
                      (x : A.carrier),
-                     (comp_hom σ A B C f g)
-                       .map x =
+                     (comp_hom σ A B C f g).map x =
                      g.map (f.map x)
   eq_cong_refl   : ∀ (σ : Signature)
                      (A : Algebra σ)
                      (x : A.carrier),
-                     (eq_congruence σ A)
-                       .rel x x
+                     (eq_congruence σ A).rel x x
   prod_fst       : ∀ (σ : Signature)
                      (A B : Algebra σ)
                      (op : σ.ops)
-                     (args : Fin
-                       (σ.arity op) →
-                       A.carrier ×
-                       B.carrier),
-                     (product_algebra σ A B)
-                       .interp op args |>.1 =
-                     A.interp op
-                       (fun i => (args i).1)
+                     (args : Fin (σ.arity op) →
+                       A.carrier × B.carrier),
+                     ((product_algebra σ A B).interp op args).1 =
+                     A.interp op (fun i => (args i).1)
   free_pos       : ∀ (σ : Signature)
                      (n : ℕ), 0 < n →
                      0 < free_algebra_dim σ n
@@ -273,21 +262,14 @@ structure UniversalAlgebraLock where
   AWM_cong_refl  : ∀ d : Domain21,
                      AWM_eq_cong.rel d d
   AWM_prod_fst   : ∀ (op : AWM_signature.ops)
-                     (args : Fin
-                       (AWM_signature.arity op)
-                       → Domain21 × Domain21),
-                     AWM_product.interp op
-                       args |>.1 =
-                     AWM_algebra.interp op
-                       (fun i => (args i).1)
-  AWM_free_pos   : 0 < free_algebra_dim
-                     AWM_signature 21
+                     (args : Fin (AWM_signature.arity op) →
+                       Domain21 × Domain21),
+                     ((AWM_product).interp op args).1 =
+                     AWM_algebra.interp op (fun i => (args i).1)
+  AWM_free_pos   : 0 < free_algebra_dim AWM_signature 21
   AWM_satisfies  : ∀ (n : ℕ)
-                     (e : Equation
-                       AWM_signature n),
-                     satisfies_eq
-                       AWM_signature
-                       AWM_algebra n e
+                     (e : Equation AWM_signature n),
+                     satisfies_eq AWM_signature AWM_algebra n e
 
 def UALock : UniversalAlgebraLock where
   id_hom_map     := id_hom_map
@@ -302,4 +284,3 @@ def UALock : UniversalAlgebraLock where
   AWM_satisfies  := AWM_satisfies_all
 
 end UniversalAlgebra
-
