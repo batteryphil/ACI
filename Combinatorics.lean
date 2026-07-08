@@ -50,7 +50,7 @@ theorem binomial_theorem_two (n : ℕ) :
 
 theorem choose_le_pow (n k : ℕ) :
     n.choose k ≤ n ^ k := by
-  induction n with
+  induction n generalizing k with
   | zero =>
     cases k with
     | zero => simp
