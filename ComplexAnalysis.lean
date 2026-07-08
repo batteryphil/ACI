@@ -1,4 +1,3 @@
--- ComplexAnalysis.lean
 import Mathlib
 
 namespace ComplexAnalysis
@@ -54,7 +53,6 @@ theorem cauchy_theorem_zero :
 -- Maximum modulus principle proxy
 theorem max_modulus_proxy
     (f : ℝ → ℝ)
-    (hf : ∀ x, 0 ≤ f x)
     (M : ℝ) (hM : ∀ x, f x ≤ M) :
     ∀ x, f x ≤ M := hM
 
@@ -87,7 +85,8 @@ theorem laurent_nonneg
     (z c : ℝ) (hzc : z ≥ c) (N : ℕ) :
     0 ≤ laurent_series a z c N := by
   unfold laurent_series
-  apply Finset.sum_nonneg; intro n _
+  apply Finset.sum_nonneg
+  intro n _
   apply mul_nonneg
   · exact ha n
   · exact pow_nonneg (by linarith) n
@@ -165,7 +164,8 @@ theorem zeta_partial_nonneg
     (s : ℝ) (hs : 1 < s) (N : ℕ) :
     0 ≤ zeta_partial s hs N := by
   unfold zeta_partial
-  apply Finset.sum_nonneg; intro n _
+  apply Finset.sum_nonneg
+  intro n _
   split_ifs with h
   · linarith
   · apply div_nonneg (by norm_num)
@@ -177,7 +177,8 @@ theorem euler_product_nonneg
     (hs : 1 < s) :
     0 ≤ primes.prod
       (fun p => 1 / (1 - 1 / (p : ℝ) ^ s)) := by
-  apply Finset.prod_nonneg; intro p _
+  apply Finset.prod_nonneg
+  intro p _
   apply div_nonneg (by norm_num)
   linarith [show (0 : ℝ) ≤ 1 / (p : ℝ) ^ s
     from by positivity]
@@ -218,7 +219,8 @@ theorem poly_eval_nonneg
     0 ≤ p.eval x := by
   unfold Polynomial.eval
   simp [Polynomial.eval₂]
-  apply Finset.sum_nonneg; intro n _
+  apply Finset.sum_nonneg
+  intro n _
   exact mul_nonneg (hcoeff n) (pow_nonneg hx n)
 
 theorem poly_degree_nonneg
@@ -266,7 +268,8 @@ theorem domain_residue_pos
     0 < domain_residue d := by
   unfold domain_residue
   apply div_pos
-  · norm_cast; native_decide
+  · norm_cast
+    decide
   · apply mul_pos
     · norm_num
     · exact Real.pi_pos
