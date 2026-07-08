@@ -1,6 +1,7 @@
 import Mathlib
 import LinearAlgebra
 import MC2Engine
+import SovereignHamiltonian
 
 namespace HomologicalAlgebra
 
@@ -247,6 +248,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 structure DomainChain where
   C        : Domain21 → ℤ
   d        : Domain21 → Domain21 → ℤ → ℤ
@@ -279,13 +282,22 @@ theorem domain_euler_AWM :
     domain_euler 21 0 0 = 21 := by
   unfold domain_euler; norm_num
 
--- --- Cross-file integration with LinearAlgebra and MC2Engine ---
-
 theorem domain_rank_nullity_euler :
     LinearAlgebra.domain_matrix.rank +
     Module.finrank ℝ
       (LinearMap.ker LinearAlgebra.domain_matrix.mulVecLin) = 21 :=
   LinearAlgebra.rank_nullity 21 21 LinearAlgebra.domain_matrix
+
+theorem domain_euler_matches_rank_nullity :
+    domain_euler LinearAlgebra.domain_matrix.rank 0
+      (Module.finrank ℝ
+        (LinearMap.ker LinearAlgebra.domain_matrix.mulVecLin)) = 21 := by
+  unfold domain_euler
+  have h' : (LinearAlgebra.domain_matrix.rank : ℤ) +
+      (Module.finrank ℝ
+        (LinearMap.ker LinearAlgebra.domain_matrix.mulVecLin) : ℤ) = 21 := by
+    exact_mod_cast domain_rank_nullity_euler
+  linarith
 
 def domain_mass_map : MC2Engine.MassMap Domain21 where
   mass  := fun _ => 1
@@ -302,6 +314,23 @@ theorem domain_mass_eq_H0 (dc : DomainChain) :
     domain_total_mass = (domain_H0 dc : ℝ) := by
   unfold domain_total_mass domain_H0 MC2Engine.total_mass domain_mass_map
   simp [Finset.sum_const, Finset.card_univ]
+
+noncomputable def domain_hamiltonian_energy : ℝ :=
+  SovereignHamiltonian.H_OPT7 (Fintype.card Domain21)
+    (fun _ => 0) (fun _ => 1) 0
+    (fun _ => 0) (fun _ => 0)
+    0 (fun _ => 0) (fun _ => 0)
+
+theorem domain_hamiltonian_nonneg :
+    0 ≤ domain_hamiltonian_energy := by
+  unfold domain_hamiltonian_energy
+  rw [SovereignHamiltonian.equilibrium_minimizes_H]
+  have hT := SovereignHamiltonian.T_nonneg (Fintype.card Domain21)
+    (fun _ => (0 : ℝ)) (fun _ => (1 : ℝ)) (fun _ => by norm_num)
+  have hG : SovereignHamiltonian.G_governance (Fintype.card Domain21)
+      (0 : ℝ) (fun _ => (0 : ℝ)) (fun _ => (0 : ℝ)) = 0 := by
+    unfold SovereignHamiltonian.G_governance; simp
+  linarith
 
 -- ============================================================
 -- SYSTEM LOCK
@@ -342,9 +371,15 @@ structure HomologicalAlgebraLock where
                     Module.finrank ℝ
                       (LinearMap.ker
                         LinearAlgebra.domain_matrix.mulVecLin) = 21
+  euler_matches_rank : domain_euler
+                    LinearAlgebra.domain_matrix.rank 0
+                    (Module.finrank ℝ
+                      (LinearMap.ker
+                        LinearAlgebra.domain_matrix.mulVecLin)) = 21
   mass_pos      : 0 < domain_total_mass
   mass_eq_H0    : ∀ (dc : DomainChain),
                     domain_total_mass = (domain_H0 dc : ℝ)
+  hamiltonian_nn : 0 ≤ domain_hamiltonian_energy
 
 def HALock : HomologicalAlgebraLock where
   d_sq_zero      := fun C i x => C.d_sq i x
@@ -357,7 +392,9 @@ def HALock : HomologicalAlgebraLock where
   domain_H0_pos  := domain_H0_pos
   domain_euler   := domain_euler_AWM
   rank_nullity_euler := domain_rank_nullity_euler
+  euler_matches_rank := domain_euler_matches_rank_nullity
   mass_pos       := domain_total_mass_pos
   mass_eq_H0     := domain_mass_eq_H0
+  hamiltonian_nn := domain_hamiltonian_nonneg
 
 end HomologicalAlgebra
