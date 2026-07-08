@@ -32,6 +32,7 @@ theorem standard_J_antisym (n : ℕ) :
   · by_cases h2 : i.val ≥ n ∧ j.val + n = i.val
     · have hc1 : (j.val < n ∧ i.val = j.val + n) := by omega
       rw [if_neg h1, if_pos h2, if_pos hc1]
+      norm_num
     · have hc1 : ¬ (j.val < n ∧ i.val = j.val + n) := by
         rintro ⟨hj1, hj2⟩
         exact h2 ⟨by omega, by omega⟩
@@ -39,6 +40,7 @@ theorem standard_J_antisym (n : ℕ) :
         rintro ⟨hj1, hj2⟩
         exact h1 ⟨by omega, by omega⟩
       rw [if_neg h1, if_neg h2, if_neg hc1, if_neg hc2]
+      norm_num
 
 theorem symplectic_pairing_proxy (n : ℕ)
     (omega : Matrix (Fin (2*n))
