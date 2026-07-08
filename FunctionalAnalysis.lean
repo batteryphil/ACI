@@ -107,10 +107,11 @@ theorem l2_le_linf_sqrt
             apply Finset.sum_le_sum; intro i _
             apply sq_le_sq'
             · linarith [Finset.le_sup' (fun i => |x i|) (mem_univ i),
-                abs_nonneg (x i)]
-            · exact Finset.le_sup' _ (mem_univ i)
+                neg_abs_le (x i)]
+            · exact Finset.le_sup' (fun i => |x i|) (mem_univ i)
       _ = (univ.sup' hne (fun i => |x i|)) ^ 2 * n := by
-            simp [Finset.sum_const, Finset.card_univ, Finset.card_fin]
+            simp [Finset.sum_const, Finset.card_univ]
+            ring
   calc Real.sqrt (univ.sum (fun i => x i ^ 2))
       ≤ Real.sqrt ((univ.sup' hne (fun i => |x i|)) ^ 2 * n) :=
         Real.sqrt_le_sqrt hbound
