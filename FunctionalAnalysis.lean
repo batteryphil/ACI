@@ -90,7 +90,7 @@ theorem linf_norm_nonneg (n : ℕ) (hn : 0 < n)
     0 ≤ linf_norm n hn x := by
   unfold linf_norm
   apply le_trans (abs_nonneg (x ⟨0, hn⟩))
-  exact Finset.le_sup' _ (mem_univ _)
+  exact Finset.le_sup' (fun i => |x i|) (mem_univ _)
 
 theorem l2_le_linf_sqrt
     (n : ℕ) (hn : 0 < n) (x : Fin n → ℝ) :
@@ -99,7 +99,7 @@ theorem l2_le_linf_sqrt
   have hne : (univ : Finset (Fin n)).Nonempty := ⟨⟨0, hn⟩, Finset.mem_univ _⟩
   unfold l2_norm linf_norm
   have hsup_nonneg : 0 ≤ univ.sup' hne (fun i => |x i|) :=
-    le_trans (abs_nonneg (x ⟨0, hn⟩)) (Finset.le_sup' _ (mem_univ _))
+    le_trans (abs_nonneg (x ⟨0, hn⟩)) (Finset.le_sup' (fun i => |x i|) (mem_univ _))
   have hbound : univ.sum (fun i => x i ^ 2) ≤
       (univ.sup' hne (fun i => |x i|)) ^ 2 * n := by
     calc univ.sum (fun i => x i ^ 2)
@@ -170,7 +170,7 @@ theorem geometric_series_converges
   rw [div_lt_iff₀ (abs_pos.mpr hrne)]
   calc |r ^ n| = |r| ^ n := by rw [abs_pow]
     _ ≤ |r| ^ N := pow_le_pow_of_le_one (abs_nonneg _) hr.le hn
-    _ < eps * (1 - |r|) := hN N (le_refl _)
+    _ < eps * (1 - |r|) := hN
     _ ≤ eps * |1 - r| := by
         apply mul_le_mul_of_nonneg_left _ heps.le
         have h1 : |(1:ℝ)| - |r| ≤ |1 - r| := abs_sub_abs_le_abs_sub 1 r
@@ -258,18 +258,18 @@ theorem projection_orthogonal
     (hu : 0 < inner_product n u u) :
     orthogonal n
       (fun i => v i - project_onto n u v hu i) u := by
-  have hune : inner_product n u u ≠ 0 := ne_of_gt hu
   unfold orthogonal project_onto
   unfold inner_product
+  unfold inner_product at hu
+  have hune : univ.sum (fun i => u i * u i) ≠ 0 := ne_of_gt hu
   have hsplit : univ.sum (fun i =>
-      (v i - inner_product n v u / inner_product n u u * u i) * u i) =
-      inner_product n v u -
-      (inner_product n v u / inner_product n u u) * inner_product n u u := by
-    unfold inner_product
+      (v i - univ.sum (fun j => v j * u j) / univ.sum (fun j => u j * u j) * u i) * u i) =
+      univ.sum (fun i => v i * u i) -
+      (univ.sum (fun i => v i * u i) / univ.sum (fun i => u i * u i)) *
+        univ.sum (fun i => u i * u i) := by
     rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
     apply Finset.sum_congr rfl
     intro i _; ring
-  unfold inner_product at hsplit
   rw [hsplit, div_mul_cancel₀ _ hune, sub_self]
 
 -- ============================================================
