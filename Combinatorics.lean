@@ -1,4 +1,3 @@
--- Combinatorics.lean
 import Mathlib
 
 namespace Combinatorics
@@ -132,16 +131,23 @@ def degree (n : ℕ) (G : SimpleGraph n)
 theorem handshaking (n : ℕ)
     (G : SimpleGraph n) :
     Finset.univ.sum (degree n G) % 2 = 0 := by
-  unfold degree
-  have : Finset.univ.sum
-      (fun i => (Finset.univ.filter
-        (fun j => G.adj i j = true)).card) =
-      Finset.univ.sum
-      (fun j => (Finset.univ.filter
-        (fun i => G.adj i j = true)).card) := by
-    apply Finset.sum_comm'
-    intro i j
-    simp [G.sym]
+  classical
+  let G' : _root_.SimpleGraph (Fin n) :=
+    { Adj := fun i j => G.adj i j = true
+      symm := by intro i j h; rwa [G.sym] at h
+      loopless := by
+        intro i h
+        simpa [G.irref] using h }
+  have hdeg : ∀ i, degree n G i = G'.degree i := by
+    intro i
+    unfold degree
+    simp [G', _root_.SimpleGraph.degree,
+      _root_.SimpleGraph.neighborFinset,
+      _root_.SimpleGraph.neighborSet]
+  have heq : Finset.univ.sum (degree n G) =
+      Finset.univ.sum (fun i => G'.degree i) :=
+    Finset.sum_congr rfl (fun i _ => hdeg i)
+  rw [heq, _root_.SimpleGraph.sum_degrees_eq_twice_card_edges]
   omega
 
 theorem degree_nonneg (n : ℕ)
@@ -156,15 +162,8 @@ def complete_graph (n : ℕ) : SimpleGraph n where
   irref := by intro i; simp
 
 theorem complete_graph_edges (n : ℕ) :
-    n.choose 2 = n * (n - 1) / 2 := by
-  cases n with
-  | zero => simp
-  | succ n =>
-    cases n with
-    | zero => simp
-    | succ n =>
-      simp [Nat.choose, Nat.choose_succ_succ]
-      omega
+    n.choose 2 = n * (n - 1) / 2 :=
+  Nat.choose_two_right n
 
 -- ============================================================
 -- SECTION 6: PARTITIONS AND STIRLING NUMBERS
@@ -187,7 +186,7 @@ theorem bell_pos (n : ℕ) :
     | zero => simp [bell_number]
     | succ n =>
       unfold bell_number
-      apply Finset.sum_pos_of_ne_zero
+      apply Finset.sum_pos'
       · intro k _
         exact Nat.zero_le _
       · exact ⟨0, by simp,
@@ -204,7 +203,7 @@ noncomputable def stirling2
 theorem stirling2_diag (n : ℕ) :
     stirling2 n n = 1 := by
   unfold stirling2
-  simp
+  split_ifs with h1 h2 <;> simp_all
 
 -- ============================================================
 -- SECTION 7: CATALAN NUMBERS
@@ -222,10 +221,10 @@ theorem catalan_pos (n : ℕ) :
   | zero => simp [catalan]
   | succ n ih =>
     unfold catalan
-    apply Finset.sum_pos_of_ne_zero
+    apply Finset.sum_pos'
     · intro i _; exact Nat.zero_le _
     · exact ⟨0, by simp,
-        by simp [catalan]⟩
+        by simpa [catalan] using ih⟩
 
 theorem catalan_zero : catalan 0 = 1 := rfl
 theorem catalan_one  : catalan 1 = 1 := by
@@ -268,8 +267,7 @@ inductive Domain21 : Type where
   deriving DecidableEq, Repr, Fintype
 
 theorem domain_count :
-    Fintype.card Domain21 = 21 :=
-  by native_decide
+    Fintype.card Domain21 = 21 := by decide
 
 theorem domain_pairs :
     (21 : ℕ).choose 2 = 210 := by decide
