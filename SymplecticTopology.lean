@@ -1,4 +1,3 @@
--- SymplecticTopology.lean
 import Mathlib
 
 namespace SymplecticTopology
