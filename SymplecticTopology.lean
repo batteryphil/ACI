@@ -25,7 +25,20 @@ theorem standard_J_antisym (n : ℕ) :
   simp only [Matrix.transpose_apply, Matrix.neg_apply, standard_J, Matrix.of_apply]
   have hi : (i : ℕ) < 2 * n := i.is_lt
   have hj : (j : ℕ) < 2 * n := j.is_lt
-  split_ifs <;> omega
+  by_cases h1 : i.val < n ∧ j.val = i.val + n
+  · have hc2 : (j.val ≥ n ∧ i.val + n = j.val) := by omega
+    have hc1 : ¬ (j.val < n ∧ i.val = j.val + n) := by omega
+    rw [if_pos h1, if_neg hc1, if_pos hc2]
+  · by_cases h2 : i.val ≥ n ∧ j.val + n = i.val
+    · have hc1 : (j.val < n ∧ i.val = j.val + n) := by omega
+      rw [if_neg h1, if_pos h2, if_pos hc1]
+    · have hc1 : ¬ (j.val < n ∧ i.val = j.val + n) := by
+        rintro ⟨hj1, hj2⟩
+        exact h2 ⟨by omega, by omega⟩
+      have hc2 : ¬ (j.val ≥ n ∧ i.val + n = j.val) := by
+        rintro ⟨hj1, hj2⟩
+        exact h1 ⟨by omega, by omega⟩
+      rw [if_neg h1, if_neg h2, if_neg hc1, if_neg hc2]
 
 theorem symplectic_pairing_proxy (n : ℕ)
     (omega : Matrix (Fin (2*n))
