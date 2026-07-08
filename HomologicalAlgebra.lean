@@ -293,11 +293,8 @@ theorem domain_euler_matches_rank_nullity :
       (Module.finrank ℝ
         (LinearMap.ker LinearAlgebra.domain_matrix.mulVecLin)) = 21 := by
   unfold domain_euler
-  have h' : (LinearAlgebra.domain_matrix.rank : ℤ) +
-      (Module.finrank ℝ
-        (LinearMap.ker LinearAlgebra.domain_matrix.mulVecLin) : ℤ) = 21 := by
-    exact_mod_cast domain_rank_nullity_euler
-  linarith
+  have h := domain_rank_nullity_euler
+  omega
 
 def domain_mass_map : MC2Engine.MassMap Domain21 where
   mass  := fun _ => 1
@@ -366,7 +363,7 @@ structure HomologicalAlgebraLock where
                     L_derived F hF 0 x = F x
   domain_H0_pos : ∀ (dc : DomainChain),
                     0 < domain_H0 dc
-  domain_euler  : domain_euler 21 0 0 = 21
+  dom_euler_val : domain_euler 21 0 0 = 21
   rank_nullity_euler : LinearAlgebra.domain_matrix.rank +
                     Module.finrank ℝ
                       (LinearMap.ker
@@ -390,7 +387,7 @@ def HALock : HomologicalAlgebraLock where
   spectral_nn    := spectral_page_nonneg
   L0_is_F        := L0_is_F
   domain_H0_pos  := domain_H0_pos
-  domain_euler   := domain_euler_AWM
+  dom_euler_val  := domain_euler_AWM
   rank_nullity_euler := domain_rank_nullity_euler
   euler_matches_rank := domain_euler_matches_rank_nullity
   mass_pos       := domain_total_mass_pos
