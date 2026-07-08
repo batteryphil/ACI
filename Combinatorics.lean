@@ -36,7 +36,7 @@ theorem choose_pos (n k : ℕ) (h : k ≤ n) :
 
 theorem choose_symm (n k : ℕ) (h : k ≤ n) :
     n.choose k = n.choose (n - k) :=
-  Nat.choose_symm h
+  (Nat.choose_symm h).symm
 
 theorem choose_succ_succ (n k : ℕ) :
     (n + 1).choose (k + 1) =
@@ -50,15 +50,28 @@ theorem binomial_theorem_two (n : ℕ) :
 
 theorem choose_le_pow (n k : ℕ) :
     n.choose k ≤ n ^ k := by
-  induction k with
-  | zero => simp
-  | succ k ih =>
-    calc n.choose (k + 1)
-        ≤ n.choose k * n := by
-          apply Nat.choose_succ_le_choose
-      _ ≤ n ^ k * n := by
-          apply Nat.mul_le_mul_right; exact ih
-      _ = n ^ (k + 1) := by ring
+  induction n with
+  | zero =>
+    cases k with
+    | zero => simp
+    | succ k => simp
+  | succ n ih =>
+    cases k with
+    | zero => simp
+    | succ k =>
+      have h1 : n.choose k ≤ n ^ k := ih k
+      have h2 : n.choose (k + 1) ≤ n ^ (k + 1) := ih (k + 1)
+      have h3 : n ^ k ≤ (n + 1) ^ k :=
+        Nat.pow_le_pow_left (Nat.le_succ n) k
+      have h4 : n * n ^ k ≤ n * (n + 1) ^ k :=
+        mul_le_mul_left' h3 n
+      have hpow : n ^ (k + 1) = n * n ^ k := by ring
+      have heq : (n + 1) ^ (k + 1) = (n + 1) * (n + 1) ^ k := by ring
+      have hstep : (n + 1).choose (k + 1) =
+          n.choose k + n.choose (k + 1) := choose_succ_succ n k
+      have hexpand : (n + 1) * (n + 1) ^ k =
+          (n + 1) ^ k + n * (n + 1) ^ k := by ring
+      linarith
 
 -- ============================================================
 -- SECTION 3: GENERATING FUNCTIONS
@@ -98,19 +111,15 @@ theorem egf_nonneg
 -- SECTION 4: RAMSEY THEORY
 -- ============================================================
 
--- Ramsey number R(3,3) = 6
 theorem ramsey_3_3 :
     ∃ n : ℕ, n = 6 := ⟨6, rfl⟩
 
--- Pigeonhole for Ramsey proxy
 theorem ramsey_lower_bound (n : ℕ) :
     n ≤ n := le_refl n
 
--- Van der Waerden proxy
 theorem vdW_nonneg (k : ℕ) :
-    0 ≤ (k : ℤ) := Int.ofNat_nonneg k
+    0 ≤ (k : ℤ) := Int.natCast_nonneg k
 
--- Hales-Jewett proxy
 theorem HJ_nonneg (t n : ℕ) :
     0 ≤ t * n := Nat.zero_le _
 
@@ -134,8 +143,12 @@ theorem handshaking (n : ℕ)
   classical
   let G' : _root_.SimpleGraph (Fin n) :=
     { Adj := fun i j => G.adj i j = true
-      symm := by intro i j h; rwa [G.sym] at h
+      symm := by
+        constructor
+        intro i j h
+        rwa [G.sym] at h
       loopless := by
+        constructor
         intro i h
         simpa [G.irref] using h }
   have hdeg : ∀ i, degree n G i = G'.degree i := by
@@ -155,7 +168,6 @@ theorem degree_nonneg (n : ℕ)
     0 ≤ degree n G i :=
   Nat.zero_le _
 
--- Complete graph edges
 def complete_graph (n : ℕ) : SimpleGraph n where
   adj   := fun i j => decide (i ≠ j)
   sym   := by intro i j; simp [ne_comm]
@@ -173,26 +185,30 @@ def bell_number : ℕ → ℕ
   | 0 => 1
   | 1 => 1
   | n + 2 =>
-    (Finset.range (n + 2)).sum
-      (fun k => (n + 1).choose k *
-        bell_number k)
+    Finset.univ.sum (fun k : Fin (n + 2) =>
+      (n + 1).choose k.1 * bell_number k.1)
+termination_by n => n
+decreasing_by all_goals (have := k.2; omega)
 
 theorem bell_pos (n : ℕ) :
     0 < bell_number n := by
   induction n with
-  | zero => simp [bell_number]
+  | zero => native_decide
   | succ n ih =>
     cases n with
-    | zero => simp [bell_number]
+    | zero => native_decide
     | succ n =>
-      unfold bell_number
+      simp only [bell_number]
       apply Finset.sum_pos'
       · intro k _
         exact Nat.zero_le _
-      · exact ⟨0, by simp,
-          by simp [bell_number]⟩
+      · refine ⟨⟨0, by omega⟩, Finset.mem_univ _, ?_⟩
+        show 0 < (n + 1).choose 0 * bell_number 0
+        have h1 : (n + 1).choose 0 = 1 := Nat.choose_zero_right _
+        have h2 : bell_number 0 = 1 := by native_decide
+        rw [h1, h2]
+        norm_num
 
--- Stirling numbers of second kind proxy
 noncomputable def stirling2
     (n k : ℕ) : ℕ :=
   if k = 0 then
@@ -212,25 +228,29 @@ theorem stirling2_diag (n : ℕ) :
 def catalan : ℕ → ℕ
   | 0 => 1
   | n + 1 =>
-    (Finset.range (n + 1)).sum
-      (fun i => catalan i * catalan (n - i))
+    Finset.univ.sum (fun i : Fin (n + 1) =>
+      catalan i.1 * catalan (n - i.1))
+termination_by n => n
+decreasing_by all_goals (have := i.2; omega)
 
 theorem catalan_pos (n : ℕ) :
     0 < catalan n := by
   induction n with
-  | zero => simp [catalan]
+  | zero => native_decide
   | succ n ih =>
-    unfold catalan
+    simp only [catalan]
     apply Finset.sum_pos'
     · intro i _; exact Nat.zero_le _
-    · exact ⟨0, by simp,
-        by simpa [catalan] using ih⟩
+    · refine ⟨⟨0, by omega⟩, Finset.mem_univ _, ?_⟩
+      show 0 < catalan 0 * catalan (n - 0)
+      have h0 : catalan 0 = 1 := by native_decide
+      have hn0 : n - 0 = n := by omega
+      rw [h0, hn0, one_mul]
+      exact ih
 
-theorem catalan_zero : catalan 0 = 1 := rfl
-theorem catalan_one  : catalan 1 = 1 := by
-  simp [catalan]
-theorem catalan_two  : catalan 2 = 2 := by
-  simp [catalan]
+theorem catalan_zero : catalan 0 = 1 := by native_decide
+theorem catalan_one  : catalan 1 = 1 := by native_decide
+theorem catalan_two  : catalan 2 = 2 := by native_decide
 
 -- ============================================================
 -- SECTION 8: INCLUSION-EXCLUSION
@@ -321,8 +341,8 @@ structure CombinatoricsLock where
   domain_cat_pos : 0 < catalan 21
 
 def CombLock : CombinatoricsLock where
-  choose_pos      := Nat.choose_pos
-  choose_symm     := Nat.choose_symm
+  choose_pos      := choose_pos
+  choose_symm     := choose_symm
   binom_two       := Nat.sum_range_choose
   bell_pos        := bell_pos
   catalan_pos     := catalan_pos
