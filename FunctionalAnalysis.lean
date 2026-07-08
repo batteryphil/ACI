@@ -44,24 +44,51 @@ theorem l2_norm_triangle (n : ℕ) (x y : Fin n → ℝ) :
     l2_norm n (fun i => x i + y i) ≤
     l2_norm n x + l2_norm n y := by
   unfold l2_norm
-  rw [← Real.sqrt_add (Finset.sum_nonneg
-    (fun i _ => sq_nonneg _))]
-  apply Real.sqrt_le_sqrt
-  have CS : (univ.sum (fun i => x i * y i)) ^ 2 ≤
-    univ.sum (fun i => x i ^ 2) *
-    univ.sum (fun i => y i ^ 2) :=
+  have hA : (0:ℝ) ≤ univ.sum (fun i => x i ^ 2) :=
+    Finset.sum_nonneg (fun i _ => sq_nonneg _)
+  have hB : (0:ℝ) ≤ univ.sum (fun i => y i ^ 2) :=
+    Finset.sum_nonneg (fun i _ => sq_nonneg _)
+  have hCS : (univ.sum (fun i => x i * y i)) ^ 2 ≤
+      univ.sum (fun i => x i ^ 2) * univ.sum (fun i => y i ^ 2) :=
     Finset.sum_mul_sq_le_sq_mul_sq univ x y
-  nlinarith [Finset.sum_nonneg (fun i _ => sq_nonneg (x i)),
-             Finset.sum_nonneg (fun i _ => sq_nonneg (y i)),
-             sq_nonneg (univ.sum (fun i => x i * y i))]
+  have hcross : univ.sum (fun i => x i * y i) ≤
+      Real.sqrt (univ.sum (fun i => x i ^ 2)) *
+      Real.sqrt (univ.sum (fun i => y i ^ 2)) := by
+    have hstep : |univ.sum (fun i => x i * y i)| ≤
+        Real.sqrt (univ.sum (fun i => x i ^ 2)) *
+        Real.sqrt (univ.sum (fun i => y i ^ 2)) := by
+      rw [← Real.sqrt_sq_eq_abs, ← Real.sqrt_mul hA]
+      exact Real.sqrt_le_sqrt hCS
+    exact le_trans (le_abs_self _) hstep
+  have hexpand : univ.sum (fun i => (x i + y i) ^ 2) ≤
+      (Real.sqrt (univ.sum (fun i => x i ^ 2)) +
+       Real.sqrt (univ.sum (fun i => y i ^ 2))) ^ 2 := by
+    have heq : univ.sum (fun i => (x i + y i) ^ 2) =
+        univ.sum (fun i => x i ^ 2) + 2 * univ.sum (fun i => x i * y i) +
+        univ.sum (fun i => y i ^ 2) := by
+      have hterm : ∀ i ∈ univ, (x i + y i) ^ 2 =
+          x i ^ 2 + 2 * (x i * y i) + y i ^ 2 := fun i _ => by ring
+      rw [Finset.sum_congr rfl hterm]
+      simp [Finset.sum_add_distrib, Finset.mul_sum]
+    rw [heq]
+    nlinarith [Real.sq_sqrt hA, Real.sq_sqrt hB, hcross]
+  calc Real.sqrt (univ.sum (fun i => (x i + y i) ^ 2))
+      ≤ Real.sqrt ((Real.sqrt (univ.sum (fun i => x i ^ 2)) +
+          Real.sqrt (univ.sum (fun i => y i ^ 2))) ^ 2) :=
+        Real.sqrt_le_sqrt hexpand
+    _ = Real.sqrt (univ.sum (fun i => x i ^ 2)) +
+        Real.sqrt (univ.sum (fun i => y i ^ 2)) :=
+        Real.sqrt_sq (add_nonneg (Real.sqrt_nonneg _) (Real.sqrt_nonneg _))
 
 noncomputable def linf_norm (n : ℕ) (hn : 0 < n)
     (x : Fin n → ℝ) : ℝ :=
-  univ.sup' (Finset.univ_nonempty) (fun i => |x i|)
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  univ.sup' Finset.univ_nonempty (fun i => |x i|)
 
 theorem linf_norm_nonneg (n : ℕ) (hn : 0 < n)
     (x : Fin n → ℝ) :
     0 ≤ linf_norm n hn x := by
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   unfold linf_norm
   apply le_trans (abs_nonneg (x ⟨0, hn⟩))
   exact Finset.le_sup' _ (mem_univ _)
@@ -70,6 +97,7 @@ theorem l2_le_linf_sqrt
     (n : ℕ) (hn : 0 < n) (x : Fin n → ℝ) :
     l2_norm n x ≤
     linf_norm n hn x * Real.sqrt n := by
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   unfold l2_norm linf_norm
   rw [← Real.sqrt_mul (by positivity)]
   apply Real.sqrt_le_sqrt
@@ -113,9 +141,9 @@ theorem convergent_is_cauchy
     have h2 := hN n hn
     calc |seq m - seq n|
         = |seq m - L + (L - seq n)| := by ring_nf
-      _ ≤ |seq m - L| + |L - seq n| := abs_add _ _
+      _ ≤ |seq m - L| + |L - seq n| := abs_add_le _ _
       _ = |seq m - L| + |seq n - L| := by
-            rw [abs_sub_comm]
+            rw [abs_sub_comm L (seq n)]
       _ < eps/2 + eps/2 := by linarith
       _ = eps := by ring⟩
 
@@ -125,8 +153,8 @@ theorem geometric_series_converges
       (fun n => (Finset.range n).sum (fun k => r ^ k)) L := by
   use 1 / (1 - r)
   intro eps heps
-  obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one (eps * (1 - |r|))
-    (by nlinarith [abs_nonneg r]) hr
+  obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one
+    (show (0:ℝ) < eps * (1 - |r|) by nlinarith [abs_nonneg r]) hr
   have hr1 : r ≠ 1 := by
     intro h; simp [h] at hr
   have hrne : (1 : ℝ) - r ≠ 0 := by
@@ -163,14 +191,20 @@ theorem inner_product_symm (n : ℕ) (x y : Fin n → ℝ) :
 theorem inner_product_nonneg (n : ℕ) (x : Fin n → ℝ) :
     0 ≤ inner_product n x x := by
   unfold inner_product
-  apply Finset.sum_nonneg; intro i _; exact sq_nonneg _
+  apply Finset.sum_nonneg; intro i _; exact mul_self_nonneg _
 
 theorem inner_product_zero_iff
     (n : ℕ) (x : Fin n → ℝ) :
     inner_product n x x = 0 ↔ ∀ i, x i = 0 := by
   unfold inner_product
-  simp [Finset.sum_eq_zero_iff
-    (fun i _ => sq_nonneg (x i)), sq_eq_zero_iff]
+  constructor
+  · intro h i
+    have h' : ∀ i ∈ univ, 0 ≤ x i * x i := fun i _ => mul_self_nonneg _
+    have := (Finset.sum_eq_zero_iff_of_nonneg h').mp h i (mem_univ i)
+    exact mul_self_eq_zero.mp this
+  · intro h
+    apply Finset.sum_eq_zero
+    intro i _; simp [h i]
 
 theorem cauchy_schwarz (n : ℕ) (x y : Fin n → ℝ) :
     (inner_product n x y) ^ 2 ≤
@@ -186,8 +220,12 @@ theorem parallelogram_law (n : ℕ) (x y : Fin n → ℝ) :
                     (fun i => x i - y i) =
     2 * (inner_product n x x + inner_product n y y) := by
   unfold inner_product
-  simp [← Finset.sum_add_distrib]
-  congr 1; ext i; ring
+  rw [← Finset.sum_add_distrib]
+  rw [show (2:ℝ) * (univ.sum (fun i => x i * x i) + univ.sum (fun i => y i * y i)) =
+      univ.sum (fun i => 2 * (x i * x i + y i * y i)) from by
+    rw [Finset.mul_sum, Finset.sum_add_distrib]]
+  apply Finset.sum_congr rfl
+  intro i _; ring
 
 def orthogonal (n : ℕ) (x y : Fin n → ℝ) : Prop :=
   inner_product n x y = 0
@@ -198,11 +236,15 @@ theorem pythagoras (n : ℕ) (x y : Fin n → ℝ)
                     (fun i => x i + y i) =
     inner_product n x x + inner_product n y y := by
   unfold inner_product orthogonal at *
-  simp [← Finset.sum_add_distrib]
-  linarith [Finset.sum_congr rfl
-    (fun i _ => show x i * y i + y i * x i = 0 from by
-      linarith [show univ.sum (fun i => x i * y i) = 0
-        from h])]
+  have hexpand : univ.sum (fun i => (x i + y i) * (x i + y i)) =
+      univ.sum (fun i => x i * x i) + univ.sum (fun i => y i * y i) +
+      2 * univ.sum (fun i => x i * y i) := by
+    have heq : ∀ i ∈ univ, (x i + y i) * (x i + y i) =
+        x i * x i + y i * y i + 2 * (x i * y i) := fun i _ => by ring
+    rw [Finset.sum_congr rfl heq, Finset.sum_add_distrib, Finset.sum_add_distrib,
+        Finset.mul_sum]
+  rw [hexpand, h]
+  ring
 
 noncomputable def project_onto
     (n : ℕ) (u v : Fin n → ℝ)
@@ -214,10 +256,17 @@ theorem projection_orthogonal
     (hu : 0 < inner_product n u u) :
     orthogonal n
       (fun i => v i - project_onto n u v hu i) u := by
-  unfold orthogonal inner_product project_onto
-  simp [← Finset.sum_sub_distrib, Finset.mul_sum]
-  field_simp
-  ring
+  have hune : inner_product n u u ≠ 0 := ne_of_gt hu
+  unfold orthogonal project_onto
+  have hsplit : univ.sum (fun i =>
+      (v i - inner_product n v u / inner_product n u u * u i) * u i) =
+      inner_product n v u -
+      (inner_product n v u / inner_product n u u) * inner_product n u u := by
+    unfold inner_product
+    rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro i _; ring
+  rw [hsplit, div_mul_cancel₀ _ hune, sub_self]
 
 -- ============================================================
 -- SECTION 4: BOUNDED LINEAR OPERATORS
@@ -232,7 +281,8 @@ def is_linear_map (n m : ℕ)
 
 noncomputable def operator_norm (n m : ℕ) (hn : 0 < n)
     (T : (Fin n → ℝ) → (Fin m → ℝ)) : ℝ :=
-  Finset.univ.sup' Finset.univ_nonempty (fun x : Fin n →
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  Finset.univ.sup' Finset.univ_nonempty (fun x : Fin n =>
     l2_norm m (T (fun i => if i = x then 1 else 0)))
 
 def is_bounded (n m : ℕ)
@@ -260,17 +310,15 @@ theorem identity_bounded (n : ℕ) :
 theorem composition_bounded (n m k : ℕ)
     (S : (Fin m → ℝ) → (Fin k → ℝ))
     (T : (Fin n → ℝ) → (Fin m → ℝ))
-    (CS CT : ℝ)
+    (CS CT : ℝ) (hCS_nn : 0 ≤ CS)
     (hS : is_bounded m k S CS)
     (hT : is_bounded n m T CT) :
     is_bounded n k (fun x => S (T x)) (CS * CT) := by
   intro x
   calc l2_norm k (S (T x))
       ≤ CS * l2_norm m (T x) := hS (T x)
-    _ ≤ CS * (CT * l2_norm n x) := by
-          apply mul_le_mul_of_nonneg_left (hT x)
-          linarith [hS (fun _ => 0),
-                    l2_norm_nonneg m (T (fun _ => 0))]
+    _ ≤ CS * (CT * l2_norm n x) :=
+        mul_le_mul_of_nonneg_left (hT x) hCS_nn
     _ = CS * CT * l2_norm n x := by ring
 
 -- ============================================================
@@ -298,11 +346,12 @@ theorem self_adjoint_real_eigenvalues
     lambda = inner_product n (T x) x /
              inner_product n x x := by
   unfold inner_product at *
-  rw [show univ.sum (fun i => T x i * x i) =
-      lambda * univ.sum (fun i => x i * x i) from by
-    rw [← Finset.mul_sum]
-    congr 1; ext i
-    rw [heig i]; ring]
+  have hnum : univ.sum (fun i => T x i * x i) =
+      lambda * univ.sum (fun i => x i * x i) := by
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _; rw [heig i]
+  rw [hnum]
   field_simp
 
 theorem eigenvalue_bounded
@@ -329,24 +378,25 @@ theorem eigenvectors_orthogonal
   have h1 : inner_product n (T x) y =
             lambda * inner_product n x y := by
     unfold inner_product
-    rw [show univ.sum (fun i => T x i * y i) =
-        lambda * univ.sum (fun i => x i * y i) from by
-      rw [← Finset.mul_sum]
-      congr 1; ext i; rw [hx i]; ring]
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _; rw [hx i]; ring
   have h2 : inner_product n x (T y) =
             mu * inner_product n x y := by
     unfold inner_product
-    rw [show univ.sum (fun i => x i * T y i) =
-        mu * univ.sum (fun i => x i * y i) from by
-      rw [← Finset.mul_sum]
-      congr 1; ext i; rw [hy i]; ring]
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _; rw [hy i]; ring
   have h3 : lambda * inner_product n x y =
             mu * inner_product n x y := by
     rw [← h1, ← h2]; exact hT x y
-  have := sub_eq_zero.mp (by linarith)
-  exact (mul_eq_zero.mp
-    (show (lambda - mu) * inner_product n x y = 0 from
-      by linarith)).resolve_left (sub_ne_zero.mpr hlm)
+  have h4 : lambda * inner_product n x y -
+            mu * inner_product n x y = 0 := by linarith
+  have hzero : (lambda - mu) * inner_product n x y = 0 := by
+    linarith [sub_mul lambda mu (inner_product n x y), h4]
+  rcases mul_eq_zero.mp hzero with h | h
+  · exact absurd (sub_eq_zero.mp h) hlm
+  · exact h
 
 -- ============================================================
 -- SECTION 6: COMPACT OPERATORS
@@ -410,40 +460,55 @@ theorem riesz_representation (n : ℕ)
   use fun j => f (fun i => if i = j then 1 else 0)
   intro x
   unfold inner_product
-  conv_lhs =>
-    rw [show x = fun i =>
-        univ.sum (fun j => x j *
-          if i = j then 1 else 0) from by
-      ext i; simp]
-  rw [show f (fun i => univ.sum (fun j =>
-      x j * if i = j then 1 else 0)) =
-      univ.sum (fun j => x j *
-        f (fun i => if i = j then 1 else 0)) from by
-    simp [hf.1, hf.2, Finset.sum_comm]]
-  congr 1; ext j; ring
+  have hdecomp : x = fun i =>
+      univ.sum (fun j => x j * if i = j then 1 else 0) := by
+    ext i; simp
+  have hlin_sum : ∀ (s : Finset (Fin n)),
+      f (fun i => s.sum (fun j => x j * if i = j then 1 else 0)) =
+      s.sum (fun j => x j * f (fun i => if i = j then 1 else 0)) := by
+    intro s
+    induction s using Finset.induction with
+    | empty =>
+        have hzero : f (fun _ => (0:ℝ)) = 0 := by
+          have h0 := hf.2 0 (fun _ => (0:ℝ))
+          simpa using h0
+        simpa using hzero
+    | insert a s ha ih =>
+        rw [Finset.sum_insert ha, Finset.sum_insert ha]
+        have hsplit : (fun i => x a * (if i = a then (1:ℝ) else 0) +
+            s.sum (fun j => x j * if i = j then 1 else 0)) =
+            (fun i => (fun i => x a * if i = a then (1:ℝ) else 0) i +
+              (fun i => s.sum (fun j => x j * if i = j then 1 else 0)) i) := rfl
+        rw [hsplit, hf.1]
+        congr 1
+        have := hf.2 (x a) (fun i => if i = a then (1:ℝ) else 0)
+        simpa using this.trans (by rw [ih])
+  conv_lhs => rw [hdecomp]
+  rw [hlin_sum univ]
+  apply Finset.sum_congr rfl
+  intro j _; ring
 
 theorem extension_bounded_functional (n : ℕ)
     (f : (Fin n → ℝ) → ℝ)
     (hf : is_linear_functional n f)
-    (C : ℝ) (hC : bounded_functional n f C) :
+    (C : ℝ) (hC_nn : 0 ≤ C) (hC : bounded_functional n f C) :
     ∃ y : Fin n → ℝ,
       (∀ x, f x = inner_product n x y) ∧
       l2_norm n y ≤ C := by
   obtain ⟨y, hy⟩ := riesz_representation n f hf
-  exact ⟨y, hy, by
-    by_contra h
-    push_neg at h
-    have hyne : l2_norm n y ≠ 0 := by
-      intro heq
-      have := (l2_norm_zero_iff n y).mp heq
-      simp [this] at h
-      linarith [l2_norm_nonneg n y]
-    have := hC y
-    rw [hy y] at this
-    unfold inner_product at this
-    nlinarith [cauchy_schwarz n y y,
-               l2_norm_nonneg n y,
-               sq_nonneg (l2_norm n y)]⟩
+  refine ⟨y, hy, ?_⟩
+  by_contra h
+  push_neg at h
+  have hbnd := hC y
+  rw [hy y] at hbnd
+  have hsq : inner_product n y y = (l2_norm n y) ^ 2 := by
+    unfold inner_product l2_norm
+    rw [Real.sq_sqrt (Finset.sum_nonneg (fun i _ => sq_nonneg (y i)))]
+    apply Finset.sum_congr rfl
+    intro i _; ring
+  have hyy_nonneg : 0 ≤ inner_product n y y := inner_product_nonneg n y
+  rw [abs_of_nonneg hyy_nonneg, hsq] at hbnd
+  nlinarith [l2_norm_nonneg n y]
 
 -- ============================================================
 -- SECTION 8: OPEN MAPPING AND CLOSED GRAPH
@@ -456,14 +521,18 @@ def bijective_bounded (n : ℕ)
   (∀ x y, T x = T y → x = y) ∧
   (∀ y, ∃ x, T x = y)
 
-theorem closed_graph_bounded (n : ℕ)
+theorem closed_graph_bounded (n : ℕ) (hn : 0 < n)
     (T : (Fin n → ℝ) → Fin n → ℝ)
     (hlin : is_linear_map n n T) :
     ∃ C : ℝ, 0 ≤ C ∧ is_bounded n n T C := by
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
   use Finset.univ.sup' Finset.univ_nonempty (fun x : Fin n =>
     l2_norm n (T (fun i => if i = x then 1 else 0))) * n
   constructor
-  · positivity
+  · apply mul_nonneg
+    · exact le_trans (l2_norm_nonneg n _)
+        (Finset.le_sup' _ (Finset.mem_univ (⟨0, hn⟩ : Fin n)))
+    · exact Nat.cast_nonneg n
   · intro x
     unfold l2_norm
     apply Real.sqrt_le_sqrt
@@ -508,7 +577,7 @@ theorem AWM_inner_symm (x y : Domain21 → ℝ) :
 theorem AWM_inner_nonneg (x : Domain21 → ℝ) :
     0 ≤ AWM_inner_product x x := by
   unfold AWM_inner_product
-  apply Finset.sum_nonneg; intro d _; exact sq_nonneg _
+  apply Finset.sum_nonneg; intro d _; exact mul_self_nonneg _
 
 theorem AWM_cauchy_schwarz (x y : Domain21 → ℝ) :
     (AWM_inner_product x y) ^ 2 ≤
@@ -528,10 +597,15 @@ theorem AWM_norm_nonneg (x : Domain21 → ℝ) :
 theorem AWM_norm_zero_iff (x : Domain21 → ℝ) :
     AWM_norm x = 0 ↔ ∀ d, x d = 0 := by
   unfold AWM_norm AWM_inner_product
-  rw [Real.sqrt_eq_zero
-    (Finset.sum_nonneg (fun d _ => sq_nonneg _))]
-  simp [Finset.sum_eq_zero_iff
-    (fun d _ => sq_nonneg (x d)), sq_eq_zero_iff]
+  rw [Real.sqrt_eq_zero (Finset.sum_nonneg (fun d _ => mul_self_nonneg (x d)))]
+  constructor
+  · intro h d
+    have := (Finset.sum_eq_zero_iff_of_nonneg
+      (fun d _ => mul_self_nonneg (x d))).mp h d (mem_univ d)
+    exact mul_self_eq_zero.mp this
+  · intro h
+    apply Finset.sum_eq_zero
+    intro d _; simp [h d]
 
 structure GovernanceOperator where
   T         : (Domain21 → ℝ) → Domain21 → ℝ
@@ -568,17 +642,18 @@ theorem governance_spectral
   rw [show G.T v = fun d => lambda * v d from
     funext heig] at hbnd
   unfold AWM_norm at hbnd
-  rw [show AWM_inner_product (fun d => lambda * v d)
+  have hexpand : AWM_inner_product (fun d => lambda * v d)
       (fun d => lambda * v d) =
-      lambda ^ 2 * AWM_inner_product v v from by
+      lambda ^ 2 * AWM_inner_product v v := by
     unfold AWM_inner_product
-    rw [← Finset.mul_sum]; congr 1
-    ext d; ring] at hbnd
-  rw [Real.sqrt_mul (sq_nonneg _),
+    simp only [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro d _; ring
+  rw [hexpand, Real.sqrt_mul (sq_nonneg _),
       Real.sqrt_sq_eq_abs] at hbnd
   have hv_pos : 0 < Real.sqrt (AWM_inner_product v v) :=
     Real.sqrt_pos.mpr hv
-  exact (mul_le_mul_right hv_pos).mp hbnd
+  exact le_of_mul_le_mul_right hbnd hv_pos
 
 -- --- Cross-file integration with MC2Engine, SovereignHamiltonian ---
 
@@ -587,7 +662,7 @@ theorem AWM_norm_via_domain_mass :
     Real.sqrt (MC2Engine.total_mass
       (⟨fun _ => 1, fun _ => by norm_num⟩ : MC2Engine.MassMap Domain21)) := by
   unfold AWM_norm AWM_inner_product MC2Engine.total_mass
-  congr 1
+  simp
 
 noncomputable def domain_governance_energy : ℝ :=
   SovereignHamiltonian.T_kinetic (Fintype.card Domain21)
