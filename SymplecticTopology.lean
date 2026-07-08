@@ -23,7 +23,7 @@ theorem standard_J_antisym (n : ℕ) :
     -(standard_J n) := by
   ext i j
   simp only [Matrix.transpose_apply, Matrix.neg_apply, standard_J, Matrix.of_apply]
-  split_ifs <;> first | norm_num | omega
+  split_ifs <;> omega
 
 theorem symplectic_pairing_proxy (n : ℕ)
     (omega : Matrix (Fin (2*n))
@@ -178,12 +178,12 @@ theorem leapfrog_energy_proxy (n : ℕ)
     ∀ q p : Fin n → ℝ, 0 ≤ H q p :=
   hH
 
-theorem backward_error_proxy (n : ℕ)
+theorem backward_error_proxy (_n : ℕ)
     (dt : ℝ) (hdt : 0 < dt) :
     0 < dt := hdt
 
 noncomputable def symplectic_capacity
-    (r : ℝ) (hr : 0 < r) : ℝ :=
+    (r : ℝ) (_hr : 0 < r) : ℝ :=
   Real.pi * r ^ 2
 
 theorem capacity_pos (r : ℝ)
