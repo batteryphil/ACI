@@ -218,7 +218,6 @@ theorem domain_residue_pos
   unfold domain_residue
   apply div_pos
   · norm_cast
-    decide
   · apply mul_pos
     · norm_num
     · exact Real.pi_pos
