@@ -303,10 +303,24 @@ theorem tower_law (k e f : ℕ)
     f / k = (f / e) * (e / k) := by
   obtain ⟨m, hm⟩ := hke
   obtain ⟨n, hn⟩ := hef
-  subst hm; subst hn
-  simp [Nat.mul_div_cancel_left,
-        Nat.pos_of_ne_zero]
-  ring
+  subst hm
+  subst hn
+  rcases eq_or_ne k 0 with hk0 | hk0
+  · subst hk0
+    simp
+  · rcases eq_or_ne m 0 with hm0 | hm0
+    · subst hm0
+      simp
+    · have hkpos : 0 < k := Nat.pos_of_ne_zero hk0
+      have hkmpos : 0 < k * m :=
+        Nat.mul_pos hkpos (Nat.pos_of_ne_zero hm0)
+      have e1 : k * m * n / k = m * n :=
+        Nat.mul_div_cancel_left (m * n) hkpos
+      have e2 : k * m * n / (k * m) = n :=
+        Nat.mul_div_cancel_left n hkmpos
+      have e3 : k * m / k = m :=
+        Nat.mul_div_cancel_left m hkpos
+      rw [e1, e2, e3, Nat.mul_comm n m]
 
 theorem galois_correspondence
     (G : GaloisGroup) (H_order : ℕ)
