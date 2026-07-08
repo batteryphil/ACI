@@ -1,5 +1,6 @@
--- FunctionalAnalysis.lean
 import Mathlib
+import MC2Engine
+import SovereignHamiltonian
 
 namespace FunctionalAnalysis
 
@@ -7,10 +8,8 @@ open Finset Real
 
 -- ============================================================
 -- SECTION 1: NORMED SPACES
--- ||x|| ≥ 0, ||x|| = 0 ↔ x = 0, ||αx|| = |α|||x||, triangle
 -- ============================================================
 
--- Norm axioms on ℝⁿ (Fin n → ℝ)
 noncomputable def l2_norm (n : ℕ) (x : Fin n → ℝ) : ℝ :=
   Real.sqrt (univ.sum (fun i => x i ^ 2))
 
@@ -51,13 +50,11 @@ theorem l2_norm_triangle (n : ℕ) (x y : Fin n → ℝ) :
   have CS : (univ.sum (fun i => x i * y i)) ^ 2 ≤
     univ.sum (fun i => x i ^ 2) *
     univ.sum (fun i => y i ^ 2) :=
-    Finset.inner_mul_le_norm_sq_mul_norm_sq
-      univ (fun i => x i) (fun i => y i)
+    Finset.sum_mul_sq_le_sq_mul_sq univ x y
   nlinarith [Finset.sum_nonneg (fun i _ => sq_nonneg (x i)),
              Finset.sum_nonneg (fun i _ => sq_nonneg (y i)),
              sq_nonneg (univ.sum (fun i => x i * y i))]
 
--- L∞ norm
 noncomputable def linf_norm (n : ℕ) (hn : 0 < n)
     (x : Fin n → ℝ) : ℝ :=
   univ.sup' (Finset.univ_nonempty) (fun i => |x i|)
@@ -69,7 +66,6 @@ theorem linf_norm_nonneg (n : ℕ) (hn : 0 < n)
   apply le_trans (abs_nonneg (x ⟨0, hn⟩))
   exact Finset.le_sup' _ (mem_univ _)
 
--- L2 ≤ L∞ · √n
 theorem l2_le_linf_sqrt
     (n : ℕ) (hn : 0 < n) (x : Fin n → ℝ) :
     l2_norm n x ≤
@@ -94,16 +90,13 @@ theorem l2_le_linf_sqrt
 
 -- ============================================================
 -- SECTION 2: BANACH SPACES
--- Complete normed vector spaces
 -- ============================================================
 
--- Cauchy sequence
 def is_cauchy (seq : ℕ → ℝ) : Prop :=
   ∀ eps : ℝ, 0 < eps →
   ∃ N : ℕ, ∀ m n : ℕ, N ≤ m → N ≤ n →
     |seq m - seq n| < eps
 
--- Convergent sequence
 def converges_to (seq : ℕ → ℝ) (L : ℝ) : Prop :=
   ∀ eps : ℝ, 0 < eps →
   ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
@@ -126,7 +119,6 @@ theorem convergent_is_cauchy
       _ < eps/2 + eps/2 := by linarith
       _ = eps := by ring⟩
 
--- Geometric series converges
 theorem geometric_series_converges
     (r : ℝ) (hr : |r| < 1) :
     ∃ L : ℝ, converges_to
@@ -135,30 +127,30 @@ theorem geometric_series_converges
   intro eps heps
   obtain ⟨N, hN⟩ := exists_pow_lt_of_lt_one (eps * (1 - |r|))
     (by nlinarith [abs_nonneg r]) hr
-  exact ⟨N, fun n hn => by
-    have hr1 : r ≠ 1 := by
-      intro h; simp [h] at hr
-    rw [Finset.geom_sum_eq hr1]
-    rw [show (1 - r ^ n) / (1 - r) - 1 / (1 - r) =
-        -r ^ n / (1 - r) from by ring]
-    rw [abs_div, abs_neg]
-    apply div_lt_of_lt_mul
-    · rw [abs_of_pos]; nlinarith [abs_nonneg r]
-    · calc |r ^ n| = |r| ^ n := by
-            rw [abs_pow]
-        _ ≤ |r| ^ N := by
-            apply pow_le_pow_of_le_one
-              (abs_nonneg _) hr.le; exact hn
-        _ < eps * (1 - |r|) := hN N (le_refl _)
-        _ = eps * |1 - r| := by
-            rw [abs_of_pos]; nlinarith [abs_nonneg r]⟩
+  have hr1 : r ≠ 1 := by
+    intro h; simp [h] at hr
+  have hrne : (1 : ℝ) - r ≠ 0 := by
+    intro h; apply hr1; linarith
+  refine ⟨N, fun n hn => ?_⟩
+  have hsum : (Finset.range n).sum (fun k => r ^ k) - 1 / (1 - r) =
+      -(r ^ n) / (1 - r) := by
+    rw [geom_sum_eq hr1]
+    field_simp
+    ring
+  rw [hsum, abs_div, abs_neg]
+  rw [div_lt_iff (abs_pos.mpr hrne)]
+  calc |r ^ n| = |r| ^ n := by rw [abs_pow]
+    _ ≤ |r| ^ N := pow_le_pow_of_le_one (abs_nonneg _) hr.le hn
+    _ < eps * (1 - |r|) := hN N (le_refl _)
+    _ ≤ eps * |1 - r| := by
+        apply mul_le_mul_of_nonneg_left _ heps.le
+        have h1 : |(1:ℝ)| - |r| ≤ |1 - r| := abs_sub_abs_le_abs_sub 1 r
+        simpa using h1
 
 -- ============================================================
 -- SECTION 3: HILBERT SPACES
--- Complete inner product spaces
 -- ============================================================
 
--- Inner product on Fin n → ℝ
 noncomputable def inner_product
     (n : ℕ) (x y : Fin n → ℝ) : ℝ :=
   univ.sum (fun i => x i * y i)
@@ -180,14 +172,13 @@ theorem inner_product_zero_iff
   simp [Finset.sum_eq_zero_iff
     (fun i _ => sq_nonneg (x i)), sq_eq_zero_iff]
 
--- Cauchy-Schwarz inequality
 theorem cauchy_schwarz (n : ℕ) (x y : Fin n → ℝ) :
     (inner_product n x y) ^ 2 ≤
-    inner_product n x x * inner_product n y y :=
-  Finset.inner_mul_le_norm_sq_mul_norm_sq univ
-    (fun i => x i) (fun i => y i)
+    inner_product n x x * inner_product n y y := by
+  unfold inner_product
+  have h := Finset.sum_mul_sq_le_sq_mul_sq univ x y
+  simpa [sq] using h
 
--- Parallelogram law
 theorem parallelogram_law (n : ℕ) (x y : Fin n → ℝ) :
     inner_product n (fun i => x i + y i)
                     (fun i => x i + y i) +
@@ -198,7 +189,6 @@ theorem parallelogram_law (n : ℕ) (x y : Fin n → ℝ) :
   simp [← Finset.sum_add_distrib]
   congr 1; ext i; ring
 
--- Orthogonality
 def orthogonal (n : ℕ) (x y : Fin n → ℝ) : Prop :=
   inner_product n x y = 0
 
@@ -214,7 +204,6 @@ theorem pythagoras (n : ℕ) (x y : Fin n → ℝ)
       linarith [show univ.sum (fun i => x i * y i) = 0
         from h])]
 
--- Gram-Schmidt orthogonalization
 noncomputable def project_onto
     (n : ℕ) (u v : Fin n → ℝ)
     (hu : 0 < inner_product n u u) : Fin n → ℝ :=
@@ -232,10 +221,8 @@ theorem projection_orthogonal
 
 -- ============================================================
 -- SECTION 4: BOUNDED LINEAR OPERATORS
--- T: X → Y linear, ||Tx|| ≤ C||x||
 -- ============================================================
 
--- Linear map on Fin n → ℝ
 def is_linear_map (n m : ℕ)
     (T : (Fin n → ℝ) → (Fin m → ℝ)) : Prop :=
   (∀ x y, T (fun i => x i + y i) =
@@ -243,13 +230,11 @@ def is_linear_map (n m : ℕ)
   (∀ c x, T (fun i => c * x i) =
     fun i => c * T x i)
 
--- Operator norm
 noncomputable def operator_norm (n m : ℕ) (hn : 0 < n)
     (T : (Fin n → ℝ) → (Fin m → ℝ)) : ℝ :=
   Finset.univ.sup' Finset.univ_nonempty (fun x : Fin n →
     l2_norm m (T (fun i => if i = x then 1 else 0)))
 
--- Bounded operator
 def is_bounded (n m : ℕ)
     (T : (Fin n → ℝ) → (Fin m → ℝ))
     (C : ℝ) : Prop :=
@@ -268,12 +253,10 @@ theorem bounded_op_nonneg_const (n m : ℕ)
           · exact le_max_left _ _
           · exact l2_norm_nonneg _ _
 
--- Identity operator is bounded
 theorem identity_bounded (n : ℕ) :
     is_bounded n n id 1 := by
   intro x; simp
 
--- Composition of bounded operators is bounded
 theorem composition_bounded (n m k : ℕ)
     (S : (Fin m → ℝ) → (Fin k → ℝ))
     (T : (Fin n → ℝ) → (Fin m → ℝ))
@@ -292,24 +275,20 @@ theorem composition_bounded (n m k : ℕ)
 
 -- ============================================================
 -- SECTION 5: SPECTRAL THEORY
--- Eigenvalues and eigenvectors of self-adjoint operators
 -- ============================================================
 
--- Eigenvalue equation: Tx = λx
 def is_eigenvalue (n : ℕ)
     (T : (Fin n → ℝ) → Fin n → ℝ)
     (lambda : ℝ) : Prop :=
   ∃ x : Fin n → ℝ, (∀ i, x i ≠ 0 ∨ True) ∧
     ∀ i, T x i = lambda * x i
 
--- Self-adjoint: ⟨Tx, y⟩ = ⟨x, Ty⟩
 def self_adjoint (n : ℕ)
     (T : (Fin n → ℝ) → Fin n → ℝ) : Prop :=
   ∀ x y : Fin n → ℝ,
     inner_product n (T x) y =
     inner_product n x (T y)
 
--- Self-adjoint operators have real eigenvalues
 theorem self_adjoint_real_eigenvalues
     (n : ℕ) (T : (Fin n → ℝ) → Fin n → ℝ)
     (hT : self_adjoint n T)
@@ -326,7 +305,6 @@ theorem self_adjoint_real_eigenvalues
     rw [heig i]; ring]
   field_simp
 
--- Eigenvalues of self-adjoint bounded by operator norm
 theorem eigenvalue_bounded
     (n : ℕ) (T : (Fin n → ℝ) → Fin n → ℝ)
     (C : ℝ) (hC : is_bounded n n T C)
@@ -339,7 +317,6 @@ theorem eigenvalue_bounded
     funext heig] at hTx
   rwa [l2_norm_smul] at hTx
 
--- Orthogonality of eigenvectors for distinct eigenvalues
 theorem eigenvectors_orthogonal
     (n : ℕ) (T : (Fin n → ℝ) → Fin n → ℝ)
     (hT : self_adjoint n T)
@@ -375,7 +352,6 @@ theorem eigenvectors_orthogonal
 -- SECTION 6: COMPACT OPERATORS
 -- ============================================================
 
--- Finite-rank operators are compact
 def finite_rank (n m : ℕ) (r : ℕ)
     (T : (Fin n → ℝ) → (Fin m → ℝ)) : Prop :=
   ∃ basis : Fin r → Fin m → ℝ,
@@ -384,7 +360,6 @@ def finite_rank (n m : ℕ) (r : ℕ)
       T x = fun j => univ.sum (fun k =>
         coeffs x k * basis k j)
 
--- Trace class: finite trace
 noncomputable def trace (n : ℕ)
     (A : Fin n → Fin n → ℝ) : ℝ :=
   univ.sum (fun i => A i i)
@@ -403,7 +378,6 @@ theorem trace_linear (n : ℕ)
   unfold trace
   simp [← Finset.sum_add_distrib, Finset.mul_sum]
 
--- Hilbert-Schmidt norm
 noncomputable def HS_norm (n : ℕ)
     (A : Fin n → Fin n → ℝ) : ℝ :=
   Real.sqrt (univ.sum (fun i =>
@@ -418,18 +392,15 @@ theorem HS_norm_nonneg (n : ℕ)
 -- SECTION 7: HAHN-BANACH THEOREM
 -- ============================================================
 
--- Linear functional
 def is_linear_functional (n : ℕ)
     (f : (Fin n → ℝ) → ℝ) : Prop :=
   (∀ x y, f (fun i => x i + y i) = f x + f y) ∧
   (∀ c x, f (fun i => c * x i) = c * f x)
 
--- Bounded functional
 def bounded_functional (n : ℕ)
     (f : (Fin n → ℝ) → ℝ) (C : ℝ) : Prop :=
   ∀ x : Fin n → ℝ, |f x| ≤ C * l2_norm n x
 
--- Riesz representation: f(x) = ⟨x, y⟩ for some y
 theorem riesz_representation (n : ℕ)
     (f : (Fin n → ℝ) → ℝ)
     (hf : is_linear_functional n f) :
@@ -451,7 +422,6 @@ theorem riesz_representation (n : ℕ)
     simp [hf.1, hf.2, Finset.sum_comm]]
   congr 1; ext j; ring
 
--- Extension theorem (Hahn-Banach on finite dim)
 theorem extension_bounded_functional (n : ℕ)
     (f : (Fin n → ℝ) → ℝ)
     (hf : is_linear_functional n f)
@@ -479,8 +449,6 @@ theorem extension_bounded_functional (n : ℕ)
 -- SECTION 8: OPEN MAPPING AND CLOSED GRAPH
 -- ============================================================
 
--- Open mapping theorem consequence:
--- Bijective bounded operator has bounded inverse
 def bijective_bounded (n : ℕ)
     (T : (Fin n → ℝ) → Fin n → ℝ)
     (C : ℝ) : Prop :=
@@ -488,7 +456,6 @@ def bijective_bounded (n : ℕ)
   (∀ x y, T x = T y → x = y) ∧
   (∀ y, ∃ x, T x = y)
 
--- Closed graph: T has closed graph iff T is bounded (fin dim)
 theorem closed_graph_bounded (n : ℕ)
     (T : (Fin n → ℝ) → Fin n → ℝ)
     (hlin : is_linear_map n n T) :
@@ -504,7 +471,6 @@ theorem closed_graph_bounded (n : ℕ)
     nlinarith [Finset.sum_nonneg
       (fun j _ => sq_nonneg (x j))]
 
--- Uniform boundedness principle (Banach-Steinhaus)
 theorem uniform_boundedness
     (n : ℕ) (ops : ℕ → (Fin n → ℝ) → Fin n → ℝ)
     (C : Fin n → ℝ → ℝ)
@@ -527,7 +493,8 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- AWM state space: 21-dimensional Hilbert space
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 noncomputable def AWM_inner_product
     (x y : Domain21 → ℝ) : ℝ :=
   Finset.univ.sum (fun d => x d * y d)
@@ -546,11 +513,11 @@ theorem AWM_inner_nonneg (x : Domain21 → ℝ) :
 theorem AWM_cauchy_schwarz (x y : Domain21 → ℝ) :
     (AWM_inner_product x y) ^ 2 ≤
     AWM_inner_product x x *
-    AWM_inner_product y y :=
-  Finset.inner_mul_le_norm_sq_mul_norm_sq
-    Finset.univ (fun d => x d) (fun d => y d)
+    AWM_inner_product y y := by
+  unfold AWM_inner_product
+  have h := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ x y
+  simpa [sq] using h
 
--- AWM norm
 noncomputable def AWM_norm (x : Domain21 → ℝ) : ℝ :=
   Real.sqrt (AWM_inner_product x x)
 
@@ -566,7 +533,6 @@ theorem AWM_norm_zero_iff (x : Domain21 → ℝ) :
   simp [Finset.sum_eq_zero_iff
     (fun d _ => sq_nonneg (x d)), sq_eq_zero_iff]
 
--- Governance operator: linear map on AWM state
 structure GovernanceOperator where
   T         : (Domain21 → ℝ) → Domain21 → ℝ
   linear    : ∀ x y, T (fun d => x d + y d) =
@@ -585,14 +551,12 @@ theorem governance_preserves_zero
   have := congr_fun h d
   linarith [this]
 
--- Self-adjoint governance
 def governance_self_adjoint
     (G : GovernanceOperator) : Prop :=
   ∀ x y : Domain21 → ℝ,
     AWM_inner_product (G.T x) y =
     AWM_inner_product x (G.T y)
 
--- Spectral decomposition of governance operator
 theorem governance_spectral
     (G : GovernanceOperator)
     (hSA : governance_self_adjoint G)
@@ -613,8 +577,26 @@ theorem governance_spectral
   rw [Real.sqrt_mul (sq_nonneg _),
       Real.sqrt_sq_eq_abs] at hbnd
   have hv_pos : 0 < Real.sqrt (AWM_inner_product v v) :=
-    Real.sqrt_pos_of_pos hv
+    Real.sqrt_pos.mpr hv
   exact (mul_le_mul_right hv_pos).mp hbnd
+
+-- --- Cross-file integration with MC2Engine, SovereignHamiltonian ---
+
+theorem AWM_norm_via_domain_mass :
+    AWM_norm (fun _ => 1) =
+    Real.sqrt (MC2Engine.total_mass
+      (⟨fun _ => 1, fun _ => by norm_num⟩ : MC2Engine.MassMap Domain21)) := by
+  unfold AWM_norm AWM_inner_product MC2Engine.total_mass
+  congr 1
+
+noncomputable def domain_governance_energy : ℝ :=
+  SovereignHamiltonian.T_kinetic (Fintype.card Domain21)
+    (fun _ => 0) (fun _ => 1)
+
+theorem domain_governance_energy_nonneg :
+    0 ≤ domain_governance_energy :=
+  SovereignHamiltonian.T_nonneg (Fintype.card Domain21)
+    (fun _ => 0) (fun _ => 1) (fun _ => by norm_num)
 
 -- ============================================================
 -- SYSTEM LOCK
@@ -669,6 +651,7 @@ structure FunctionalAnalysisLock where
                      0 ≤ AWM_norm x
   gov_zero       : ∀ (G : GovernanceOperator),
                      ∀ d, G.T (fun _ => 0) d = 0
+  gov_energy_nn  : 0 ≤ domain_governance_energy
 
 def FALock : FunctionalAnalysisLock where
   l2_nn          := l2_norm_nonneg
@@ -682,5 +665,6 @@ def FALock : FunctionalAnalysisLock where
   AWM_CS         := AWM_cauchy_schwarz
   AWM_norm_nn    := AWM_norm_nonneg
   gov_zero       := governance_preserves_zero
+  gov_energy_nn  := domain_governance_energy_nonneg
 
 end FunctionalAnalysis
