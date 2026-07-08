@@ -302,3 +302,4 @@ def UALock : UniversalAlgebraLock where
   AWM_satisfies  := AWM_satisfies_all
 
 end UniversalAlgebra
+
