@@ -1,4 +1,7 @@
 import Mathlib
+import MC2Engine
+import LinearAlgebra
+import SovereignHamiltonian
 
 namespace AbstractAlgebra
 
@@ -314,8 +317,9 @@ theorem tower_law (k e f : ℕ)
     · have hkpos : 0 < k := Nat.pos_of_ne_zero hk0
       have hkmpos : 0 < k * m :=
         Nat.mul_pos hkpos (Nat.pos_of_ne_zero hm0)
-      have e1 : k * m * n / k = m * n :=
-        Nat.mul_div_cancel_left (m * n) hkpos
+      have e1 : k * m * n / k = m * n := by
+        rw [mul_assoc]
+        exact Nat.mul_div_cancel_left (m * n) hkpos
       have e2 : k * m * n / (k * m) = n :=
         Nat.mul_div_cancel_left n hkmpos
       have e3 : k * m / k = m :=
@@ -404,6 +408,8 @@ inductive Domain21 : Type where
   | O_Operator | P_Propagation | Q_Quality | R_Resonance
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
+
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
 
 structure DomainMonoid where
   compose  : Domain21 → Domain21 → Domain21
@@ -494,6 +500,45 @@ theorem AWM_basis_spans :
   intro h
   exact absurd (Finset.mem_univ d) h
 
+-- --- Cross-file integration with MC2Engine, LinearAlgebra, SovereignHamiltonian ---
+
+def domain_mass_map : MC2Engine.MassMap Domain21 where
+  mass  := fun _ => 1
+  h_pos := fun _ => by norm_num
+
+noncomputable def domain_total_mass : ℝ :=
+  MC2Engine.total_mass domain_mass_map
+
+theorem domain_total_mass_pos :
+    0 < domain_total_mass :=
+  MC2Engine.total_mass_pos domain_mass_map
+
+theorem domain_total_mass_eq_card :
+    domain_total_mass = (Fintype.card Domain21 : ℝ) := by
+  unfold domain_total_mass MC2Engine.total_mass domain_mass_map
+  simp [Finset.sum_const, Finset.card_univ]
+
+theorem domain_repr_dim_eq_matrix_rank :
+    domain_repr_dim = LinearAlgebra.domain_matrix.rank := by
+  rw [domain_repr_dim_val, LinearAlgebra.domain_matrix_rank]
+
+noncomputable def domain_hamiltonian_energy : ℝ :=
+  SovereignHamiltonian.H_OPT7 (Fintype.card Domain21)
+    (fun _ => 0) (fun _ => 1) 0
+    (fun _ => 0) (fun _ => 0)
+    0 (fun _ => 0) (fun _ => 0)
+
+theorem domain_hamiltonian_nonneg :
+    0 ≤ domain_hamiltonian_energy := by
+  unfold domain_hamiltonian_energy
+  rw [SovereignHamiltonian.equilibrium_minimizes_H]
+  have hT := SovereignHamiltonian.T_nonneg (Fintype.card Domain21)
+    (fun _ => (0 : ℝ)) (fun _ => (1 : ℝ)) (fun _ => by norm_num)
+  have hG : SovereignHamiltonian.G_governance (Fintype.card Domain21)
+      (0 : ℝ) (fun _ => (0 : ℝ)) (fun _ => (0 : ℝ)) = 0 := by
+    unfold SovereignHamiltonian.G_governance; simp
+  linarith
+
 -- ============================================================
 -- SYSTEM LOCK
 -- ============================================================
@@ -563,6 +608,12 @@ structure AbstractAlgebraLock where
                             v d' *
                             AWM_module_basis d' d)
   repr_dim          : domain_repr_dim = 21
+  mass_pos          : 0 < domain_total_mass
+  mass_eq_card      : domain_total_mass =
+                        (Fintype.card Domain21 : ℝ)
+  repr_eq_rank      : domain_repr_dim =
+                        LinearAlgebra.domain_matrix.rank
+  hamiltonian_nn     : 0 ≤ domain_hamiltonian_energy
 
 def AALock : AbstractAlgebraLock where
   group_one_unique  := group_one_unique
@@ -583,5 +634,9 @@ def AALock : AbstractAlgebraLock where
   basis_orth        := AWM_basis_orthonormal
   basis_spans       := AWM_basis_spans
   repr_dim          := domain_repr_dim_val
+  mass_pos          := domain_total_mass_pos
+  mass_eq_card      := domain_total_mass_eq_card
+  repr_eq_rank      := domain_repr_dim_eq_matrix_rank
+  hamiltonian_nn    := domain_hamiltonian_nonneg
 
 end AbstractAlgebra
