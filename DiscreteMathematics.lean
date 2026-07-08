@@ -261,24 +261,24 @@ theorem hamming_dist_zero (n : ℕ)
 -- ============================================================
 
 theorem bool_and_comm (a b : Bool) :
-    a && b = b && a := by
+    (a && b) = (b && a) := by
   cases a <;> cases b <;> decide
 
 theorem bool_or_comm (a b : Bool) :
-    a || b = b || a := by
+    (a || b) = (b || a) := by
   cases a <;> cases b <;> decide
 
 theorem bool_demorgan_and (a b : Bool) :
-    !(a && b) = !a || !b := by
+    (!(a && b)) = ((!a) || (!b)) := by
   cases a <;> cases b <;> decide
 
 theorem bool_demorgan_or (a b : Bool) :
-    !(a || b) = !a && !b := by
+    (!(a || b)) = ((!a) && (!b)) := by
   cases a <;> cases b <;> decide
 
 theorem bool_distrib (a b c : Bool) :
-    a && (b || c) =
-    (a && b) || (a && c) := by
+    (a && (b || c)) =
+    ((a && b) || (a && c)) := by
   cases a <;> cases b <;> cases c <;> decide
 
 -- ============================================================
@@ -330,7 +330,7 @@ theorem domain_hamming_zero
   hamming_dist_zero 21 x
 
 theorem domain_demorgan (a b : Bool) :
-    !(a && b) = !a || !b :=
+    (!(a && b)) = ((!a) || (!b)) :=
   bool_demorgan_and a b
 
 -- ============================================================
@@ -377,9 +377,9 @@ structure DiscreteMathematicsLock where
                      (x : Fin n → Bool),
                      hamming_dist n x x = 0
   demorgan_and   : ∀ a b : Bool,
-                     !(a && b) = !a || !b
+                     (!(a && b)) = ((!a) || (!b))
   demorgan_or    : ∀ a b : Bool,
-                     !(a || b) = !a && !b
+                     (!(a || b)) = ((!a) && (!b))
   dom_perm       : Fintype.card
                      (Equiv.Perm (Fin 21)) =
                    (21).factorial
@@ -390,7 +390,7 @@ structure DiscreteMathematicsLock where
   dom_ham_zero   : ∀ x : Fin 21 → Bool,
                      hamming_dist 21 x x = 0
   dom_demorgan   : ∀ a b : Bool,
-                     !(a && b) = !a || !b
+                     (!(a && b)) = ((!a) || (!b))
 
 def DMLock : DiscreteMathematicsLock where
   binom_pos      := binom_pos
