@@ -1,4 +1,6 @@
 import Mathlib
+import LinearAlgebra
+import MC2Engine
 
 namespace HomologicalAlgebra
 
@@ -277,6 +279,30 @@ theorem domain_euler_AWM :
     domain_euler 21 0 0 = 21 := by
   unfold domain_euler; norm_num
 
+-- --- Cross-file integration with LinearAlgebra and MC2Engine ---
+
+theorem domain_rank_nullity_euler :
+    LinearAlgebra.domain_matrix.rank +
+    Module.finrank ℝ
+      (LinearMap.ker LinearAlgebra.domain_matrix.mulVecLin) = 21 :=
+  LinearAlgebra.rank_nullity 21 21 LinearAlgebra.domain_matrix
+
+def domain_mass_map : MC2Engine.MassMap Domain21 where
+  mass  := fun _ => 1
+  h_pos := fun _ => by norm_num
+
+noncomputable def domain_total_mass : ℝ :=
+  MC2Engine.total_mass domain_mass_map
+
+theorem domain_total_mass_pos :
+    0 < domain_total_mass :=
+  MC2Engine.total_mass_pos domain_mass_map
+
+theorem domain_mass_eq_H0 (dc : DomainChain) :
+    domain_total_mass = (domain_H0 dc : ℝ) := by
+  unfold domain_total_mass domain_H0 MC2Engine.total_mass domain_mass_map
+  simp [Finset.sum_const, Finset.card_univ]
+
 -- ============================================================
 -- SYSTEM LOCK
 -- ============================================================
@@ -312,6 +338,13 @@ structure HomologicalAlgebraLock where
   domain_H0_pos : ∀ (dc : DomainChain),
                     0 < domain_H0 dc
   domain_euler  : domain_euler 21 0 0 = 21
+  rank_nullity_euler : LinearAlgebra.domain_matrix.rank +
+                    Module.finrank ℝ
+                      (LinearMap.ker
+                        LinearAlgebra.domain_matrix.mulVecLin) = 21
+  mass_pos      : 0 < domain_total_mass
+  mass_eq_H0    : ∀ (dc : DomainChain),
+                    domain_total_mass = (domain_H0 dc : ℝ)
 
 def HALock : HomologicalAlgebraLock where
   d_sq_zero      := fun C i x => C.d_sq i x
@@ -323,5 +356,8 @@ def HALock : HomologicalAlgebraLock where
   L0_is_F        := L0_is_F
   domain_H0_pos  := domain_H0_pos
   domain_euler   := domain_euler_AWM
+  rank_nullity_euler := domain_rank_nullity_euler
+  mass_pos       := domain_total_mass_pos
+  mass_eq_H0     := domain_mass_eq_H0
 
 end HomologicalAlgebra
