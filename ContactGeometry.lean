@@ -1,4 +1,3 @@
--- ContactGeometry.lean
 import Mathlib
 
 namespace ContactGeometry
@@ -9,15 +8,11 @@ open Finset Real Matrix
 -- SECTION 1: CONTACT STRUCTURES
 -- ============================================================
 
--- Contact form: α ∧ (dα)^n ≠ 0
--- Discrete proxy: α : ℝ^(2n+1) → ℝ
 structure ContactForm (n : ℕ) where
   alpha    : Fin (2*n+1) → ℝ → ℝ
   nonzero  : ∀ x : Fin (2*n+1) → ℝ,
     ∃ i, alpha i (x i) ≠ 0 ∨ True
 
--- Standard contact form on ℝ^(2n+1)
--- α = dz - Σ yᵢ dxᵢ
 noncomputable def standard_contact (n : ℕ) :
     ContactForm n where
   alpha := fun i x =>
@@ -26,7 +21,6 @@ noncomputable def standard_contact (n : ℕ) :
   nonzero := fun _ =>
     ⟨⟨0, by omega⟩, Or.inr trivial⟩
 
--- Contact hyperplane field
 def contact_hyperplane (n : ℕ)
     (alpha : Fin (2*n+1) → ℝ) :
     Set (Fin (2*n+1) → ℝ) :=
@@ -44,8 +38,6 @@ theorem zero_in_hyperplane (n : ℕ)
 -- SECTION 2: REEB VECTOR FIELD
 -- ============================================================
 
--- Reeb field: ι_R dα = 0, α(R) = 1
--- Proxy: unit vector in z-direction
 noncomputable def reeb_vector (n : ℕ) :
     Fin (2*n+1) → ℝ :=
   fun i => if i.val = 2*n then 1 else 0
@@ -54,15 +46,18 @@ theorem reeb_norm_sq (n : ℕ) :
     Finset.univ.sum (fun i =>
       reeb_vector n i ^ 2) = 1 := by
   unfold reeb_vector
-  simp [Finset.sum_ite,
-        Finset.filter_eq']
-  simp [Finset.mem_univ]
+  have hlt : 2*n < 2*n+1 := by omega
+  rw [Finset.sum_eq_single (⟨2*n, hlt⟩ : Fin (2*n+1))]
+  · simp
+  · intro b _ hb
+    have hne : b.val ≠ 2*n := fun h => hb (Fin.ext h)
+    simp [hne]
+  · intro h
+    exact absurd (Finset.mem_univ _) h
 
--- Reeb flow preserves contact structure
 theorem reeb_flow_proxy (n : ℕ) :
     True := trivial
 
--- Periodic Reeb orbits proxy
 theorem periodic_orbit_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -70,7 +65,6 @@ theorem periodic_orbit_proxy (n : ℕ) :
 -- SECTION 3: LEGENDRIAN SUBMANIFOLDS
 -- ============================================================
 
--- Legendrian: tangent in contact hyperplane
 def is_legendrian (n : ℕ)
     (alpha : Fin (2*n+1) → ℝ)
     (gamma : Fin n → Fin (2*n+1) → ℝ) :
@@ -84,11 +78,9 @@ theorem zero_legendrian (n : ℕ)
       (fun _ _ => 0) := by
   intro j; simp
 
--- Legendrian isotopy proxy
 theorem legendrian_isotopy_proxy :
     True := trivial
 
--- Thurston-Bennequin number proxy
 theorem TB_proxy (n : ℤ) :
     ∃ k : ℤ, k = n := ⟨n, rfl⟩
 
@@ -96,7 +88,6 @@ theorem TB_proxy (n : ℤ) :
 -- SECTION 4: CONTACTOMORPHISMS
 -- ============================================================
 
--- Contactomorphism: φ*α = f·α
 def is_contactomorphism (n : ℕ)
     (phi : Matrix (Fin (2*n+1))
       (Fin (2*n+1)) ℝ)
@@ -114,7 +105,6 @@ theorem identity_contactomorphism (n : ℕ)
     is_contactomorphism n 1 alpha 1 := by
   intro v; simp [Matrix.one_mulVec]
 
--- Gray's stability theorem proxy
 theorem gray_stability_proxy :
     True := trivial
 
@@ -122,7 +112,6 @@ theorem gray_stability_proxy :
 -- SECTION 5: SYMPLECTIZATION
 -- ============================================================
 
--- Symplectization: (M × ℝ, d(e^t α))
 noncomputable def symplectization_form
     (n : ℕ) (alpha : Fin (2*n+1) → ℝ)
     (t : ℝ) : Fin (2*n+1) → ℝ :=
@@ -136,7 +125,6 @@ theorem symplect_form_pos
   unfold symplectization_form
   exact mul_pos (Real.exp_pos t) h
 
--- SFT proxy
 theorem SFT_proxy :
     True := trivial
 
@@ -144,7 +132,6 @@ theorem SFT_proxy :
 -- SECTION 6: CONTACT HAMILTONIANS
 -- ============================================================
 
--- Contact Hamiltonian: H : M → ℝ
 noncomputable def contact_hamiltonian
     (n : ℕ) (H : Fin (2*n+1) → ℝ)
     (alpha : Fin (2*n+1) → ℝ) : ℝ :=
@@ -160,12 +147,11 @@ theorem contact_H_linear (n : ℕ)
     contact_hamiltonian n H1 alpha +
     c * contact_hamiltonian n H2 alpha := by
   unfold contact_hamiltonian
-  simp [mul_add, add_mul,
-        Finset.sum_add_distrib,
-        Finset.mul_sum]
+  rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+  apply Finset.sum_congr rfl
+  intro x _
   ring
 
--- Energy dissipation in contact systems
 theorem contact_dissipation_proxy
     (E : ℝ) (h : 0 ≤ E) : 0 ≤ E := h
 
@@ -173,18 +159,15 @@ theorem contact_dissipation_proxy
 -- SECTION 7: TIGHT VS OVERTWISTED
 -- ============================================================
 
--- Tight contact structure proxy
 def is_tight_proxy (n : ℕ) : Prop :=
   True
 
 theorem standard_is_tight (n : ℕ) :
     is_tight_proxy n := trivial
 
--- Bennequin inequality proxy
 theorem bennequin_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Eliashberg classification proxy
 theorem eliashberg_proxy :
     True := trivial
 
@@ -192,15 +175,12 @@ theorem eliashberg_proxy :
 -- SECTION 8: RELATION TO SYMPLECTIC
 -- ============================================================
 
--- Contact ↔ Symplectic via symplectization
 theorem contact_symplectic_proxy (n : ℕ) :
     True := trivial
 
--- Weinstein conjecture proxy
 theorem weinstein_conjecture_proxy :
     True := trivial
 
--- Fillability proxy
 def is_fillable_proxy (n : ℕ) : Prop :=
   True
 
@@ -220,14 +200,12 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- AWM contact space: 43-dimensional (2*21+1)
 def AWM_contact_dim : ℕ := 43
 
 theorem AWM_contact_dim_eq :
     AWM_contact_dim = 2 * 21 + 1 := by
   unfold AWM_contact_dim; norm_num
 
--- AWM Reeb vector
 noncomputable def AWM_reeb :=
   reeb_vector 21
 
@@ -236,31 +214,26 @@ theorem AWM_reeb_norm :
       AWM_reeb i ^ 2) = 1 :=
   reeb_norm_sq 21
 
--- AWM contact form
 noncomputable def AWM_contact :=
   standard_contact 21
 
--- AWM zero in hyperplane
 theorem AWM_zero_hyperplane
     (alpha : Fin 43 → ℝ) :
     (fun _ => (0:ℝ)) ∈
     contact_hyperplane 21 alpha :=
   zero_in_hyperplane 21 alpha
 
--- AWM zero Legendrian
 theorem AWM_zero_legendrian
     (alpha : Fin 43 → ℝ) :
     is_legendrian 21 alpha
       (fun _ _ => 0) :=
   zero_legendrian 21 alpha
 
--- AWM identity contactomorphism
 theorem AWM_identity_contact
     (alpha : Fin 43 → ℝ) :
     is_contactomorphism 21 1 alpha 1 :=
   identity_contactomorphism 21 alpha
 
--- AWM contact Hamiltonian linear
 theorem AWM_contact_H_linear
     (H1 H2 : Fin 43 → ℝ)
     (alpha : Fin 43 → ℝ) (c : ℝ) :
@@ -270,7 +243,6 @@ theorem AWM_contact_H_linear
     c * contact_hamiltonian 21 H2 alpha :=
   contact_H_linear 21 H1 H2 alpha c
 
--- AWM symplectization positive
 theorem AWM_symplect_pos
     (alpha : Fin 43 → ℝ)
     (t : ℝ) (i : Fin 43)
@@ -308,7 +280,7 @@ structure ContactGeometryLock where
                        alpha =
                      contact_hamiltonian n
                        H1 alpha +
-                     c * contact_hamiltonian n
+                     c *contact_hamiltonian n
                        H2 alpha
   symplect_pos   : ∀ (n : ℕ)
                      (alpha : Fin (2*n+1) → ℝ)
