@@ -1,13 +1,13 @@
 {
   "suite": "PHASE_38_SUBSPACE_GOVERNOR",
-  "timestamp": 1783181987.428161,
+  "timestamp": 1783498825.716546,
   "svd_filter_metrics": {
-    "compromised_spectral_radius": 32.496276,
+    "compromised_spectral_radius": 34.366952,
     "reconstructed_spectral_radius": 0.85,
     "original_singular_spectrum": [
-      5.700550531416331,
-      5.023262028215867,
-      1.9716472777272573
+      5.8623333534069895,
+      4.936570123310067,
+      1.9188542691427852
     ],
     "adjusted_singular_spectrum": [
       0.9219544457292888,
