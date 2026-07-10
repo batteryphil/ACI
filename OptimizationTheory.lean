@@ -1,4 +1,3 @@
--- OptimizationTheory.lean
 import Mathlib
 
 namespace OptimizationTheory
@@ -9,13 +8,11 @@ open Finset Real
 -- SECTION 1: CONVEX OPTIMIZATION
 -- ============================================================
 
--- Convex set
 def is_convex_set (S : Set ℝ) : Prop :=
   ∀ x y : ℝ, x ∈ S → y ∈ S →
     ∀ t : ℝ, 0 ≤ t → t ≤ 1 →
-      t * x + (1 - t) * y ∈ S
+    t * x + (1 - t) * y ∈ S
 
--- Convex function
 def is_convex_fn (f : ℝ → ℝ) : Prop :=
   ∀ x y t, 0 ≤ t → t ≤ 1 →
     f (t * x + (1-t) * y) ≤
@@ -24,23 +21,20 @@ def is_convex_fn (f : ℝ → ℝ) : Prop :=
 theorem sq_is_convex :
     is_convex_fn (fun x => x ^ 2) := by
   intro x y t ht0 ht1
-  nlinarith [sq_nonneg (x - y),
-             sq_nonneg t,
-             sq_nonneg (1 - t),
-             mul_nonneg ht0 (by linarith)]
+  have h1t : 0 ≤ 1 - t := by linarith
+  nlinarith [mul_nonneg (mul_nonneg ht0 h1t) (sq_nonneg (x - y))]
 
 theorem abs_is_convex :
     is_convex_fn (fun x => |x|) := by
   intro x y t ht0 ht1
+  have h1t : 0 ≤ 1 - t := by linarith
   calc |t * x + (1-t) * y|
-      ≤ |t * x| + |(1-t) * y| :=
-        abs_add _ _
+      ≤ |t * x| + |(1-t) * y| := abs_add_le _ _
     _ = t * |x| + (1-t) * |y| := by
         rw [abs_mul, abs_mul,
             abs_of_nonneg ht0,
-            abs_of_nonneg (by linarith)]
+            abs_of_nonneg h1t]
 
--- Epigraph
 def epigraph (f : ℝ → ℝ) : Set (ℝ × ℝ) :=
   {p | f p.1 ≤ p.2}
 
@@ -53,11 +47,9 @@ theorem epigraph_nonneg (f : ℝ → ℝ)
 -- SECTION 2: UNCONSTRAINED OPTIMIZATION
 -- ============================================================
 
--- Local minimum
 def is_local_min (f : ℝ → ℝ) (x : ℝ) : Prop :=
   ∃ eps > 0, ∀ y, |y - x| < eps → f x ≤ f y
 
--- Global minimum
 def is_global_min (f : ℝ → ℝ) (x : ℝ) : Prop :=
   ∀ y, f x ≤ f y
 
@@ -66,12 +58,10 @@ theorem global_implies_local (f : ℝ → ℝ)
     is_local_min f x :=
   ⟨1, one_pos, fun y _ => h y⟩
 
--- First order necessary condition proxy
 theorem FONC_proxy (f : ℝ → ℝ)
     (x : ℝ) (h : is_local_min f x) :
     is_local_min f x := h
 
--- Gradient descent convergence proxy
 theorem GD_convergence_proxy
     (alpha L : ℝ) (hα : 0 < alpha)
     (hL : 0 < L) (hαL : alpha ≤ 2 / L) :
@@ -81,12 +71,10 @@ theorem GD_convergence_proxy
 -- SECTION 3: CONSTRAINED OPTIMIZATION
 -- ============================================================
 
--- KKT conditions proxy
 theorem KKT_proxy (x lambda : ℝ)
-    (hλ : 0 ≤ lambda) :
-    0 ≤ lambda := hλ
+    (hlam : 0 ≤ lambda) :
+    0 ≤ lambda := hlam
 
--- Lagrangian: L = f + λg
 noncomputable def lagrangian
     (f g : ℝ → ℝ) (lambda x : ℝ) : ℝ :=
   f x + lambda * g x
@@ -99,7 +87,6 @@ theorem lagrangian_linear_lambda
     lagrangian f g l2 x - f x := by
   unfold lagrangian; ring
 
--- Slater's condition proxy
 theorem slater_proxy :
     True := trivial
 
@@ -107,19 +94,15 @@ theorem slater_proxy :
 -- SECTION 4: LINEAR PROGRAMMING
 -- ============================================================
 
--- LP: min cᵀx s.t. Ax ≥ b, x ≥ 0
--- Feasible point nonneg
 theorem LP_feasible_nonneg (n : ℕ)
     (x : Fin n → ℝ)
     (hx : ∀ i, 0 ≤ x i) (i : Fin n) :
     0 ≤ x i := hx i
 
--- Objective value
 noncomputable def LP_objective (n : ℕ)
     (c x : Fin n → ℝ) : ℝ :=
   Finset.univ.sum (fun i => c i * x i)
 
--- Weak duality
 theorem LP_weak_duality (n : ℕ)
     (c b : Fin n → ℝ)
     (x y : Fin n → ℝ)
@@ -130,11 +113,9 @@ theorem LP_weak_duality (n : ℕ)
     LP_objective n b y ≤
     LP_objective n c x := h
 
--- Simplex method proxy
 theorem simplex_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Strong duality proxy
 theorem LP_strong_duality_proxy :
     True := trivial
 
@@ -142,21 +123,20 @@ theorem LP_strong_duality_proxy :
 -- SECTION 5: SEMIDEFINITE PROGRAMMING
 -- ============================================================
 
--- PSD cone: X ≥ 0
 def is_PSD (n : ℕ)
     (X : Matrix (Fin n) (Fin n) ℝ) : Prop :=
   ∀ v : Fin n → ℝ,
-    0 ≤ Matrix.dotProduct v (X.mulVec v)
+    0 ≤ dotProduct v (X.mulVec v)
 
 theorem identity_PSD (n : ℕ) :
     is_PSD n 1 := by
   intro v
-  simp [Matrix.dotProduct, Matrix.mulVec,
-        Matrix.one_apply]
-  apply Finset.sum_nonneg; intro i _
-  exact sq_nonneg _
+  rw [Matrix.one_mulVec]
+  unfold dotProduct
+  apply Finset.sum_nonneg
+  intro i _
+  exact mul_self_nonneg _
 
--- SDP objective nonneg
 theorem SDP_obj_nonneg (n : ℕ)
     (C X : Matrix (Fin n) (Fin n) ℝ)
     (hX : is_PSD n X) :
@@ -166,7 +146,6 @@ theorem SDP_obj_nonneg (n : ℕ)
 -- SECTION 6: INTEGER PROGRAMMING
 -- ============================================================
 
--- Integer constraint proxy
 def integer_feasible (n : ℕ)
     (x : Fin n → ℤ) : Prop :=
   ∀ i, 0 ≤ x i
@@ -175,11 +154,9 @@ theorem zero_integer_feasible (n : ℕ) :
     integer_feasible n (fun _ => 0) :=
   fun _ => le_refl 0
 
--- Branch and bound proxy
 theorem branch_bound_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Cutting plane proxy
 theorem cutting_plane_proxy :
     True := trivial
 
@@ -187,21 +164,17 @@ theorem cutting_plane_proxy :
 -- SECTION 7: NONLINEAR PROGRAMMING
 -- ============================================================
 
--- Newton's method convergence proxy
 theorem newton_conv_proxy
     (f'' : ℝ → ℝ) (x : ℝ)
     (h : 0 < f'' x) : 0 < f'' x := h
 
--- Trust region proxy
 theorem trust_region_nonneg
     (delta : ℝ) (h : 0 < delta) :
     0 < delta := h
 
--- Conjugate gradient proxy
 theorem CG_nonneg (k : ℕ) :
     0 ≤ (k : ℝ) := Nat.cast_nonneg k
 
--- BFGS update proxy
 theorem BFGS_proxy :
     True := trivial
 
@@ -209,18 +182,15 @@ theorem BFGS_proxy :
 -- SECTION 8: MULTI-OBJECTIVE OPTIMIZATION
 -- ============================================================
 
--- Pareto dominance
 def pareto_dominates (n : ℕ)
     (f g : Fin n → ℝ) : Prop :=
   (∀ i, f i ≤ g i) ∧ ∃ i, f i < g i
 
--- Pareto front nonneg
 theorem pareto_front_nonneg (n : ℕ)
     (f : Fin n → ℝ)
     (hf : ∀ i, 0 ≤ f i) (i : Fin n) :
     0 ≤ f i := hf i
 
--- Scalarization proxy
 noncomputable def scalarization (n : ℕ)
     (w f : Fin n → ℝ) : ℝ :=
   Finset.univ.sum (fun i => w i * f i)
@@ -247,17 +217,14 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain convex function
 theorem domain_sq_convex :
     is_convex_fn (fun x => x ^ 2) :=
   sq_is_convex
 
--- Domain global min at zero
 theorem domain_sq_global_min :
     is_global_min (fun x => x ^ 2) 0 := by
   intro y; simp; exact sq_nonneg y
 
--- Domain LP objective
 noncomputable def domain_LP_obj :=
   LP_objective 21 (fun _ => 1) (fun _ => 1)
 
@@ -267,12 +234,10 @@ theorem domain_LP_nonneg :
   apply Finset.sum_nonneg; intro i _
   norm_num
 
--- Domain PSD identity
 theorem domain_PSD :
     is_PSD 21 1 :=
   identity_PSD 21
 
--- Domain scalarization
 noncomputable def domain_scalar :=
   scalarization 21
     (fun _ => 1/21) (fun _ => 1)
@@ -284,7 +249,6 @@ theorem domain_scalar_nonneg :
     (fun _ => by norm_num)
     (fun _ => by norm_num)
 
--- Domain integer feasible
 theorem domain_int_feasible :
     integer_feasible 21 (fun _ => 0) :=
   zero_integer_feasible 21
@@ -315,7 +279,7 @@ structure OptimizationTheoryLock where
                      LP_objective n b y →
                      LP_objective n b y ≤
                      LP_objective n c x
-  identity_PSD   : ∀ n : ℕ, is_PSD n 1
+  id_PSD         : ∀ n : ℕ, is_PSD n 1
   int_feas_zero  : ∀ n : ℕ,
                      integer_feasible n
                        (fun _ => 0)
@@ -341,7 +305,7 @@ def OTLock : OptimizationTheoryLock where
   KKT_nn         := fun _ _ h => h
   LP_feas_nn     := LP_feasible_nonneg
   LP_weak_dual   := LP_weak_duality
-  identity_PSD   := identity_PSD
+  id_PSD         := identity_PSD
   int_feas_zero  := zero_integer_feasible
   scalar_nn      := scalarization_nonneg
   dom_sq_convex  := domain_sq_convex
@@ -352,3 +316,4 @@ def OTLock : OptimizationTheoryLock where
   dom_int_feas   := domain_int_feasible
 
 end OptimizationTheory
+
