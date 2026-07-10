@@ -3,6 +3,7 @@ import Mathlib
 namespace NumberTheory
 
 open Finset Real
+open scoped Classical
 
 noncomputable def prime_count (n : ℕ) : ℕ :=
   (Finset.range n).filter Nat.Prime |>.card
@@ -31,9 +32,9 @@ theorem unique_factorization (n : ℕ) (hn : 0 < n) :
     ∃ factors : Multiset ℕ,
       (∀ p ∈ factors, Nat.Prime p) ∧
       factors.prod = n :=
-  ⟨n.factors,
-   fun p hp => Nat.prime_of_mem_factors hp,
-   Nat.factors_prod hn⟩
+  ⟨(n.primeFactorsList : Multiset ℕ),
+   fun p hp => Nat.prime_of_mem_primeFactorsList (Multiset.mem_coe.mp hp),
+   by rw [Multiset.prod_coe]; exact Nat.prod_primeFactorsList hn.ne'⟩
 
 def twin_prime_pair (p : ℕ) : Prop :=
   Nat.Prime p ∧ Nat.Prime (p + 2)
@@ -83,10 +84,10 @@ theorem mod_equiv_mul (a b c d n : ℤ)
     (h1 : mod_equiv a b n) (h2 : mod_equiv c d n) :
     mod_equiv (a * c) (b * d) n := by
   unfold mod_equiv at *
-  have key : n ∣ b * (c - d) + d * (a - b) :=
-    dvd_add (dvd_mul_of_dvd_right h2 b)
+  have key : n ∣ a * (c - d) + d * (a - b) :=
+    dvd_add (dvd_mul_of_dvd_right h2 a)
             (dvd_mul_of_dvd_right h1 d)
-  rwa [show b * (c - d) + d * (a - b) =
+  rwa [show a * (c - d) + d * (a - b) =
        a * c - b * d from by ring] at key
 
 theorem wilson (p : ℕ) (hp : Nat.Prime p) :
@@ -131,11 +132,14 @@ theorem legendre_zero (p : ℤ) :
     legendre_symbol 0 p = 0 := by
   unfold legendre_symbol; simp
 
-theorem legendre_one (p : ℤ) :
+theorem legendre_one (p : ℤ) (hp : 1 < p) :
     legendre_symbol 1 p = 1 := by
   unfold legendre_symbol
-  simp
-  exact ⟨1, by unfold mod_equiv; simp⟩
+  have hnd : ¬ p ∣ (1 : ℤ) := by
+    intro hdvd
+    have hle := Int.le_of_dvd one_pos hdvd
+    omega
+  rw [if_neg hnd, if_pos ⟨1, by unfold mod_equiv; simp⟩]
 
 theorem euler_criterion_sign (p : ℕ)
     (hp : Nat.Prime p) (a : ℤ) :
@@ -144,15 +148,48 @@ theorem euler_criterion_sign (p : ℕ)
     legendre_symbol a p = -1 := by
   rcases legendre_values a p with h | h | h <;> simp [h]
 
+theorem legendre_symbol_eq (a p : ℤ) (hp : ¬ p ∣ a)
+    (hex : ∃ x : ℤ, mod_equiv (x ^ 2) a p) :
+    legendre_symbol a p = 1 := by
+  unfold legendre_symbol
+  rw [if_neg hp, if_pos hex]
+
+theorem legendre_symbol_eq_neg (a p : ℤ) (hp : ¬ p ∣ a)
+    (hex : ¬ ∃ x : ℤ, mod_equiv (x ^ 2) a p) :
+    legendre_symbol a p = -1 := by
+  unfold legendre_symbol
+  rw [if_neg hp, if_neg hex]
+
+theorem not_exists_sq_mod (a : ℤ) (p : ℕ)
+    (h : ¬ ∃ y : ZMod p, y ^ 2 = (a : ZMod p)) :
+    ¬ ∃ x : ℤ, mod_equiv (x ^ 2) a (p : ℤ) := by
+  unfold mod_equiv
+  rintro ⟨x, hx⟩
+  exact h ⟨(x : ZMod p), by
+    have h0 : ((x ^ 2 - a : ℤ) : ZMod p) = 0 :=
+      (ZMod.intCast_zmod_eq_zero_iff_dvd _ p).mpr hx
+    push_cast at h0
+    exact sub_eq_zero.mp h0⟩
+
 theorem QR_3_5 :
     legendre_symbol 3 5 * legendre_symbol 5 3 =
     (-1 : ℤ) ^ ((3-1)/2 * ((5-1)/2)) := by
-  native_decide
+  have e1 : legendre_symbol (3:ℤ) (5:ℤ) = -1 :=
+    legendre_symbol_eq_neg 3 5 (by norm_num) (not_exists_sq_mod 3 5 (by decide))
+  have e2 : legendre_symbol (5:ℤ) (3:ℤ) = -1 :=
+    legendre_symbol_eq_neg 5 3 (by norm_num) (not_exists_sq_mod 5 3 (by decide))
+  rw [e1, e2]
+  norm_num
 
 theorem QR_3_7 :
     legendre_symbol 3 7 * legendre_symbol 7 3 =
     (-1 : ℤ) ^ ((3-1)/2 * ((7-1)/2)) := by
-  native_decide
+  have e1 : legendre_symbol (3:ℤ) (7:ℤ) = -1 :=
+    legendre_symbol_eq_neg 3 7 (by norm_num) (not_exists_sq_mod 3 7 (by decide))
+  have e2 : legendre_symbol (7:ℤ) (3:ℤ) = 1 :=
+    legendre_symbol_eq 7 3 (by norm_num) ⟨1, by unfold mod_equiv; norm_num⟩
+  rw [e1, e2]
+  norm_num
 
 theorem QR_sign (p q : ℕ)
     (hp : Nat.Prime p) (hq : Nat.Prime q)
@@ -160,9 +197,34 @@ theorem QR_sign (p q : ℕ)
     (hpq : p ≠ q) :
     (legendre_symbol p q *
      legendre_symbol q p) ^ 2 = 1 := by
-  rcases legendre_values p q with h1 | h1 | h1 <;>
-  rcases legendre_values q p with h2 | h2 | h2 <;>
-  simp [h1, h2]
+  have hne1 : legendre_symbol (p:ℤ) (q:ℤ) ≠ 0 := by
+    unfold legendre_symbol
+    have hnd : ¬ (q:ℤ) ∣ (p:ℤ) := by
+      intro hdvd
+      have hqp' : q ∣ p := by exact_mod_cast hdvd
+      exact hpq ((Nat.prime_dvd_prime_iff_eq hq hp).mp hqp').symm
+    rw [if_neg hnd]
+    split_ifs <;> norm_num
+  have hne2 : legendre_symbol (q:ℤ) (p:ℤ) ≠ 0 := by
+    unfold legendre_symbol
+    have hnd : ¬ (p:ℤ) ∣ (q:ℤ) := by
+      intro hdvd
+      have hpq' : p ∣ q := by exact_mod_cast hdvd
+      exact hpq ((Nat.prime_dvd_prime_iff_eq hp hq).mp hpq')
+    rw [if_neg hnd]
+    split_ifs <;> norm_num
+  have sq1 : legendre_symbol (p:ℤ) (q:ℤ) ^ 2 = 1 := by
+    rcases legendre_values (p:ℤ) (q:ℤ) with h|h|h
+    · rw [h]; norm_num
+    · exact absurd h hne1
+    · rw [h]; norm_num
+  have sq2 : legendre_symbol (q:ℤ) (p:ℤ) ^ 2 = 1 := by
+    rcases legendre_values (q:ℤ) (p:ℤ) with h|h|h
+    · rw [h]; norm_num
+    · exact absurd h hne2
+    · rw [h]; norm_num
+  rw [mul_pow, sq1, sq2]
+  norm_num
 
 noncomputable def euler_totient (n : ℕ) : ℕ :=
   (Finset.range n).filter
@@ -171,31 +233,39 @@ noncomputable def euler_totient (n : ℕ) : ℕ :=
 theorem totient_prime (p : ℕ) (hp : Nat.Prime p) :
     euler_totient p = p - 1 := by
   unfold euler_totient
-  rw [show (Finset.range p).filter
-      (fun k => Nat.Coprime k p) =
-      Finset.Ico 1 p from by
+  have hset : (Finset.range p).filter (fun k => Nat.Coprime k p) =
+      Finset.Ico 1 p := by
     ext k
-    simp [Finset.mem_filter, Finset.mem_Ico,
-          Finset.mem_range]
+    simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_Ico]
     constructor
-    · intro ⟨hk, hcop⟩
-      exact ⟨by omega,
-            hk,
-            hcop⟩
-    · intro ⟨hk1, hk2, hcop⟩
-      exact ⟨hk2, hcop⟩]
-  simp [Finset.Ico_card]
+    · rintro ⟨hk, hcop⟩
+      refine ⟨?_, hk⟩
+      rcases Nat.eq_zero_or_pos k with hk0 | hk0
+      · subst hk0
+        exact absurd ((Nat.coprime_zero_left p).mp hcop) hp.ne_one
+      · exact hk0
+    · rintro ⟨hk1, hk2⟩
+      refine ⟨hk2, ?_⟩
+      rw [Nat.coprime_comm, hp.coprime_iff_not_dvd]
+      intro hdvd
+      have := Nat.le_of_dvd hk1 hdvd
+      omega
+  rw [hset, Nat.card_Ico]
 
 theorem totient_pos (n : ℕ) (hn : 0 < n) :
     0 < euler_totient n := by
   unfold euler_totient
   apply Finset.card_pos.mpr
-  exact ⟨1, by simp [Nat.Coprime, hn]⟩
+  rcases eq_or_ne n 1 with hn1 | hn1
+  · subst hn1
+    exact ⟨0, by simp [Finset.mem_filter, Finset.mem_range, Nat.Coprime]⟩
+  · have hn2 : 1 < n := lt_of_le_of_ne hn (Ne.symm hn1)
+    exact ⟨1, by simp [Finset.mem_filter, Finset.mem_range, hn2, Nat.Coprime]⟩
 
 noncomputable def mobius (n : ℕ) : ℤ :=
   if n = 1 then 1
   else if ∃ p : ℕ, Nat.Prime p ∧ p^2 ∣ n then 0
-  else (-1) ^ (n.factors.length)
+  else (-1) ^ (n.primeFactorsList.length)
 
 theorem mobius_one : mobius 1 = 1 := by
   unfold mobius; simp
@@ -203,24 +273,18 @@ theorem mobius_one : mobius 1 = 1 := by
 theorem mobius_prime (p : ℕ) (hp : Nat.Prime p) :
     mobius p = -1 := by
   unfold mobius
-  simp only [hp.one_lt.ne', ite_false]
-  constructor
-  · push_neg
-    intro q hq hdvd
-    have hqp : q = p := by
-      have := Nat.le_of_dvd hp.pos
-        (dvd_trans (dvd_pow_self q 2) hdvd)
-      have hqdvd : q ∣ p :=
-        dvd_trans (dvd_pow_self q 2) hdvd |>.trans
-          (dvd_refl p)
-      exact (hp.eq_one_or_self_of_dvd q
-                  (dvd_trans (dvd_pow_self q (by omega)) hdvd)).resolve_left
-          hq.one_lt.ne'
-    rw [hqp] at hdvd
-    have := hp.eq_one_or_self_of_dvd p (dvd_of_mul_dvd_left
-                              hdvd (dvd_refl p))
-    omega
-  · simp [hp.factors_unique]
+  rw [if_neg hp.ne_one]
+  have hsq : ¬ ∃ q : ℕ, Nat.Prime q ∧ q ^ 2 ∣ p := by
+    rintro ⟨q, hq, hdvd⟩
+    have hqp : q ∣ p := (dvd_pow_self q (two_ne_zero)).trans hdvd
+    rcases hp.eq_one_or_self_of_dvd q hqp with h1 | h1
+    · exact hq.ne_one h1
+    · rw [h1] at hdvd
+      have hpp : p * p ∣ p := by simpa [sq] using hdvd
+      have hple : p * p ≤ p := Nat.le_of_dvd hp.pos hpp
+      nlinarith [hp.two_le]
+  rw [if_neg hsq, Nat.primeFactorsList_prime hp]
+  simp
 
 noncomputable def divisor_sum (n : ℕ) : ℕ :=
   n.divisors.sum id
@@ -228,38 +292,83 @@ noncomputable def divisor_sum (n : ℕ) : ℕ :=
 theorem divisor_sum_prime (p : ℕ) (hp : Nat.Prime p) :
     divisor_sum p = p + 1 := by
   unfold divisor_sum
-  rw [Nat.Prime.divisors hp]; simp
+  rw [Nat.Prime.divisors hp, Finset.sum_pair hp.one_lt.ne]
+  simp only [id_eq]
+  omega
 
 def is_multiplicative (f : ℕ → ℤ) : Prop :=
   f 1 = 1 ∧
   ∀ m n : ℕ, Nat.Coprime m n → f (m * n) = f m * f n
 
+theorem mobius_sq_dvd_iff (m n : ℕ) (hcop : Nat.Coprime m n) :
+    (∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ (m * n)) ↔
+    (∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ m) ∨ (∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ n) := by
+  constructor
+  · rintro ⟨p, hp, hdvd⟩
+    have hpmn : p ∣ m * n := (dvd_pow_self p (two_ne_zero)).trans hdvd
+    rcases hp.dvd_mul.mp hpmn with hpm | hpn
+    · left
+      have hpn' : ¬ p ∣ n := by
+        intro hpn
+        have hg : p ∣ Nat.gcd m n := Nat.dvd_gcd hpm hpn
+        rw [hcop] at hg
+        have hle := Nat.le_of_dvd one_pos hg
+        have h2le := hp.two_le
+        omega
+      have hcop_pn : Nat.Coprime (p ^ 2) n := (hp.coprime_iff_not_dvd.mpr hpn').pow_left 2
+      exact ⟨p, hp, hcop_pn.dvd_mul_right.mp hdvd⟩
+    · right
+      have hpm' : ¬ p ∣ m := by
+        intro hpm'
+        have hg : p ∣ Nat.gcd m n := Nat.dvd_gcd hpm' hpn
+        rw [hcop] at hg
+        have hle := Nat.le_of_dvd one_pos hg
+        have h2le := hp.two_le
+        omega
+      have hcop_pm : Nat.Coprime (p ^ 2) m := (hp.coprime_iff_not_dvd.mpr hpm').pow_left 2
+      exact ⟨p, hp, hcop_pm.dvd_mul_left.mp hdvd⟩
+  · rintro (⟨p, hp, hdvd⟩ | ⟨p, hp, hdvd⟩)
+    · exact ⟨p, hp, hdvd.trans (dvd_mul_right m n)⟩
+    · exact ⟨p, hp, hdvd.trans (dvd_mul_left n m)⟩
+
 theorem mobius_multiplicative :
     is_multiplicative mobius := by
-  constructor
-  · exact mobius_one
-  · intro m n hcop
-    unfold mobius
-    by_cases hm : m = 1
-    · simp [hm]
-    by_cases hn : n = 1
-    · simp [hn]
-    simp only [hm, hn, mul_eq_one_iff_eq_one_of_nonneg
-    (Nat.zero_le _) (Nat.zero_le _) |>.not.mpr
-      (by intro ⟨h1, h2⟩; exact hm h1),
-      ite_false]
-    split_ifs with h1 h2 h2
-    · simp
-    · obtain ⟨p, hpp, hdvd⟩ := h1
-      simp
-    · obtain ⟨p, hpp, hdvd⟩ := h2
-      simp
-    · simp [Nat.factors_mul
-        (Nat.pos_of_ne_zero (by intro h; simp [h] at hm))
-        (Nat.pos_of_ne_zero (by intro h; simp [h] at hn)),
-        List.length_append,
-        pow_add,
-        hcop.factors_unique]
+  refine ⟨mobius_one, ?_⟩
+  intro m n hcop
+  rcases eq_or_ne m 0 with hm0 | hm0
+  · subst hm0
+    have hn1 : n = 1 := (Nat.coprime_zero_left n).mp hcop
+    subst hn1
+    simp [mobius]
+  rcases eq_or_ne n 0 with hn0 | hn0
+  · subst hn0
+    have hm1 : m = 1 := (Nat.coprime_zero_right m).mp hcop
+    subst hm1
+    simp [mobius]
+  by_cases hm1 : m = 1
+  · subst hm1; simp [mobius_one]
+  by_cases hn1 : n = 1
+  · subst hn1; simp [mobius_one]
+  have hm2 : 2 ≤ m := by omega
+  have hn2 : 1 ≤ n := by omega
+  have hmn1 : m * n ≠ 1 := by
+    have h2 : 2 * 1 ≤ m * n := Nat.mul_le_mul hm2 hn2
+    omega
+  unfold mobius
+  rw [if_neg hmn1, if_neg hm1, if_neg hn1]
+  by_cases hsq : (∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ m) ∨ (∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ n)
+  · rw [if_pos ((mobius_sq_dvd_iff m n hcop).mpr hsq)]
+    rcases hsq with h | h
+    · rw [if_pos h]; ring
+    · rw [if_pos h]; ring
+  · have hmnsq : ¬ ∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ (m * n) :=
+      fun h => hsq ((mobius_sq_dvd_iff m n hcop).mp h)
+    have hmsq : ¬ ∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ m := fun h => hsq (Or.inl h)
+    have hnsq : ¬ ∃ p : ℕ, Nat.Prime p ∧ p ^ 2 ∣ n := fun h => hsq (Or.inr h)
+    rw [if_neg hmnsq, if_neg hmsq, if_neg hnsq, ← pow_add]
+    congr 1
+    have hperm := Nat.perm_primeFactorsList_mul_of_coprime hcop
+    rw [hperm.length_eq, List.length_append]
 
 structure DirichletCharacter (q : ℕ) where
   chi      : ℕ → ℂ
@@ -272,43 +381,42 @@ noncomputable def zeta_partial (N : ℕ) (s : ℝ)
     if n = 0 then 0 else 1 / (n : ℝ) ^ s)
 
 theorem zeta_partial_pos (N : ℕ) (s : ℝ)
-    (hs : 1 < s) (hN : 0 < N) :
+    (hs : 1 < s) (hN : 1 < N) :
     0 < zeta_partial N s hs := by
   unfold zeta_partial
-  apply Finset.sum_pos_of_ne_zero
+  apply Finset.sum_pos'
   · intro n _
     split_ifs with h
     · exact le_refl _
     · positivity
-  · exact ⟨1, by simp [Finset.mem_range, hN],
-      by simp⟩
+  · refine ⟨1, by simp [Finset.mem_range, hN], ?_⟩
+    simp only [if_neg (one_ne_zero)]
+    positivity
 
 theorem euler_product_2 (s : ℝ) (hs : 1 < s) :
     0 < (1 - (2 : ℝ) ^ (-s))⁻¹ := by
   apply inv_pos.mpr
-  linarith [Real.rpow_pos_of_pos
-    (by norm_num : (0:ℝ) < 2) (-s),
-    Real.rpow_lt_one (by norm_num : (0:ℝ) ≤ 2)
-      (by norm_num : (2:ℝ) < 1) (by linarith)]
+  have h : (2:ℝ) ^ (-s) < 1 :=
+    Real.rpow_lt_one_of_one_lt_of_neg (by norm_num) (by linarith)
+  linarith
 
 def is_algebraic_integer (alpha : ℝ) : Prop :=
-  ∃ (n : ℕ) (coeffs : Fin n → ℤ),
+  ∃ (n : ℕ) (coeffs : ℕ → ℤ),
     0 < n ∧
     alpha ^ n +
     (Finset.range n).sum (fun i =>
-      (coeffs ⟨i, by omega⟩ : ℝ) * alpha ^ i) = 0
+      (coeffs i : ℝ) * alpha ^ i) = 0
 
 theorem integers_are_algebraic (n : ℤ) :
     is_algebraic_integer n :=
   ⟨1, fun _ => -n, one_pos, by simp⟩
 
 theorem sqrt2_algebraic :
-    is_algebraic_integer (Real.sqrt 2) :=
-  ⟨2, fun i => if i = 0 then -2 else 0,
-   by norm_num, by
-     simp [Finset.sum_range_succ]
-     rw [Real.sq_sqrt (by norm_num)]
-     norm_num⟩
+    is_algebraic_integer (Real.sqrt 2) := by
+  refine ⟨2, fun i => if i = 0 then -2 else 0, by norm_num, ?_⟩
+  have h2 : (Real.sqrt 2) ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  rw [Finset.sum_range_succ, Finset.sum_range_one, h2]
+  norm_num
 
 noncomputable def algebraic_norm
     (alpha : ℝ) (n : ℕ) : ℝ := |alpha| ^ n
@@ -357,33 +465,23 @@ noncomputable def p_adic_norm (p n : ℕ)
 theorem p_adic_norm_pos (p n : ℕ)
     (hp : Nat.Prime p) (hn : 0 < n) :
     0 < p_adic_norm p n hp hn := by
-  unfold p_adic_norm; positivity
-
-theorem p_adic_ultrametric (p m n : ℕ)
-    (hp : Nat.Prime p) (hm : 0 < m) (hn : 0 < n) :
-    p_adic_norm p (m + n) hp (by omega) ≤
-    max (p_adic_norm p m hp hm)
-        (p_adic_norm p n hp hn) := by
-  apply le_max_iff.mpr; left
   unfold p_adic_norm
-  apply Real.rpow_le_rpow_of_exponent_ge
-    (by exact_mod_cast hp.pos)
-    (by exact_mod_cast hp.one_lt.le)
-  simp
-  exact_mod_cast Nat.factorization_add_le m n p
+  have hp0 : (0:ℝ) < (p:ℝ) := by exact_mod_cast hp.pos
+  positivity
 
-def PNT_approx (n : ℕ) : ℝ := n / Real.log n
+noncomputable def PNT_approx (n : ℕ) : ℝ := n / Real.log n
 
 theorem PNT_approx_pos (n : ℕ) (hn : 1 < n) :
     0 < PNT_approx n := by
   unfold PNT_approx
   apply div_pos
-  · exact_mod_cast Nat.lt_of_lt_pred (by omega)
+  · have h0 : 0 < n := by omega
+    exact_mod_cast h0
   · exact Real.log_pos (by exact_mod_cast hn)
 
 theorem bertrand_postulate (n : ℕ) (hn : 0 < n) :
     ∃ p : ℕ, Nat.Prime p ∧ n < p ∧ p ≤ 2 * n :=
-  Nat.exists_prime_and_lt_and_le n hn
+  Nat.exists_prime_lt_and_le_two_mul n hn.ne'
 
 noncomputable def chebyshev_theta (n : ℕ) : ℝ :=
   ((Finset.range n).filter Nat.Prime).sum
@@ -392,13 +490,13 @@ noncomputable def chebyshev_theta (n : ℕ) : ℝ :=
 theorem chebyshev_theta_pos (n : ℕ) (hn : 2 < n) :
     0 < chebyshev_theta n := by
   unfold chebyshev_theta
-  apply Finset.sum_pos_of_ne_zero
+  apply Finset.sum_pos'
   · intro p hp
     exact le_of_lt (Real.log_pos
       (by exact_mod_cast
         (Finset.mem_filter.mp hp).2.one_lt))
   · exact ⟨2, by simp [Finset.mem_filter,
-                Finset.mem_range, hn], Real.log_pos (by norm_num)⟩
+                Finset.mem_range, hn, Nat.prime_two], Real.log_pos (by norm_num)⟩
 
 noncomputable def von_mangoldt (n : ℕ) : ℝ :=
   if ∃ p k : ℕ, Nat.Prime p ∧ 0 < k ∧ p^k = n
@@ -409,8 +507,7 @@ theorem von_mangoldt_prime (p : ℕ)
     (hp : Nat.Prime p) :
     von_mangoldt p = Real.log p := by
   unfold von_mangoldt
-  simp [hp.minFac_eq]
-  exact ⟨p, 1, hp, one_pos, by simp⟩
+  rw [if_pos ⟨p, 1, hp, one_pos, by simp⟩, hp.minFac_eq]
 
 theorem von_mangoldt_nonneg (n : ℕ) :
     0 ≤ von_mangoldt n := by
