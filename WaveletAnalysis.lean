@@ -1,4 +1,3 @@
--- WaveletAnalysis.lean
 import Mathlib
 
 namespace WaveletAnalysis
@@ -17,9 +16,9 @@ structure MRAStructure where
 theorem MRA_monotone (m : MRAStructure)
     (j k : ℕ) (h : j ≤ k) :
     m.resolution j ≤ m.resolution k := by
-  induction h with
-  | refl => exact le_refl _
-  | step h ih => linarith [m.increasing k]
+  induction k, h using Nat.le_induction with
+  | base => exact le_refl _
+  | succ n hn ih => linarith [m.increasing n]
 
 theorem MRA_resolution_pos (m : MRAStructure)
     (j : ℕ) : 0 < m.resolution j := m.pos j
@@ -34,8 +33,9 @@ theorem scale_factor_pos (j : ℕ) :
 theorem scale_factor_increasing (j : ℕ) :
     scale_factor j < scale_factor (j + 1) := by
   unfold scale_factor
-  apply pow_lt_pow_right (by norm_num)
-  omega
+  have h1 : (2:ℝ)^(j+1) = 2 * 2^j := by ring
+  have h2 : (0:ℝ) < 2^j := by positivity
+  linarith [h1]
 
 -- ============================================================
 -- SECTION 2: SCALING FUNCTION AND WAVELET
@@ -60,27 +60,36 @@ noncomputable def wavelet_filter
 theorem wavelet_filter_energy (sf : ScalingFilter) :
     univ.sum (fun k => wavelet_filter sf k ^ 2) = 1/2 := by
   unfold wavelet_filter
-  simp [mul_pow, neg_one_sq]
-  exact sf.sum_sq
+  rw [Fin.sum_univ_four]
+  have hsq : ∀ n : ℕ, ((-1:ℝ)^n)^2 = 1 := by
+    intro n
+    rw [← pow_mul, mul_comm, pow_mul, neg_one_sq, one_pow]
+  simp only [mul_pow, hsq, one_mul]
+  have h30 : (⟨3 - (0:Fin 4).val, by omega⟩ : Fin 4) = 3 := by decide
+  have h31 : (⟨3 - (1:Fin 4).val, by omega⟩ : Fin 4) = 2 := by decide
+  have h32 : (⟨3 - (2:Fin 4).val, by omega⟩ : Fin 4) = 1 := by decide
+  have h33 : (⟨3 - (3:Fin 4).val, by omega⟩ : Fin 4) = 0 := by decide
+  rw [h30, h31, h32, h33]
+  have hsum := sf.sum_sq
+  rw [Fin.sum_univ_four] at hsum
+  linarith [hsum]
 
--- QMF condition: Σ h_k g_k = 0
--- Proof: terms pair as h_k·(-1)^k·h_{3-k} + h_{3-k}·(-1)^{3-k}·h_k = 0
--- since (-1)^k + (-1)^{3-k} = 0 for k=0,1,2,3
 theorem QMF_condition (sf : ScalingFilter) :
     univ.sum (fun k => sf.h k * wavelet_filter sf k) = 0 := by
   unfold wavelet_filter
-  simp only [Finset.univ, Fintype.elems]
-  simp [Fin.sum_univ_four]
-  ring_nf
-  simp [pow_succ, pow_zero, neg_mul, mul_neg,
-        mul_comm (sf.h _) (sf.h _)]
+  rw [Fin.sum_univ_four]
+  have h30 : (⟨3 - (0:Fin 4).val, by omega⟩ : Fin 4) = 3 := by decide
+  have h31 : (⟨3 - (1:Fin 4).val, by omega⟩ : Fin 4) = 2 := by decide
+  have h32 : (⟨3 - (2:Fin 4).val, by omega⟩ : Fin 4) = 1 := by decide
+  have h33 : (⟨3 - (3:Fin 4).val, by omega⟩ : Fin 4) = 0 := by decide
+  simp only [h30, h31, h32, h33]
+  norm_num
   ring
 
 -- ============================================================
 -- SECTION 3: DISCRETE WAVELET TRANSFORM
 -- ============================================================
 
--- DWT coefficient: W[j,k] = Σ f[n] ψ_{j,k}[n]
 noncomputable def dwt_coeff (n : ℕ)
     (f psi : Fin n → ℝ) : ℝ :=
   Finset.univ.sum (fun i => f i * psi i)
@@ -90,8 +99,9 @@ theorem dwt_coeff_linear (n : ℕ)
     dwt_coeff n (fun i => f i + c * g i) psi =
     dwt_coeff n f psi + c * dwt_coeff n g psi := by
   unfold dwt_coeff
-  simp [add_mul, Finset.sum_add_distrib,
-        Finset.mul_sum, mul_add]
+  rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+  apply Finset.sum_congr rfl
+  intro i _
   ring
 
 theorem dwt_coeff_nonneg (n : ℕ)
@@ -107,13 +117,11 @@ theorem dwt_coeff_nonneg (n : ℕ)
 -- SECTION 4: WAVELET RECONSTRUCTION
 -- ============================================================
 
--- Perfect reconstruction proxy
 theorem perfect_reconstruction_proxy (n : ℕ)
     (f : Fin n → ℝ) :
     ∃ rec : Fin n → ℝ, rec = f :=
   ⟨f, rfl⟩
 
--- Energy preservation: Parseval for wavelets
 theorem wavelet_parseval (n : ℕ)
     (f : Fin n → ℝ) :
     Finset.univ.sum (fun i => f i ^ 2) ≥ 0 :=
@@ -123,7 +131,6 @@ theorem wavelet_parseval (n : ℕ)
 -- SECTION 5: HAAR WAVELETS
 -- ============================================================
 
--- Haar scaling function: φ = 1 on [0,1)
 noncomputable def haar_phi (x : ℝ) : ℝ :=
   if 0 ≤ x ∧ x < 1 then 1 else 0
 
@@ -132,7 +139,6 @@ theorem haar_phi_nonneg (x : ℝ) :
   unfold haar_phi
   split_ifs <;> norm_num
 
--- Haar wavelet: ψ = 1 on [0,½), -1 on [½,1)
 noncomputable def haar_psi (x : ℝ) : ℝ :=
   if 0 ≤ x ∧ x < 1/2 then 1
   else if 1/2 ≤ x ∧ x < 1 then -1
@@ -147,7 +153,6 @@ theorem haar_psi_bounded (x : ℝ) :
 -- SECTION 6: CONTINUOUS WAVELET TRANSFORM
 -- ============================================================
 
--- CWT: W(a,b) = (1/√a) ∫ f(t) ψ((t-b)/a) dt
 noncomputable def CWT_discrete (n : ℕ)
     (f psi : Fin n → ℝ)
     (a : ℝ) (ha : 0 < a) : ℝ :=
@@ -166,7 +171,6 @@ theorem CWT_nonneg (n : ℕ)
   · apply Finset.sum_nonneg; intro i _
     exact mul_nonneg (hf i) (hpsi i)
 
--- Admissibility condition proxy
 theorem admissibility_proxy (psi : ℝ → ℝ) :
     True := trivial
 
@@ -174,7 +178,6 @@ theorem admissibility_proxy (psi : ℝ → ℝ) :
 -- SECTION 7: WAVELET FRAMES
 -- ============================================================
 
--- Frame bounds: A ≤ frame ≤ B
 def is_frame_proxy (A B : ℝ) : Prop :=
   0 < A ∧ A ≤ B
 
@@ -182,7 +185,6 @@ theorem tight_frame_exists :
     ∃ A B : ℝ, is_frame_proxy A B :=
   ⟨1, 2, one_pos, by norm_num⟩
 
--- Riesz basis proxy
 theorem riesz_basis_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -190,7 +192,6 @@ theorem riesz_basis_proxy (n : ℕ) :
 -- SECTION 8: MULTIRATE SIGNAL PROCESSING
 -- ============================================================
 
--- Downsampling by 2
 def downsample (n : ℕ)
     (f : Fin (2*n) → ℝ) : Fin n → ℝ :=
   fun k => f ⟨2 * k.val,
@@ -203,7 +204,6 @@ theorem downsample_nonneg (n : ℕ)
     0 ≤ downsample n f k :=
   hf ⟨2 * k.val, by omega⟩
 
--- Upsampling by 2
 def upsample (n : ℕ)
     (f : Fin n → ℝ) : Fin (2*n) → ℝ :=
   fun k =>
@@ -234,7 +234,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain DWT
 noncomputable def domain_DWT
     (f psi : Fin 21 → ℝ) : ℝ :=
   dwt_coeff 21 f psi
@@ -246,12 +245,10 @@ theorem domain_DWT_linear
     c * domain_DWT g psi :=
   dwt_coeff_linear 21 f g psi c
 
--- Domain Haar nonneg
 theorem domain_haar_nonneg (x : ℝ) :
     0 ≤ haar_phi x :=
   haar_phi_nonneg x
 
--- Domain CWT nonneg
 noncomputable def domain_CWT
     (f psi : Fin 21 → ℝ) : ℝ :=
   CWT_discrete 21 f psi 1 one_pos
@@ -263,13 +260,11 @@ theorem domain_CWT_nonneg
     0 ≤ domain_CWT f psi :=
   CWT_nonneg 21 f psi 1 one_pos hf hpsi
 
--- Domain Parseval
 theorem domain_parseval (f : Fin 21 → ℝ) :
     0 ≤ Finset.univ.sum
       (fun i => f i ^ 2) :=
   wavelet_parseval 21 f
 
--- Domain frame exists
 theorem domain_frame_exists :
     ∃ A B : ℝ, is_frame_proxy A B :=
   tight_frame_exists
@@ -337,3 +332,4 @@ def WALock : WaveletAnalysisLock where
   dom_parseval   := domain_parseval
 
 end WaveletAnalysis
+
