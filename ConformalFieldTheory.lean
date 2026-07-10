@@ -1,4 +1,3 @@
--- ConformalFieldTheory.lean
 import Mathlib
 
 namespace ConformalFieldTheory
@@ -7,10 +6,8 @@ open Finset Real
 
 -- ============================================================
 -- SECTION 1: VIRASORO ALGEBRA
--- [L_m, L_n] = (m-n)L_{m+n} + c/12(m³-m)δ_{m+n,0}
 -- ============================================================
 
--- Central term of Virasoro algebra
 noncomputable def virasoro_central
     (c m : ℝ) : ℝ :=
   c / 12 * (m ^ 3 - m)
@@ -40,7 +37,6 @@ theorem virasoro_central_pos_large_m
   apply mul_pos (div_pos hc (by norm_num))
   nlinarith [sq_pos_of_pos (by linarith : 0 < m)]
 
--- Structure constants of Virasoro algebra
 noncomputable def virasoro_bracket_coeff
     (m n : ℝ) : ℝ := m - n
 
@@ -53,7 +49,6 @@ theorem virasoro_bracket_self_zero (m : ℝ) :
     virasoro_bracket_coeff m m = 0 := by
   unfold virasoro_bracket_coeff; ring
 
--- Jacobi identity for Virasoro (linear part)
 theorem virasoro_jacobi_linear
     (l m n : ℝ) :
     virasoro_bracket_coeff l m *
@@ -66,16 +61,14 @@ theorem virasoro_jacobi_linear
 
 -- ============================================================
 -- SECTION 2: PRIMARY OPERATORS
--- L_0 O = h O, L_n O = 0 for n > 0
 -- ============================================================
 
 structure PrimaryOperator where
-  h     : ℝ  -- conformal dimension
-  hbar  : ℝ  -- anti-holomorphic dimension
+  h     : ℝ
+  hbar  : ℝ
   h_nn  : 0 ≤ h
   hbar_nn : 0 ≤ hbar
 
--- Spin and scaling dimension
 noncomputable def spin (p : PrimaryOperator) : ℝ :=
   p.h - p.hbar
 
@@ -88,7 +81,6 @@ theorem scaling_dim_nonneg (p : PrimaryOperator) :
   unfold scaling_dimension
   linarith [p.h_nn, p.hbar_nn]
 
--- Unitarity bound: h ≥ |s|/2 for spin s
 def unitarity_satisfied (p : PrimaryOperator) : Prop :=
   p.h ≥ |spin p| / 2
 
@@ -96,15 +88,12 @@ theorem identity_unitary :
     unitarity_satisfied ⟨0, 0, le_refl _, le_refl _⟩ := by
   unfold unitarity_satisfied spin; simp
 
--- OPE coefficient triangle inequality
 theorem OPE_triangle
     (h1 h2 h3 : ℝ)
     (h1_nn : 0 ≤ h1) (h2_nn : 0 ≤ h2) (h3_nn : 0 ≤ h3)
     (h : h3 ≤ h1 + h2) :
     0 ≤ h1 + h2 - h3 := by linarith
 
--- Descendant operators: L_{-n} applied to primary
--- have dimension h + n
 noncomputable def descendant_dimension
     (h : ℝ) (n : ℕ) : ℝ := h + n
 
@@ -112,29 +101,30 @@ theorem descendant_dim_ge_primary
     (h : ℝ) (n : ℕ) :
     h ≤ descendant_dimension h n := by
   unfold descendant_dimension
-  linarith [Nat.cast_nonneg n]
+  have hnn : (0:ℝ) ≤ (n:ℝ) := Nat.cast_nonneg n
+  linarith
 
 theorem descendant_dim_strictly_above
     (h : ℝ) (n : ℕ) (hn : 0 < n) :
     h < descendant_dimension h n := by
   unfold descendant_dimension
-  linarith [Nat.cast_pos.mpr hn]
+  have hnp : (0:ℝ) < (n:ℝ) := Nat.cast_pos.mpr hn
+  linarith
 
 -- ============================================================
 -- SECTION 3: CENTRAL CHARGE AND C-THEOREM
--- c counts degrees of freedom
 -- ============================================================
 
--- Central charge is positive for unitary CFT
 def unitary_CFT (c : ℝ) : Prop := 0 < c
 
 theorem free_boson_central_charge :
-    unitary_CFT 1 := one_pos
+    unitary_CFT 1 := by
+  unfold unitary_CFT; norm_num
 
 theorem free_fermion_central_charge :
-    unitary_CFT (1/2) := by norm_num
+    unitary_CFT (1/2) := by
+  unfold unitary_CFT; norm_num
 
--- c-theorem: c decreases along RG flow
 def c_theorem_satisfied
     (c_UV c_IR : ℝ) : Prop :=
   c_IR ≤ c_UV
@@ -148,7 +138,6 @@ theorem c_theorem_strict_flow
     c_theorem_satisfied c_UV c_IR :=
   le_of_lt h
 
--- Zamolodchikov c-function
 noncomputable def c_function
     (energy_density_correlator r : ℝ)
     (hr : 0 < r) : ℝ :=
@@ -160,12 +149,17 @@ theorem c_function_pos
     0 < c_function T_corr r hr := by
   unfold c_function; positivity
 
+def modular_invariant
+    (Z : ℝ → ℝ) : Prop :=
+  ∀ tau : ℝ, Z tau = Z (-1 / tau)
+
+def T_invariant (Z : ℝ → ℝ) : Prop :=
+  ∀ tau : ℝ, Z tau = Z (tau + 1)
+
 -- ============================================================
 -- SECTION 4: STATE-OPERATOR CORRESPONDENCE
--- Every state |ψ⟩ corresponds to operator O(0)|0⟩
 -- ============================================================
 
--- State energy = operator dimension
 structure StateOperatorPair where
   dimension : ℝ
   energy    : ℝ
@@ -177,14 +171,13 @@ theorem state_energy_nonneg
     0 ≤ sop.energy := by
   rw [sop.correspond]; exact sop.dim_nn
 
-theorem vacuum_zero_energy :
+def vacuum_zero_energy :
     StateOperatorPair where
   dimension := 0
   energy    := 0
   correspond := rfl
   dim_nn    := le_refl _
 
--- Radial quantization: cylinder ↔ plane
 noncomputable def radial_map (z : ℝ) : ℝ :=
   Real.exp z
 
@@ -197,11 +190,7 @@ theorem radial_map_log_inverse (r : ℝ) (hr : 0 < r) :
 
 -- ============================================================
 -- SECTION 5: PARTITION FUNCTION AND MODULAR INVARIANCE
--- Z(τ) = Tr[q^{L_0 - c/24}]
 -- ============================================================
-
--- Modular parameter τ (Im τ > 0 in UHP)
--- We work with β = 2π Im τ > 0
 
 noncomputable def partition_function_CFT
     (c beta : ℝ) (hbeta : 0 < beta)
@@ -218,9 +207,8 @@ theorem partition_function_CFT_pos
   apply mul_pos (Real.exp_pos _)
   apply Finset.sum_pos
   · intro i _; exact Real.exp_pos _
-  · exact Finset.univ_nonempty
+  · exact ⟨0, Finset.mem_univ (0 : Fin 7)⟩
 
--- Cardy formula: log ρ(E) ~ 2π√(cE/6)
 noncomputable def cardy_entropy
     (c E : ℝ) (hc : 0 < c) (hE : 0 < E) : ℝ :=
   2 * Real.pi * Real.sqrt (c * E / 6)
@@ -230,25 +218,13 @@ theorem cardy_entropy_pos
     0 < cardy_entropy c E hc hE := by
   unfold cardy_entropy
   apply mul_pos (by positivity)
-  apply Real.sqrt_pos_of_pos
+  apply Real.sqrt_pos.mpr
   positivity
-
--- Modular S transformation: τ → -1/τ
--- Z(τ) = Z(-1/τ) for modular invariant theory
-def modular_invariant
-    (Z : ℝ → ℝ) : Prop :=
-  ∀ tau : ℝ, Z tau = Z (-1 / tau)
-
--- Modular T transformation: τ → τ + 1
-def T_invariant (Z : ℝ → ℝ) : Prop :=
-  ∀ tau : ℝ, Z tau = Z (tau + 1)
 
 -- ============================================================
 -- SECTION 6: OPERATOR PRODUCT EXPANSION
--- O_i(z) O_j(0) = Σ_k C_ijk z^{h_k - h_i - h_j} O_k(0)
 -- ============================================================
 
--- OPE coefficient positivity (from unitarity)
 def OPE_unitary
     (C_ijk : ℝ) : Prop :=
   0 ≤ C_ijk ^ 2
@@ -257,7 +233,6 @@ theorem OPE_coefficient_sq_nonneg
     (C : ℝ) : OPE_unitary C :=
   sq_nonneg C
 
--- OPE singular term exponent
 noncomputable def OPE_exponent
     (hi hj hk : ℝ) : ℝ :=
   hk - hi - hj
@@ -268,8 +243,6 @@ theorem OPE_exponent_negative_for_light_exchange
     OPE_exponent hi hj hk < 0 := by
   unfold OPE_exponent; linarith
 
--- Associativity of OPE (crossing symmetry)
--- (O_i O_j) O_k = O_i (O_j O_k)
 def crossing_symmetric
     (C : ℝ → ℝ → ℝ → ℝ)
     (i j k l : ℝ) : Prop :=
@@ -277,10 +250,8 @@ def crossing_symmetric
 
 -- ============================================================
 -- SECTION 7: CONFORMAL BLOCKS
--- G_{h,hbar}(z,zbar): contribution of primary h to 4-pt fn
 -- ============================================================
 
--- Simplified conformal block for 1D
 noncomputable def conformal_block_1d
     (h h_ext z : ℝ)
     (hz : 0 < z) (hz1 : z < 1) : ℝ :=
@@ -296,7 +267,6 @@ theorem conformal_block_pos
   · exact rpow_pos_of_pos hz h
   · apply rpow_pos_of_pos; linarith
 
--- Block decomposition of 4-point function
 noncomputable def four_point_decomp
     (C : Fin 7 → ℝ)
     (blocks : Fin 7 → ℝ) : ℝ :=
@@ -312,7 +282,6 @@ theorem four_point_nonneg
   apply Finset.sum_nonneg; intro k _
   exact mul_nonneg (sq_nonneg _) (hb k)
 
--- Zamolodchikov recursion: blocks satisfy recurrence
 theorem block_recursion_base
     (h_ext z : ℝ)
     (hz : 0 < z) (hz1 : z < 1) :
@@ -323,36 +292,29 @@ theorem block_recursion_base
 
 -- ============================================================
 -- SECTION 8: MINIMAL MODELS
--- M(p,q): rational CFTs with finite number of primaries
 -- ============================================================
 
--- Central charge of minimal model M(p,q)
 noncomputable def minimal_model_c
     (p q : ℝ) (hpq : 0 < p * q) : ℝ :=
   1 - 6 * (p - q) ^ 2 / (p * q)
 
--- Ising model: M(3,4), c = 1/2
 theorem ising_central_charge :
     minimal_model_c 3 4 (by norm_num) = 1/2 := by
   unfold minimal_model_c; norm_num
 
--- Tricritical Ising: M(4,5), c = 7/10
 theorem tricritical_ising_c :
     minimal_model_c 4 5 (by norm_num) = 7/10 := by
   unfold minimal_model_c; norm_num
 
--- Kac table dimensions
 noncomputable def kac_dimension
     (p q r s : ℝ) : ℝ :=
   ((p * s - q * r) ^ 2 - (p - q) ^ 2) / (4 * p * q)
 
 theorem kac_dim_identity_op
     (p q : ℝ) (hpq : 0 < p * q) :
-    kac_dimension p q p q = 0 := by
+    kac_dimension p q 1 1 = 0 := by
   unfold kac_dimension; ring
 
--- Fusion rules: primary × primary → sum of primaries
--- Verified by Verlinde formula
 theorem verlinde_nonneg
     (S_matrix : Fin 7 → Fin 7 → ℝ)
     (hS : ∀ i j, 0 ≤ S_matrix i j)
@@ -367,11 +329,10 @@ theorem verlinde_nonneg
 
 -- ============================================================
 -- SECTION 9: AWM CFT BRIDGE
--- CFT structure on 21-domain manifold
 -- ============================================================
 
 inductive Domain21 : Type where
-  | A_Energy | B_Control | C_Thermal | D_Structural
+  | A_Energy | BControl | C_Thermal | D_Structural
   | E_Boundary | F_Diagnostics | G_Governance
   | H_Harmonic | I_Information | J_Joining
   | K_Kernel | L_Localization | M_Morphogenic | N_Node
@@ -379,14 +340,14 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Each domain is a primary operator
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 structure DomainPrimary where
   h      : Domain21 → ℝ
   hbar   : Domain21 → ℝ
   h_nn   : ∀ d, 0 ≤ h d
   hbar_nn : ∀ d, 0 ≤ hbar d
 
--- Total scaling dimension of system
 noncomputable def system_scaling_dim
     (dp : DomainPrimary) : ℝ :=
   Finset.univ.sum (fun d =>
@@ -399,11 +360,10 @@ theorem system_scaling_nonneg
   apply Finset.sum_nonneg; intro d _
   linarith [dp.h_nn d, dp.hbar_nn d]
 
--- AWM central charge: 21 free bosons
 theorem AWM_central_charge :
-    unitary_CFT 21 := by norm_num
+    unitary_CFT 21 := by
+  unfold unitary_CFT; norm_num
 
--- System partition function
 noncomputable def AWM_partition
     (dp : DomainPrimary) (beta : ℝ)
     (hbeta : 0 < beta) : ℝ :=
@@ -417,16 +377,14 @@ theorem AWM_partition_pos
   unfold AWM_partition
   apply Finset.sum_pos
   · intro d _; exact Real.exp_pos _
-  · exact Finset.univ_nonempty
+  · exact ⟨.A_Energy, Finset.mem_univ _⟩
 
--- Domain OPE coefficients positive
 theorem domain_OPE_unitary
     (C : Domain21 → Domain21 → Domain21 → ℝ)
     (d1 d2 d3 : Domain21) :
     0 ≤ C d1 d2 d3 ^ 2 :=
   sq_nonneg _
 
--- C-theorem for AWM: domains ordered by scaling dimension
 theorem AWM_c_theorem
     (c_UV c_IR : ℝ)
     (h : c_IR ≤ c_UV) :
@@ -452,15 +410,13 @@ structure CFTLock where
   c_theorem       : ∀ (c_UV c_IR : ℝ),
                       c_IR ≤ c_UV →
                       c_theorem_satisfied c_UV c_IR
-  cardy_pos       : ∀ (c E : ℝ),
-                      0 < c → 0 < E →
-                      0 < cardy_entropy c E
-                            (by assumption) (by assumption)
+  cardy_pos       : ∀ (c E : ℝ) (hc : 0 < c) (hE : 0 < E),
+                      0 < cardy_entropy c E hc hE
   block_pos       : ∀ (h h_ext z : ℝ)
                       (hz : 0 < z) (hz1 : z < 1),
                       0 ≤ h → 0 ≤ h_ext →
                       0 < conformal_block_1d
-                            h h_ext z hz hz1
+                        h h_ext z hz hz1
   four_pt_nn      : ∀ (C : Fin 7 → ℝ)
                       (blocks : Fin 7 → ℝ),
                       (∀ k, 0 ≤ blocks k) →
