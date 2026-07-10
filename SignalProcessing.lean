@@ -1,4 +1,3 @@
--- SignalProcessing.lean
 import Mathlib
 
 namespace SignalProcessing
@@ -9,7 +8,6 @@ open Finset Real
 -- SECTION 1: DISCRETE TIME SIGNALS
 -- ============================================================
 
--- Energy of a discrete signal
 noncomputable def signal_energy (n : ℕ)
     (x : Fin n → ℝ) : ℝ :=
   Finset.univ.sum (fun i => x i ^ 2)
@@ -21,9 +19,8 @@ theorem signal_energy_nonneg (n : ℕ)
   apply Finset.sum_nonneg; intro i _
   exact sq_nonneg _
 
--- Power of a signal
 noncomputable def signal_power (n : ℕ)
-    (hn : 0 < n) (x : Fin n → ℝ) : ℝ :=
+    (_hn : 0 < n) (x : Fin n → ℝ) : ℝ :=
   signal_energy n x / n
 
 theorem signal_power_nonneg (n : ℕ)
@@ -32,7 +29,6 @@ theorem signal_power_nonneg (n : ℕ)
   div_nonneg (signal_energy_nonneg n x)
     (Nat.cast_nonneg n)
 
--- Unit impulse
 def unit_impulse (n : ℕ) (i : Fin n) :
     Fin n → ℝ :=
   fun j => if i = j then 1 else 0
@@ -40,16 +36,15 @@ def unit_impulse (n : ℕ) (i : Fin n) :
 theorem impulse_energy (n : ℕ) (i : Fin n) :
     signal_energy n (unit_impulse n i) = 1 := by
   unfold signal_energy unit_impulse
-  simp [Finset.sum_ite_eq']
+  simp
 
 -- ============================================================
 -- SECTION 2: Z-TRANSFORM
 -- ============================================================
 
--- Z-transform: X(z) = Σ x[n] z^{-n}
 noncomputable def z_transform (N : ℕ)
     (x : Fin N → ℝ) (z : ℝ)
-    (hz : z ≠ 0) : ℝ :=
+    (_hz : z ≠ 0) : ℝ :=
   Finset.univ.sum (fun i =>
     x i * z ^ (-(i.val : ℤ)))
 
@@ -62,10 +57,11 @@ theorem z_transform_linear (N : ℕ)
     c * z_transform N y z hz := by
   unfold z_transform
   simp [add_mul, Finset.sum_add_distrib,
-        Finset.mul_sum, mul_add]
+        Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
   ring
 
--- ROC proxy
 theorem ROC_nonneg (r : ℝ) (h : 0 ≤ r) :
     0 ≤ r := h
 
@@ -73,18 +69,17 @@ theorem ROC_nonneg (r : ℝ) (h : 0 ≤ r) :
 -- SECTION 3: FILTERS
 -- ============================================================
 
--- FIR filter output: y[n] = Σ h[k] x[n-k]
 noncomputable def FIR_output (M N : ℕ)
+    (hM : 0 < M) (hN : 0 < N)
     (h : Fin M → ℝ) (x : Fin N → ℝ)
     (n : Fin N) : ℝ :=
   (Finset.range M).sum (fun k =>
     if k < N then
-      h ⟨k % M, Nat.mod_lt _ (by omega)⟩ *
+      h ⟨k % M, Nat.mod_lt _ hM⟩ *
       x ⟨(n.val + N - k) % N,
-        Nat.mod_lt _ (by omega)⟩
+        Nat.mod_lt _ hN⟩
     else 0)
 
--- Filter stability: bounded input bounded output
 def is_BIBO_stable (M : ℕ)
     (h : Fin M → ℝ) : Prop :=
   ∃ C : ℝ, 0 ≤ C ∧
@@ -95,10 +90,9 @@ theorem FIR_is_BIBO (M : ℕ)
     (h : Fin M → ℝ) :
     is_BIBO_stable M h :=
   ⟨Finset.univ.sum (fun i => |h i|),
-   Finset.sum_nonneg (fun i _ =>
+   Finset.sum_nonneg (fun _i _ =>
      abs_nonneg _), rfl⟩
 
--- IIR filter proxy
 theorem IIR_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -106,7 +100,6 @@ theorem IIR_proxy (n : ℕ) :
 -- SECTION 4: SAMPLING THEOREM
 -- ============================================================
 
--- Nyquist rate: f_s ≥ 2 f_max
 def satisfies_nyquist
     (f_s f_max : ℝ) : Prop :=
   2 * f_max ≤ f_s
@@ -116,9 +109,8 @@ theorem nyquist_implies_reconstruct
     (h : satisfies_nyquist f_s f_max) :
     2 * f_max ≤ f_s := h
 
--- Sampling period
 noncomputable def sampling_period
-    (f_s : ℝ) (hfs : 0 < f_s) : ℝ :=
+    (f_s : ℝ) (_hfs : 0 < f_s) : ℝ :=
   1 / f_s
 
 theorem sampling_period_pos
@@ -126,7 +118,6 @@ theorem sampling_period_pos
     0 < sampling_period f_s hfs :=
   div_pos one_pos hfs
 
--- Aliasing condition proxy
 theorem aliasing_proxy
     (f f_s : ℝ) (h : f_s < 2 * f) :
     f_s < 2 * f := h
@@ -135,12 +126,10 @@ theorem aliasing_proxy
 -- SECTION 5: SPECTRAL ANALYSIS
 -- ============================================================
 
--- Power spectral density nonneg
 theorem PSD_nonneg (n : ℕ)
     (X : Fin n → ℝ) (i : Fin n) :
     0 ≤ X i ^ 2 := sq_nonneg _
 
--- Autocorrelation at zero lag nonneg
 noncomputable def autocorr_zero (n : ℕ)
     (x : Fin n → ℝ) : ℝ :=
   signal_energy n x
@@ -150,34 +139,30 @@ theorem autocorr_zero_nonneg (n : ℕ)
     0 ≤ autocorr_zero n x :=
   signal_energy_nonneg n x
 
--- Cross-correlation bound
 theorem xcorr_cauchy_schwarz (n : ℕ)
     (x y : Fin n → ℝ) :
     (Finset.univ.sum (fun i =>
       x i * y i)) ^ 2 ≤
     signal_energy n x *
-    signal_energy n y :=
-  Finset.inner_mul_le_norm_sq_mul_norm_sq
-    Finset.univ x y
+    signal_energy n y := by
+  unfold signal_energy
+  exact Finset.sum_mul_sq_le_sq_mul_sq Finset.univ x y
 
 -- ============================================================
 -- SECTION 6: MODULATION
 -- ============================================================
 
--- AM modulation: s(t) = A(1 + m cos(ωt)) cos(ωct)
 noncomputable def AM_signal
     (A m omega omega_c t : ℝ) : ℝ :=
   A * (1 + m * Real.cos (omega * t)) *
   Real.cos (omega_c * t)
 
--- Modulation index: 0 ≤ m ≤ 1
 def valid_mod_index (m : ℝ) : Prop :=
   0 ≤ m ∧ m ≤ 1
 
 theorem valid_mod_zero : valid_mod_index 0 := by
   constructor <;> norm_num
 
--- FM instantaneous frequency
 noncomputable def FM_freq
     (fc kf m_t : ℝ) : ℝ :=
   fc + kf * m_t
@@ -186,10 +171,9 @@ noncomputable def FM_freq
 -- SECTION 7: NOISE AND SNR
 -- ============================================================
 
--- SNR: signal power / noise power
 noncomputable def SNR
     (P_signal P_noise : ℝ)
-    (hN : 0 < P_noise) : ℝ :=
+    (_hN : 0 < P_noise) : ℝ :=
   P_signal / P_noise
 
 theorem SNR_nonneg
@@ -199,7 +183,6 @@ theorem SNR_nonneg
     0 ≤ SNR P_signal P_noise hN :=
   div_nonneg hS (le_of_lt hN)
 
--- SNR in dB
 noncomputable def SNR_dB
     (P_signal P_noise : ℝ)
     (hN : 0 < P_noise)
@@ -207,7 +190,6 @@ noncomputable def SNR_dB
   10 * Real.log (SNR P_signal P_noise hN) /
   Real.log 10
 
--- Noise figure proxy
 theorem noise_figure_pos
     (NF : ℝ) (h : 0 < NF) : 0 < NF := h
 
@@ -215,7 +197,6 @@ theorem noise_figure_pos
 -- SECTION 8: ADAPTIVE SIGNAL PROCESSING
 -- ============================================================
 
--- LMS algorithm update
 noncomputable def LMS_update
     (w x e mu : ℝ) : ℝ :=
   w + mu * e * x
@@ -223,11 +204,9 @@ noncomputable def LMS_update
 theorem LMS_convergence_proxy
     (mu : ℝ) (h : 0 < mu) : 0 < mu := h
 
--- Wiener filter proxy
 theorem wiener_filter_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Kalman filter state estimate proxy
 theorem kalman_proxy :
     True := trivial
 
@@ -244,7 +223,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain signal energy
 noncomputable def domain_signal_energy :=
   signal_energy 21 (fun _ => 1)
 
@@ -252,23 +230,19 @@ theorem domain_energy_nonneg :
     0 ≤ domain_signal_energy :=
   signal_energy_nonneg 21 (fun _ => 1)
 
--- Domain impulse energy
 theorem domain_impulse_energy :
     signal_energy 21
       (unit_impulse 21 ⟨0, by norm_num⟩) = 1 :=
   impulse_energy 21 ⟨0, by norm_num⟩
 
--- Domain FIR stable
 theorem domain_FIR_stable :
     is_BIBO_stable 21 (fun _ => 1 / 21) :=
   FIR_is_BIBO 21 (fun _ => 1 / 21)
 
--- Domain Nyquist
 theorem domain_nyquist :
     satisfies_nyquist 44100 20000 := by
   unfold satisfies_nyquist; norm_num
 
--- Domain SNR nonneg
 noncomputable def domain_SNR :=
   SNR 1 0.001 (by norm_num)
 
@@ -277,7 +251,6 @@ theorem domain_SNR_nonneg :
   SNR_nonneg 1 0.001
     (by norm_num) (by norm_num)
 
--- Domain autocorrelation
 noncomputable def domain_autocorr :=
   autocorr_zero 21 (fun _ => 1)
 
@@ -311,11 +284,11 @@ structure SignalProcessingLock where
   nyquist        : ∀ (fs fm : ℝ),
                      satisfies_nyquist fs fm →
                      2 * fm ≤ fs
-  samp_pos       : ∀ (fs : ℝ), 0 < fs →
-                     0 < sampling_period fs ‹_›
-  SNR_nn         : ∀ (Ps Pn : ℝ),
-                     0 ≤ Ps → 0 < Pn →
-                     0 ≤ SNR Ps Pn ‹_›
+  samp_pos       : ∀ (fs : ℝ) (hfs : 0 < fs),
+                     0 < sampling_period fs hfs
+  SNR_nn         : ∀ (Ps Pn : ℝ) (hS : 0 ≤ Ps)
+                     (hN : 0 < Pn),
+                     0 ≤ SNR Ps Pn hN
   xcorr_CS       : ∀ (n : ℕ)
                      (x y : Fin n → ℝ),
                      (Finset.univ.sum (fun i =>
@@ -334,7 +307,7 @@ structure SignalProcessingLock where
 
 def SPLock : SignalProcessingLock where
   energy_nn      := signal_energy_nonneg
-  power_nn       := signal_power_nonneg
+  power_nn      := signal_power_nonneg
   impulse_E      := impulse_energy
   ZT_linear      := z_transform_linear
   FIR_stable     := FIR_is_BIBO
