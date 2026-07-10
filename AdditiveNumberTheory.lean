@@ -1,4 +1,3 @@
--- AdditiveNumberTheory.lean
 import Mathlib
 
 namespace AdditiveNumberTheory
@@ -9,27 +8,8 @@ open Finset Nat
 -- SECTION 1: SUMSETS
 -- ============================================================
 
--- Sumset: A + B = {a + b | a ∈ A, b ∈ B}
 def sumset (A B : Finset ℕ) : Finset ℕ :=
   A.biUnion (fun a => B.image (fun b => a + b))
-
-theorem sumset_card_lb (A B : Finset ℕ)
-    (hA : A.Nonempty) (hB : B.Nonempty) :
-    A.card + B.card - 1 ≤
-    (sumset A B).card := by
-  unfold sumset
-  obtain ⟨a, ha⟩ := hA
-  obtain ⟨b, hb⟩ := hB
-  apply le_trans _ (Finset.card_biUnion_le)
-  simp only [Finset.card_image_of_injective _
-    (fun x y h => Nat.add_left_cancel h)]
-  calc A.card + B.card - 1
-      ≤ A.card * B.card := by
-        nlinarith [A.card_pos.mpr hA,
-                   B.card_pos.mpr hB]
-    _ = _ := by
-        rw [Finset.sum_const,
-            Nat.smul_eq_mul]
 
 theorem mem_sumset (A B : Finset ℕ)
     (a b : ℕ) (ha : a ∈ A) (hb : b ∈ B) :
@@ -39,7 +19,65 @@ theorem mem_sumset (A B : Finset ℕ)
   exact ⟨a, ha, Finset.mem_image.mpr
     ⟨b, hb, rfl⟩⟩
 
--- Doubling constant
+theorem sumset_card_lb (A B : Finset ℕ)
+    (hA : A.Nonempty) (hB : B.Nonempty) :
+    A.card + B.card - 1 ≤
+    (sumset A B).card := by
+  have main : ∀ B : Finset ℕ, B.Nonempty →
+      A.card + B.card - 1 ≤ (sumset A B).card := by
+    intro B
+    refine Finset.induction_on_max B (fun h => absurd h (by simp)) ?_
+    intro a s hlt ih _
+    rcases s.eq_empty_or_nonempty with hs | hs
+    · subst hs
+      have hcard1 : (insert a (∅ : Finset ℕ)).card = 1 := by simp
+      have heq : sumset A (insert a (∅ : Finset ℕ)) =
+          A.image (fun x => x + a) := by
+        unfold sumset
+        ext y
+        simp [Finset.mem_biUnion, Finset.mem_image, eq_comm]
+      rw [hcard1, heq, Finset.card_image_of_injective A
+        (fun x y h => by omega)]
+      omega
+    · have hstep := ih hs
+      have hnotmem : A.max' hA + a ∉ sumset A s := by
+        intro hmem
+        unfold sumset at hmem
+        rw [Finset.mem_biUnion] at hmem
+        obtain ⟨a', ha', hmem'⟩ := hmem
+        rw [Finset.mem_image] at hmem'
+        obtain ⟨b', hb', heq⟩ := hmem'
+        have h1 : a' ≤ A.max' hA := Finset.le_max' A a' ha'
+        have h2 : b' < a := hlt b' hb'
+        omega
+      have hsub : sumset A s ⊆ sumset A (insert a s) := by
+        intro x hx
+        unfold sumset at hx ⊢
+        rw [Finset.mem_biUnion] at hx ⊢
+        obtain ⟨a', ha', hmem'⟩ := hx
+        refine ⟨a', ha', ?_⟩
+        rw [Finset.mem_image] at hmem' ⊢
+        obtain ⟨b', hb', heq⟩ := hmem'
+        exact ⟨b', Finset.mem_insert_of_mem hb', heq⟩
+      have hmemnew : A.max' hA + a ∈ sumset A (insert a s) := by
+        unfold sumset
+        rw [Finset.mem_biUnion]
+        exact ⟨A.max' hA, A.max'_mem hA,
+          Finset.mem_image.mpr ⟨a, Finset.mem_insert_self a s, rfl⟩⟩
+      have hcardstep : (sumset A s).card + 1 ≤ (sumset A (insert a s)).card := by
+        have hins : insert (A.max' hA + a) (sumset A s) ⊆
+            sumset A (insert a s) :=
+          Finset.insert_subset_iff.mpr ⟨hmemnew, hsub⟩
+        calc (sumset A s).card + 1
+            = (insert (A.max' hA + a) (sumset A s)).card := by
+              rw [Finset.card_insert_of_notMem hnotmem]
+          _ ≤ (sumset A (insert a s)).card := Finset.card_le_card hins
+      have hBcard : (insert a s).card = s.card + 1 :=
+        Finset.card_insert_of_notMem
+          (fun h => absurd (hlt a h) (lt_irrefl a))
+      omega
+  exact main B hB
+
 noncomputable def doubling_const
     (A : Finset ℕ) : ℝ :=
   (sumset A A).card /
@@ -49,18 +87,18 @@ theorem doubling_ge_one (A : Finset ℕ)
     (hA : A.Nonempty) :
     1 ≤ doubling_const A := by
   unfold doubling_const
-  rw [le_div_iff (by positivity)]
-  norm_cast
-  calc A.card
-      = A.card + A.card - A.card := by omega
-    _ ≤ (sumset A A).card := by
-        linarith [sumset_card_lb A A hA hA]
+  have hpos : (0:ℝ) < (A.card:ℝ) := by
+    exact_mod_cast A.card_pos.mpr hA
+  rw [le_div_iff₀ hpos, one_mul]
+  have h1 := sumset_card_lb A A hA hA
+  have hcpos : 1 ≤ A.card := A.card_pos.mpr hA
+  have h2 : A.card ≤ (sumset A A).card := by omega
+  exact_mod_cast h2
 
 -- ============================================================
 -- SECTION 2: CAUCHY-DAVENPORT THEOREM
 -- ============================================================
 
--- Cauchy-Davenport: |A+B| ≥ min(p, |A|+|B|-1)
 theorem cauchy_davenport_proxy
     (p : ℕ) (hp : Nat.Prime p)
     (A B : Finset (ZMod p)) :
@@ -68,7 +106,6 @@ theorem cauchy_davenport_proxy
     (A.card + B.card) ∨ True :=
   Or.inr trivial
 
--- Vosper's theorem proxy
 theorem vosper_proxy (p : ℕ)
     (hp : Nat.Prime p) :
     True := trivial
@@ -77,12 +114,10 @@ theorem vosper_proxy (p : ℕ)
 -- SECTION 3: FREIMAN'S THEOREM
 -- ============================================================
 
--- Small doubling implies structure
 theorem freiman_proxy (A : Finset ℕ)
     (K : ℝ) (hK : 0 < K) :
     True := trivial
 
--- Arithmetic progression
 def is_AP (A : Finset ℕ) : Prop :=
   ∃ a d : ℕ, ∃ n : ℕ,
     A = (Finset.range n).image
@@ -92,7 +127,6 @@ theorem single_is_AP (a : ℕ) :
     is_AP {a} :=
   ⟨a, 1, 1, by simp⟩
 
--- Length of AP
 def AP_length (a d n : ℕ) :
     Finset ℕ :=
   (Finset.range n).image
@@ -105,22 +139,20 @@ theorem AP_card (a d n : ℕ)
   rw [Finset.card_image_of_injective]
   · exact Finset.card_range n
   · intro i j h
-    omega
+    have h' : i * d = j * d := Nat.add_left_cancel h
+    exact Nat.eq_of_mul_eq_mul_right hd h'
 
 -- ============================================================
 -- SECTION 4: ROTH'S THEOREM
 -- ============================================================
 
--- 3-term AP free set proxy
 def is_3AP_free (A : Finset ℕ) : Prop :=
-  ∀ a b c ∈ A, a + c = 2 * b →
+  ∀ a ∈ A, ∀ b ∈ A, ∀ c ∈ A, a + c = 2 * b →
     a = b ∧ b = c
 
--- Roth bound proxy
 theorem roth_proxy (N : ℕ) :
     ∃ k : ℕ, k ≤ N := ⟨0, Nat.zero_le N⟩
 
--- Behrend construction proxy
 theorem behrend_proxy (N : ℕ) :
     0 ≤ (N : ℝ) := Nat.cast_nonneg N
 
@@ -128,7 +160,6 @@ theorem behrend_proxy (N : ℕ) :
 -- SECTION 5: WARING'S PROBLEM
 -- ============================================================
 
--- g(k): every n is sum of at most g(k) k-th powers
 def waring_g (k : ℕ) : ℕ :=
   match k with
   | 0 => 1
@@ -140,16 +171,14 @@ def waring_g (k : ℕ) : ℕ :=
 theorem waring_g_pos (k : ℕ) :
     0 < waring_g k := by
   unfold waring_g
-  split <;> simp <;> positivity
+  split <;> positivity
 
--- Lagrange four squares
 theorem lagrange_four_squares_proxy
     (n : ℕ) :
     ∃ a b c d : ℕ,
       n = a^2 + b^2 + c^2 + d^2 ∨ True :=
   ⟨0, 0, 0, 0, Or.inr trivial⟩
 
--- Waring-Goldbach proxy
 theorem waring_goldbach_proxy (k : ℕ) :
     0 < waring_g k :=
   waring_g_pos k
@@ -158,19 +187,16 @@ theorem waring_goldbach_proxy (k : ℕ) :
 -- SECTION 6: GOLDBACH TYPE RESULTS
 -- ============================================================
 
--- Binary Goldbach proxy
 theorem goldbach_binary_proxy (n : ℕ)
     (hn : 4 ≤ n) (heven : Even n) :
     ∃ p q : ℕ, True :=
   ⟨2, 2, trivial⟩
 
--- Ternary Goldbach (Vinogradov) proxy
 theorem ternary_goldbach_proxy (n : ℕ)
     (hn : 7 ≤ n) (hodd : Odd n) :
     ∃ p q r : ℕ, True :=
   ⟨3, 3, 3, trivial⟩
 
--- Twin prime proxy
 theorem twin_prime_proxy :
     ∃ p : ℕ, Nat.Prime p ∧
       Nat.Prime (p + 2) :=
@@ -180,19 +206,13 @@ theorem twin_prime_proxy :
 -- SECTION 7: GREEN-TAO THEOREM
 -- ============================================================
 
--- Primes contain arbitrarily long APs proxy
 theorem green_tao_proxy (k : ℕ) :
     ∃ p : ℕ, Nat.Prime p :=
-  ⟨2, Nat.prime_iff.mpr
-    ⟨by norm_num, by
-      intro m hm
-      interval_cases m <;> omega⟩⟩
+  ⟨2, Nat.prime_two⟩
 
--- Szemerédi's theorem proxy
 theorem szemeredi_proxy (k : ℕ) :
     True := trivial
 
--- Density of primes in APs proxy
 theorem prime_AP_density_proxy
     (a d : ℕ) (hd : 0 < d)
     (hcop : Nat.Coprime a d) :
@@ -202,22 +222,18 @@ theorem prime_AP_density_proxy
 -- SECTION 8: STRUCTURE THEORY
 -- ============================================================
 
--- Plünnecke-Ruzsa inequality proxy
 theorem plunnecke_proxy
     (A B : Finset ℕ) (K : ℝ)
     (hK : 0 < K) :
     True := trivial
 
--- Ruzsa covering lemma proxy
 theorem ruzsa_covering_proxy
     (A B : Finset ℕ) :
     True := trivial
 
--- Bogolyubov's lemma proxy
 theorem bogolyubov_proxy :
     True := trivial
 
--- Balog-Szemerédi-Gowers proxy
 theorem BSG_proxy :
     True := trivial
 
@@ -234,7 +250,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain sumset: indices of first 11 domains
 def domain_A : Finset ℕ :=
   (Finset.range 11).image (fun i => i)
 
@@ -246,14 +261,17 @@ theorem domain_A_nonempty :
   unfold domain_A
   simp
 
+theorem domain_B_nonempty :
+    domain_B.Nonempty := by
+  unfold domain_B
+  simp
+
 theorem domain_sumset_lb :
     domain_A.card + domain_B.card - 1 ≤
     (sumset domain_A domain_B).card :=
   sumset_card_lb domain_A domain_B
-    domain_A_nonempty (by
-      unfold domain_B; simp)
+    domain_A_nonempty domain_B_nonempty
 
--- Domain AP: 21 elements with step 1
 def domain_AP :=
   AP_length 0 1 21
 
@@ -261,23 +279,19 @@ theorem domain_AP_card :
     domain_AP.card = 21 :=
   AP_card 0 1 21 (by norm_num)
 
--- Domain Waring g(2) = 4
 theorem domain_waring_g2 :
     waring_g 2 = 4 := by
   unfold waring_g; rfl
 
--- Domain twin prime
 theorem domain_twin_prime :
     ∃ p : ℕ, Nat.Prime p ∧
       Nat.Prime (p + 2) :=
   twin_prime_proxy
 
--- Domain Green-Tao proxy
 theorem domain_green_tao :
     ∃ p : ℕ, Nat.Prime p :=
   green_tao_proxy 21
 
--- Domain doubling constant nonneg
 theorem domain_doubling_nonneg :
     0 ≤ doubling_const domain_A := by
   unfold doubling_const; positivity
@@ -333,3 +347,4 @@ def ANTLock : AdditiveNumberTheoryLock where
   dom_doubling   := domain_doubling_nonneg
 
 end AdditiveNumberTheory
+
