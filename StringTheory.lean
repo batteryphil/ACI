@@ -1,4 +1,3 @@
--- StringTheory.lean
 import Mathlib
 
 namespace StringTheory
@@ -10,9 +9,8 @@ open Finset Real
 -- Nambu-Goto action: S = -T ∫∫ √(-det h) dτ dσ
 -- ============================================================
 
--- String tension
 noncomputable def string_tension
-    (alpha_prime : ℝ) (h : 0 < alpha_prime) : ℝ :=
+    (alpha_prime : ℝ) (_h : 0 < alpha_prime) : ℝ :=
   1 / (2 * Real.pi * alpha_prime)
 
 theorem string_tension_pos
@@ -21,7 +19,6 @@ theorem string_tension_pos
   unfold string_tension
   positivity
 
--- Worldsheet metric determinant
 noncomputable def worldsheet_det
     (h00 h01 h11 : ℝ) : ℝ :=
   h00 * h11 - h01 ^ 2
@@ -31,10 +28,9 @@ theorem worldsheet_det_symmetric
     worldsheet_det h00 h01 h11 =
     worldsheet_det h00 h01 h11 := rfl
 
--- Nambu-Goto action density
 noncomputable def NG_density
     (h00 h01 h11 T : ℝ)
-    (hT : 0 < T) : ℝ :=
+    (_hT : 0 < T) : ℝ :=
   T * Real.sqrt |worldsheet_det h00 h01 h11|
 
 theorem NG_density_pos
@@ -47,8 +43,6 @@ theorem NG_density_pos
   rw [abs_of_pos hdet]
   exact Real.sqrt_pos_of_pos hdet
 
--- Polyakov action (quadratic in X)
--- S_P = -T/2 ∫∫ √(-γ) γ^{ab} ∂_a X^μ ∂_b X_μ dτ dσ
 noncomputable def polyakov_action
     (T : ℝ) (dX : Fin 26 → ℝ) : ℝ :=
   -T / 2 * univ.sum (fun mu => dX mu ^ 2)
@@ -63,10 +57,8 @@ theorem polyakov_action_scaling
 
 -- ============================================================
 -- SECTION 2: VIRASORO CONSTRAINTS
--- T_{ab} = 0: stress-energy tensor vanishes
 -- ============================================================
 
--- Mode expansion: X^μ(τ,σ) = x^μ + 2α'p^μτ + oscillators
 noncomputable def string_mode
     (x p alpha_n : ℝ) (n : ℤ) (tau sigma : ℝ) : ℝ :=
   x + 2 * p * tau +
@@ -74,7 +66,6 @@ noncomputable def string_mode
   else alpha_n * Real.exp (-n * tau) *
        Real.cos (n * sigma)
 
--- Virasoro generators L_n
 noncomputable def virasoro_L
     (alpha : ℤ → Fin 26 → ℝ) (n : ℤ) : ℝ :=
   (Finset.Icc (-10) 10).sum (fun m =>
@@ -90,10 +81,9 @@ theorem virasoro_L0_nonneg
   apply Finset.sum_nonneg; intro mu _
   simp; exact h m mu
 
--- Mass-shell condition: M² = (N - a)/α'
 noncomputable def string_mass_sq
     (N a alpha_prime : ℝ)
-    (ha : 0 < alpha_prime) : ℝ :=
+    (_ha : 0 < alpha_prime) : ℝ :=
   (N - a) / alpha_prime
 
 theorem massless_condition (a alpha_prime : ℝ)
@@ -101,20 +91,16 @@ theorem massless_condition (a alpha_prime : ℝ)
     string_mass_sq a a alpha_prime ha = 0 := by
   unfold string_mass_sq; simp
 
--- Critical dimension: D = 26 (bosonic)
 theorem bosonic_critical_dim :
     (26 : ℕ) = 26 := rfl
 
--- D = 10 for superstring
 theorem superstring_critical_dim :
     (10 : ℕ) = 10 := rfl
 
 -- ============================================================
 -- SECTION 3: CALABI-YAU GEOMETRY
--- Compact 6-dimensional manifolds preserving supersymmetry
 -- ============================================================
 
--- Calabi-Yau conditions
 structure CalabiYau where
   complex_dim   : ℕ
   real_dim      : ℕ
@@ -123,7 +109,6 @@ structure CalabiYau where
   holonomy_SU   : True
   dim_rel       : real_dim = 2 * complex_dim
 
--- Standard CY3: 3 complex dimensions
 def CY3 : CalabiYau where
   complex_dim := 3
   real_dim    := 6
@@ -135,9 +120,11 @@ def CY3 : CalabiYau where
 theorem CY3_real_dim : CY3.real_dim = 6 := rfl
 theorem CY3_complex_dim : CY3.complex_dim = 3 := rfl
 
--- Hodge numbers h^{p,q}
 structure HodgeNumbers where
-  h11 h12 h21 h22 : ℕ
+  h11 : ℕ
+  h12 : ℕ
+  h21 : ℕ
+  h22 : ℕ
   mirror_sym : h11 = h22 ∧ h12 = h21
   euler_char : (h11 : ℤ) - h12 - h21 + h22 =
                2 * ((h11 : ℤ) - h12)
@@ -145,7 +132,6 @@ structure HodgeNumbers where
 theorem hodge_mirror (hn : HodgeNumbers) :
     hn.h11 = hn.h22 := hn.mirror_sym.1
 
--- Euler characteristic of CY3
 noncomputable def CY3_euler
     (hn : HodgeNumbers) : ℤ :=
   2 * ((hn.h11 : ℤ) - hn.h12)
@@ -158,7 +144,6 @@ theorem CY3_euler_formula (hn : HodgeNumbers) :
   have h := hn.mirror_sym
   push_cast [h.1, h.2]; ring
 
--- Quintic threefold: h^{11}=1, h^{12}=101
 def quintic_hodge : HodgeNumbers where
   h11 := 1
   h12 := 101
@@ -173,14 +158,12 @@ theorem quintic_euler :
 
 -- ============================================================
 -- SECTION 4: T-DUALITY
--- R → α'/R: compact radius duality
 -- ============================================================
 
--- T-dual radius
 noncomputable def T_dual_radius
     (R alpha_prime : ℝ)
-    (hR : 0 < R)
-    (ha : 0 < alpha_prime) : ℝ :=
+    (_hR : 0 < R)
+    (_ha : 0 < alpha_prime) : ℝ :=
   alpha_prime / R
 
 theorem T_dual_involution
@@ -199,9 +182,8 @@ theorem T_dual_pos
     0 < T_dual_radius R alpha_prime hR ha :=
   div_pos ha hR
 
--- Self-dual radius: R = √α'
 noncomputable def self_dual_radius
-    (alpha_prime : ℝ) (ha : 0 < alpha_prime) : ℝ :=
+    (alpha_prime : ℝ) (_ha : 0 < alpha_prime) : ℝ :=
   Real.sqrt alpha_prime
 
 theorem self_dual_fixed_point
@@ -212,9 +194,8 @@ theorem self_dual_fixed_point
       (Real.sqrt_pos_of_pos ha) ha =
     self_dual_radius alpha_prime ha := by
   unfold T_dual_radius self_dual_radius
-  rw [Real.div_sqrt ha.le]
+  rw [Real.div_sqrt]
 
--- T-duality exchanges winding and momentum
 theorem T_duality_exchange
     (n w : ℤ) :
     ∃ n' w' : ℤ, n' = w ∧ w' = n :=
@@ -222,20 +203,17 @@ theorem T_duality_exchange
 
 -- ============================================================
 -- SECTION 5: D-BRANES
--- Dirichlet boundary conditions, p-dimensional objects
 -- ============================================================
 
--- Dp-brane
 structure DBrane where
-  p         : ℕ  -- spatial dimensions
+  p         : ℕ
   tension   : ℝ
   tension_pos : 0 < tension
   charge    : ℤ
 
--- Dp-brane tension: T_p = 1/(g_s (2π)^p α'^{(p+1)/2})
 noncomputable def Dp_tension
     (p : ℕ) (g_s alpha_prime : ℝ)
-    (hg : 0 < g_s) (ha : 0 < alpha_prime) : ℝ :=
+    (_hg : 0 < g_s) (_ha : 0 < alpha_prime) : ℝ :=
   1 / (g_s * (2 * Real.pi) ^ p *
        alpha_prime ^ ((p+1 : ℝ)/2))
 
@@ -245,7 +223,6 @@ theorem Dp_tension_pos
     0 < Dp_tension p g_s alpha_prime hg ha := by
   unfold Dp_tension; positivity
 
--- BPS condition: tension = charge
 def is_BPS (D : DBrane) : Prop :=
   D.tension = |D.charge|
 
@@ -253,9 +230,9 @@ theorem BPS_tension_pos (D : DBrane)
     (hBPS : is_BPS D) (hq : D.charge ≠ 0) :
     0 < D.tension := by
   rw [hBPS]
-  exact abs_pos.mpr (Int.cast_ne_zero.mpr hq)
+  have habs : 0 < |D.charge| := abs_pos.mpr hq
+  exact_mod_cast habs
 
--- D-brane intersection numbers
 noncomputable def brane_intersection
     (D1 D2 : DBrane) : ℤ :=
   D1.charge * D2.charge
@@ -266,17 +243,14 @@ theorem brane_intersection_symm
     brane_intersection D2 D1 := by
   unfold brane_intersection; ring
 
--- Stack of N branes: gauge group U(N)
 theorem N_branes_gauge_group (N : ℕ) :
     ∃ gauge_dim : ℕ, gauge_dim = N ^ 2 :=
   ⟨N ^ 2, rfl⟩
 
 -- ============================================================
 -- SECTION 6: MODULI SPACES
--- Space of string vacua/compactifications
 -- ============================================================
 
--- Moduli space dimension
 noncomputable def moduli_dim
     (hn : HodgeNumbers) : ℕ :=
   hn.h11 + hn.h12
@@ -285,11 +259,9 @@ theorem moduli_dim_pos (hn : HodgeNumbers)
     (h : 0 < hn.h11 + hn.h12) :
     0 < moduli_dim hn := h
 
--- Kahler moduli: h^{11} parameters
 noncomputable def kahler_moduli_count
     (hn : HodgeNumbers) : ℕ := hn.h11
 
--- Complex structure moduli: h^{12} parameters
 noncomputable def complex_moduli_count
     (hn : HodgeNumbers) : ℕ := hn.h12
 
@@ -297,7 +269,6 @@ theorem quintic_moduli_dim :
     moduli_dim quintic_hodge = 102 := by
   unfold moduli_dim quintic_hodge; norm_num
 
--- Mirror symmetry: exchanges h^{11} and h^{12}
 theorem mirror_symmetry_exchange
     (hn : HodgeNumbers) :
     ∃ mirror : HodgeNumbers,
@@ -307,8 +278,7 @@ theorem mirror_symmetry_exchange
      h12 := hn.h11
      h21 := hn.h22
      h22 := hn.h21
-     mirror_sym := ⟨hn.mirror_sym.2.symm,
-                    hn.mirror_sym.1.symm⟩
+     mirror_sym := ⟨hn.mirror_sym.2, hn.mirror_sym.1⟩
      euler_char := by
        have := hn.euler_char
        push_cast [hn.mirror_sym] at *
@@ -317,14 +287,12 @@ theorem mirror_symmetry_exchange
 
 -- ============================================================
 -- SECTION 7: ADS/CFT CORRESPONDENCE
--- Anti-de Sitter / Conformal Field Theory duality
 -- ============================================================
 
--- AdS radius
 noncomputable def AdS_radius
     (N g_s alpha_prime : ℝ)
-    (hN : 0 < N) (hg : 0 < g_s)
-    (ha : 0 < alpha_prime) : ℝ :=
+    (_hN : 0 < N) (_hg : 0 < g_s)
+    (_ha : 0 < alpha_prime) : ℝ :=
   (4 * Real.pi * g_s * N) ^ (1/4 : ℝ) *
   Real.sqrt alpha_prime
 
@@ -338,7 +306,6 @@ theorem AdS_radius_pos
   · apply Real.rpow_pos_of_pos; positivity
   · exact Real.sqrt_pos_of_pos ha
 
--- 't Hooft coupling λ = g_YM² N
 noncomputable def tHooft_coupling
     (g_YM_sq N : ℝ) : ℝ :=
   g_YM_sq * N
@@ -349,15 +316,13 @@ theorem tHooft_coupling_pos
     0 < tHooft_coupling g_YM_sq N :=
   mul_pos hg hN
 
--- Strong coupling ↔ weakly curved AdS
 theorem strong_coupling_weak_curvature
     (lambda : ℝ) (hlambda : 1 < lambda) :
     1 / lambda < 1 := by
   rwa [div_lt_one (by linarith)]
 
--- Holographic entropy: S = A/(4G_N)
 noncomputable def holographic_entropy
-    (A G_N : ℝ) (hG : 0 < G_N) : ℝ :=
+    (A G_N : ℝ) (_hG : 0 < G_N) : ℝ :=
   A / (4 * G_N)
 
 theorem holographic_entropy_pos
@@ -365,21 +330,20 @@ theorem holographic_entropy_pos
     0 < holographic_entropy A G_N hG := by
   unfold holographic_entropy; positivity
 
--- Bekenstein-Hawking bound
 theorem holographic_area_bound
     (S G_N : ℝ) (hS : 0 < S) (hG : 0 < G_N) :
     ∃ A : ℝ, 0 < A ∧
       holographic_entropy A G_N hG = S :=
   ⟨4 * G_N * S,
    by positivity,
-   by unfold holographic_entropy; field_simp⟩
+   by
+     unfold holographic_entropy
+     field_simp⟩
 
 -- ============================================================
 -- SECTION 8: STRING FIELD THEORY
--- Second quantization of strings
 -- ============================================================
 
--- String field Ψ: functional over string configurations
 noncomputable def string_field_action
     (psi : Fin 26 → ℝ) (Q : ℝ) : ℝ :=
   (1/2) * Q * univ.sum (fun mu => psi mu ^ 2)
@@ -390,42 +354,37 @@ theorem SFT_action_nonneg
     0 ≤ string_field_action psi Q := by
   unfold string_field_action
   apply mul_nonneg (by linarith)
-  apply mul_nonneg hQ
   apply Finset.sum_nonneg; intro mu _
   exact sq_nonneg _
 
--- BRST operator Q²=0
 def BRST_nilpotent (Q : ℝ → ℝ) : Prop :=
   ∀ psi, Q (Q psi) = 0
 
--- Physical states: Q|phys⟩ = 0
 def is_physical (Q : ℝ → ℝ) (psi : ℝ) : Prop :=
   Q psi = 0
 
--- Gauge equivalence: |phys⟩ ~ |phys⟩ + Q|λ⟩
 def gauge_equivalent (Q : ℝ → ℝ)
     (psi1 psi2 lambda : ℝ) : Prop :=
   psi2 = psi1 + Q lambda
 
--- Cohomology: H = ker Q / im Q
 theorem BRST_cohomology_well_defined
     (Q : ℝ → ℝ) (hn : BRST_nilpotent Q)
+    (hQadd : ∀ a b, Q (a + b) = Q a + Q b)
     (psi lambda : ℝ)
     (hpsi : is_physical Q psi) :
     is_physical Q (psi + Q lambda) := by
   unfold is_physical at *
-  simp [map_add, hn lambda, hpsi]
+  rw [hQadd, hpsi, hn lambda]
+  ring
 
--- Closed string spectrum: massless fields
 structure ClosedStringSpectrum where
-  graviton_dof  : ℕ := 35  -- D(D-3)/2 for D=10
+  graviton_dof  : ℕ := 35
   dilaton_dof   : ℕ := 1
-  B_field_dof   : ℕ := 28  -- antisymmetric tensor
+  B_field_dof   : ℕ := 28
   total_dof     : ℕ := 64
 
 -- ============================================================
 -- SECTION 9: AWM STRING THEORY BRIDGE
--- String-theoretic structure of 21-domain system
 -- ============================================================
 
 inductive Domain21 : Type where
@@ -437,11 +396,10 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- AWM as compactification target
--- 21 domains → 21-dimensional target space
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 def AWM_target_dim : ℕ := 21
 
--- AWM string tension
 noncomputable def AWM_string_tension
     (alpha_prime : ℝ) (h : 0 < alpha_prime) : ℝ :=
   string_tension alpha_prime h
@@ -451,14 +409,12 @@ theorem AWM_tension_pos
     0 < AWM_string_tension alpha_prime h :=
   string_tension_pos alpha_prime h
 
--- Domain as D-brane
 structure DomainBrane where
   domain    : Domain21
   p_dim     : ℕ
   tension   : ℝ
   tension_pos : 0 < tension
 
--- 21 domain branes
 def domain_brane_count : ℕ :=
   Fintype.card Domain21
 
@@ -467,7 +423,6 @@ theorem domain_brane_count_val :
   unfold domain_brane_count
   native_decide
 
--- T-duality of domain margins
 noncomputable def domain_T_dual
     (margins : Domain21 → ℝ)
     (alpha_prime : ℝ)
@@ -498,11 +453,10 @@ theorem domain_T_dual_involution
       d = margins d :=
   T_dual_involution (margins d) alpha_prime (hm d) ha
 
--- Holographic domain entropy
 noncomputable def domain_holographic_entropy
     (margins : Domain21 → ℝ)
     (G_N : ℝ) (hG : 0 < G_N)
-    (hm : ∀ d, 0 < margins d) : ℝ :=
+    (_hm : ∀ d, 0 < margins d) : ℝ :=
   Finset.univ.sum (fun d =>
     holographic_entropy (margins d) G_N hG)
 
@@ -511,7 +465,7 @@ theorem domain_entropy_pos
     (G_N : ℝ) (hG : 0 < G_N)
     (hm : ∀ d, 0 < margins d) :
     0 < domain_holographic_entropy
-          margins G_N hG hm := by
+      margins G_N hG hm := by
   unfold domain_holographic_entropy
   apply Finset.sum_pos
   · intro d _
@@ -519,7 +473,6 @@ theorem domain_entropy_pos
       (margins d) G_N (hm d) hG
   · exact Finset.univ_nonempty
 
--- Mirror symmetry of domain Hodge numbers
 theorem domain_mirror_symmetry
     (hn : HodgeNumbers) :
     ∃ mirror_hn : HodgeNumbers,
@@ -536,7 +489,7 @@ structure StringTheoryLock where
                         0 < string_tension ap h
   NG_pos            : ∀ (h00 h01 h11 T : ℝ)
                         (hT : 0 < T)
-                        (hd : 0 < worldsheet_det
+                        (_hd : 0 < worldsheet_det
                                h00 h01 h11),
                         0 < NG_density h00 h01 h11 T hT
   massless_cond     : ∀ (a ap : ℝ) (h : 0 < ap),
@@ -558,10 +511,8 @@ structure StringTheoryLock where
   BPS_pos           : ∀ (D : DBrane),
                         is_BPS D → D.charge ≠ 0 →
                         0 < D.tension
-  holo_pos          : ∀ (A G : ℝ),
-                        0 < A → 0 < G →
-                        0 < holographic_entropy A G
-                              (by assumption)
+  holo_pos          : ∀ (A G : ℝ) (_hA : 0 < A) (hG : 0 < G),
+                        0 < holographic_entropy A G hG
   mirror_sym        : ∀ (hn : HodgeNumbers),
                         ∃ m : HodgeNumbers,
                           m.h11 = hn.h12 ∧
@@ -592,9 +543,10 @@ def STLock : StringTheoryLock where
   BPS_pos           := BPS_tension_pos
   holo_pos          := holographic_entropy_pos
   mirror_sym        := mirror_symmetry_exchange
-  SFT_nn            := string_field_action_nonneg
+  SFT_nn            := SFT_action_nonneg
   dom_count         := domain_brane_count_val
   dom_T_pos         := domain_T_dual_pos
   dom_entropy_pos   := domain_entropy_pos
 
 end StringTheory
+
