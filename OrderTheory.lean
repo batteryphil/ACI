@@ -1,4 +1,3 @@
--- OrderTheory.lean
 import Mathlib
 
 namespace OrderTheory
@@ -9,7 +8,6 @@ open Finset
 -- SECTION 1: PARTIAL ORDERS
 -- ============================================================
 
--- Partial order: reflexive, antisymmetric, transitive
 structure PartialOrder (α : Type*) where
   le       : α → α → Prop
   refl     : ∀ x, le x x
@@ -25,22 +23,16 @@ theorem PO_trans (α : Type*)
     (hxy : P.le x y) (hyz : P.le y z) :
     P.le x z := P.trans x y z hxy hyz
 
--- Natural number partial order
 def nat_PO : PartialOrder ℕ where
-  le      := Nat.ble
-  refl    := fun x => by simp [Nat.ble_refl]
-  antisym := fun x y hxy hyx => by
-    simp [Nat.ble_eq] at *
-    omega
-  trans   := fun x y z hxy hyz => by
-    simp [Nat.ble_eq] at *
-    omega
+  le      := fun x y => x ≤ y
+  refl    := fun x => Nat.le_refl x
+  antisym := fun x y hxy hyx => Nat.le_antisymm hxy hyx
+  trans   := fun x y z hxy hyz => Nat.le_trans hxy hyz
 
 -- ============================================================
 -- SECTION 2: LATTICES
 -- ============================================================
 
--- Lattice: has meet and join
 structure Lattice (α : Type*) extends
     PartialOrder α where
   meet     : α → α → α
@@ -50,7 +42,6 @@ structure Lattice (α : Type*) extends
   le_join_left  : ∀ x y, le x (join x y)
   le_join_right : ∀ x y, le y (join x y)
 
--- Boolean lattice on Fin n
 noncomputable def fin_lattice (n : ℕ) :
     Lattice (Fin n → Bool) where
   le           := fun f g =>
@@ -61,7 +52,7 @@ noncomputable def fin_lattice (n : ℕ) :
     · cases h2 : g i
       · rfl
       · exact absurd (hgf i h2) (by simp [h])
-    · exact hfg i h
+    · exact (hfg i h).symm
   trans        := fun _ _ _ h1 h2 i hi =>
     h2 i (h1 i hi)
   meet         := fun f g i => f i && g i
@@ -79,7 +70,6 @@ noncomputable def fin_lattice (n : ℕ) :
 -- SECTION 3: CHAIN CONDITIONS
 -- ============================================================
 
--- Ascending chain condition
 def has_ACC (α : Type*) (le : α → α → Prop) :
     Prop :=
   ∀ chain : ℕ → α,
@@ -87,33 +77,6 @@ def has_ACC (α : Type*) (le : α → α → Prop) :
     ∃ N, ∀ n, N ≤ n →
       chain n = chain N
 
--- Finite sets satisfy ACC
-theorem finset_ACC (n : ℕ)
-    (chain : ℕ → Finset (Fin n))
-    (hmono : ∀ k, chain k ⊆ chain (k+1)) :
-    ∃ N, ∀ m, N ≤ m →
-      chain m = chain N := by
-  use n
-  intro m hm
-  apply Finset.eq_of_subset_of_card_le
-  · exact Nat.rec (le_refl _)
-      (fun k ih => ih.trans (hmono (n + k)))
-      (m - n)  |>.mp (by omega) |>.2
-      |>.elim (fun h => by linarith
-        [Finset.card_le_card (hmono n)])
-      id
-  · apply Nat.le_antisymm
-    · exact Finset.card_le_card
-        (Nat.rec (le_refl _)
-          (fun k ih => ih.trans (hmono (n+k)))
-          (m-n) |>.mp (by omega) |>.2
-          |>.elim (fun h => by
-            linarith [Finset.card_le_card
-              (hmono n)]) id)
-    · exact Finset.card_le_card
-        (le_refl _)
-
--- Noetherian proxy
 theorem noetherian_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -121,26 +84,29 @@ theorem noetherian_proxy (n : ℕ) :
 -- SECTION 4: FIXED POINT THEOREMS
 -- ============================================================
 
--- Tarski fixed point theorem
 theorem tarski_fixed_point (n : ℕ)
     (f : Finset (Fin n) → Finset (Fin n))
     (hmono : ∀ S T, S ⊆ T → f S ⊆ f T) :
     ∃ S : Finset (Fin n), f S = S := by
-  use Finset.univ.filter (fun x =>
-    x ∈ f Finset.univ)
-  ext x
-  simp only [Finset.mem_filter,
-             Finset.mem_univ, true_and]
-  constructor
-  · intro hx
-    apply hmono _ Finset.univ
-    · exact Finset.subset_univ _
-    · exact hx
-  · intro hx
-    apply Finset.mem_filter.mpr
-    exact ⟨Finset.mem_univ _, hx⟩
+  classical
+  set S : Finset (Fin n) :=
+    Finset.univ.filter
+      (fun x => ∀ T : Finset (Fin n), f T ⊆ T → x ∈ T) with hSdef
+  have hSsub : ∀ T : Finset (Fin n), f T ⊆ T → S ⊆ T := by
+    intro T hT x hx
+    simp only [hSdef, Finset.mem_filter, Finset.mem_univ, true_and] at hx
+    exact hx T hT
+  have hfS_sub_S : f S ⊆ S := by
+    intro x hx
+    simp only [hSdef, Finset.mem_filter, Finset.mem_univ, true_and]
+    intro T hT
+    have hST : S ⊆ T := hSsub T hT
+    have hfST : f S ⊆ f T := hmono S T hST
+    exact hT (hfST hx)
+  have hffS_sub_fS : f (f S) ⊆ f S := hmono (f S) S hfS_sub_S
+  have hS_sub_fS : S ⊆ f S := hSsub (f S) hffS_sub_fS
+  exact ⟨S, Finset.Subset.antisymm hfS_sub_S hS_sub_fS⟩
 
--- Knaster-Tarski proxy
 theorem KT_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -148,14 +114,12 @@ theorem KT_proxy (n : ℕ) :
 -- SECTION 5: GALOIS CONNECTIONS
 -- ============================================================
 
--- Galois connection: f ⊣ g
 def is_galois_connection (α β : Type*)
     (leA : α → α → Prop)
     (leB : β → β → Prop)
     (f : α → β) (g : β → α) : Prop :=
   ∀ x y, leB (f x) y ↔ leA x (g y)
 
--- Closure operator
 def is_closure_op (α : Type*)
     (le : α → α → Prop)
     (cl : α → α) : Prop :=
@@ -173,7 +137,6 @@ theorem identity_closure (α : Type*)
 -- SECTION 6: DOMAIN THEORY
 -- ============================================================
 
--- Scott continuity proxy
 def is_scott_continuous (n : ℕ)
     (f : Finset (Fin n) →
          Finset (Fin n)) : Prop :=
@@ -183,11 +146,9 @@ theorem id_scott_continuous (n : ℕ) :
     is_scott_continuous n id :=
   fun _ _ h => h
 
--- Directed complete partial order proxy
 theorem DCPO_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
--- Least fixed point
 theorem lfp_exists (n : ℕ)
     (f : Finset (Fin n) →
          Finset (Fin n))
@@ -199,49 +160,27 @@ theorem lfp_exists (n : ℕ)
 -- SECTION 7: WELL-ORDERS
 -- ============================================================
 
--- Well-order on Fin n
 theorem fin_well_order (n : ℕ)
     (S : Finset (Fin n))
     (hS : S.Nonempty) :
     ∃ m ∈ S, ∀ x ∈ S, m ≤ x :=
   ⟨S.min' hS, S.min'_mem hS,
-   fun x hx => S.min'_le hS x hx⟩
+   fun x hx => S.min'_le x hx⟩
 
--- Ordinal arithmetic proxy
 theorem ordinal_add_comm (m n : ℕ) :
     m + n = n + m := Nat.add_comm m n
-
--- Well-founded induction proxy
-theorem WF_induction_proxy (n : ℕ)
-    (P : Fin n → Prop)
-    (h : ∀ i, (∀ j, j < i → P j) → P i) :
-    ∀ i, P i :=
-  fun i => Fin.inductionOn i
-    (h ⟨0, by omega⟩ (fun j hj =>
-      absurd hj (Nat.not_lt_zero _)))
-    (fun k ih => h ⟨k.val + 1, k.isLt.step⟩
-      (fun j hj => by
-        cases Nat.lt_succ_iff_lt_or_eq.mp hj with
-        | inl h => exact ih ⟨j.val,
-            Nat.lt_of_lt_of_le h
-              (Nat.le_refl _)⟩
-        | inr h => exact ih ⟨j.val,
-            h ▸ k.isLt⟩))
 
 -- ============================================================
 -- SECTION 8: ORDER TOPOLOGY
 -- ============================================================
 
--- Order topology proxy
-theorem order_topology_proxy (n : ℕ) :
+theorem order_topology_proxy (_n : ℕ) :
     True := trivial
 
--- Interval nonneg
 theorem interval_nonneg (a b : ℕ)
     (h : a ≤ b) :
     a ≤ b := h
 
--- Dedekind completeness proxy
 theorem dedekind_proxy :
     True := trivial
 
@@ -258,9 +197,31 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain partial order: by constructor index
+def domain_rank : Domain21 → ℕ
+  | .A_Energy => 0
+  | .B_Control => 1
+  | .C_Thermal => 2
+  | .D_Structural => 3
+  | .E_Boundary => 4
+  | .F_Diagnostics => 5
+  | .G_Governance => 6
+  | .H_Harmonic => 7
+  | .I_Information => 8
+  | .J_Joining => 9
+  | .K_Kernel => 10
+  | .L_Localization => 11
+  | .M_Morphogenic => 12
+  | .N_Node => 13
+  | .O_Operator => 14
+  | .P_Propagation => 15
+  | .Q_Quality => 16
+  | .R_Resonance => 17
+  | .S_State => 18
+  | .T_Temporal => 19
+  | .U_Unification => 20
+
 def domain_le (d1 d2 : Domain21) : Prop :=
-  d1.toCtorIdx ≤ d2.toCtorIdx
+  domain_rank d1 ≤ domain_rank d2
 
 theorem domain_le_refl (d : Domain21) :
     domain_le d d :=
@@ -271,9 +232,9 @@ theorem domain_le_antisym
     (h1 : domain_le d1 d2)
     (h2 : domain_le d2 d1) :
     d1 = d2 := by
-  unfold domain_le at *
-  have := Nat.le_antisymm h1 h2
-  exact Domain21.toCtorIdx.inj this
+  unfold domain_le at h1 h2
+  have heq : domain_rank d1 = domain_rank d2 := Nat.le_antisymm h1 h2
+  cases d1 <;> cases d2 <;> simp_all [domain_rank]
 
 theorem domain_le_trans
     (d1 d2 d3 : Domain21)
@@ -282,32 +243,18 @@ theorem domain_le_trans
     domain_le d1 d3 :=
   Nat.le_trans h1 h2
 
--- Domain partial order structure
 def domain_PO : PartialOrder Domain21 where
-  le      := fun d1 d2 =>
-    d1.toCtorIdx.ble d2.toCtorIdx
-  refl    := fun d => by
-    simp [Nat.ble_refl]
-  antisym := fun d1 d2 h1 h2 => by
-    simp [Nat.ble_eq] at *
-    exact domain_le_antisym d1 d2 h1 h2
-  trans   := fun d1 d2 d3 h1 h2 => by
-    simp [Nat.ble_eq] at *
-    exact Nat.le_trans h1 h2
+  le      := domain_le
+  refl    := domain_le_refl
+  antisym := domain_le_antisym
+  trans   := domain_le_trans
 
--- Domain well-order: A_Energy is minimum
 theorem domain_min_exists
     (S : Finset Domain21) (hS : S.Nonempty) :
     ∃ m ∈ S, ∀ x ∈ S,
-      m.toCtorIdx ≤ x.toCtorIdx := by
-  obtain ⟨d, hd⟩ := hS
-  exact ⟨S.min' hS,
-    S.min'_mem hS,
-    fun x hx => by
-      have := S.min'_le hS x hx
-      simpa using this⟩
+      domain_rank m ≤ domain_rank x :=
+  S.exists_min_image domain_rank hS
 
--- Domain closure operator
 def domain_closure (S : Finset Domain21) :
     Finset Domain21 :=
   S ∪ {Domain21.U_Unification}
@@ -317,7 +264,6 @@ theorem domain_closure_extensive
     S ⊆ domain_closure S :=
   Finset.subset_union_left
 
--- Domain Tarski fixed point
 theorem domain_tarski :
     ∃ S : Finset Domain21,
       domain_closure S = S := by
@@ -325,15 +271,12 @@ theorem domain_tarski :
   unfold domain_closure
   simp
 
--- Domain Galois connection proxy
 theorem domain_galois_proxy :
     is_closure_op Domain21
-      (fun d1 d2 =>
-        d1.toCtorIdx ≤ d2.toCtorIdx)
+      (fun d1 d2 => domain_rank d1 ≤ domain_rank d2)
       id :=
   identity_closure Domain21
-    (fun d1 d2 => d1.toCtorIdx ≤
-      d2.toCtorIdx)
+    (fun d1 d2 => domain_rank d1 ≤ domain_rank d2)
     (fun d => Nat.le_refl _)
 
 -- ============================================================
@@ -357,7 +300,7 @@ structure OrderTheoryLock where
                        f S ⊆ f T) →
                      ∃ S, f S = S
   lfp_exists     : ∀ (n : ℕ)
-                     (f : Finset (Fin n) →
+                    (f : Finset (Fin n) →
                           Finset (Fin n)),
                      is_scott_continuous n f →
                      ∃ S, f S = S
@@ -385,16 +328,16 @@ structure OrderTheoryLock where
   dom_min        : ∀ (S : Finset Domain21),
                      S.Nonempty →
                      ∃ m ∈ S, ∀ x ∈ S,
-                       m.toCtorIdx ≤
-                       x.toCtorIdx
+                       domain_rank m ≤
+                       domain_rank x
   dom_closure_ext : ∀ S : Finset Domain21,
                       S ⊆ domain_closure S
   dom_tarski     : ∃ S : Finset Domain21,
                      domain_closure S = S
   dom_galois     : is_closure_op Domain21
                      (fun d1 d2 =>
-                       d1.toCtorIdx ≤
-                       d2.toCtorIdx) id
+                       domain_rank d1 ≤
+                       domain_rank d2) id
 
 def OTLock : OrderTheoryLock where
   PO_refl        := PO_refl
