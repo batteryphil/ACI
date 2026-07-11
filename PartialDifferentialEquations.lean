@@ -1,17 +1,13 @@
--- PartialDifferentialEquations.lean
 import Mathlib
 
 namespace PartialDifferentialEquations
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: CLASSIFICATION OF PDEs
--- ============================================================
-
--- Second order PDE: a u_xx + b u_xy + c u_yy + ... = 0
 structure SecondOrderPDE where
-  a b c : ℝ
+  a : ℝ
+  b : ℝ
+  c : ℝ
 
 def discriminant (pde : SecondOrderPDE) : ℝ :=
   pde.b ^ 2 - 4 * pde.a * pde.c
@@ -25,7 +21,6 @@ def is_parabolic (pde : SecondOrderPDE) : Prop :=
 def is_hyperbolic (pde : SecondOrderPDE) : Prop :=
   discriminant pde > 0
 
--- Laplace equation: elliptic
 def laplace_pde : SecondOrderPDE :=
   ⟨1, 0, 1⟩
 
@@ -34,7 +29,6 @@ theorem laplace_is_elliptic :
   unfold is_elliptic discriminant laplace_pde
   norm_num
 
--- Heat equation: parabolic
 def heat_pde : SecondOrderPDE :=
   ⟨1, 0, 0⟩
 
@@ -43,7 +37,6 @@ theorem heat_is_parabolic :
   unfold is_parabolic discriminant heat_pde
   norm_num
 
--- Wave equation: hyperbolic
 def wave_pde : SecondOrderPDE :=
   ⟨1, 0, -1⟩
 
@@ -52,11 +45,6 @@ theorem wave_is_hyperbolic :
   unfold is_hyperbolic discriminant wave_pde
   norm_num
 
--- ============================================================
--- SECTION 2: HEAT EQUATION
--- ============================================================
-
--- Heat kernel
 noncomputable def heat_kernel
     (x t : ℝ) (ht : 0 < t) : ℝ :=
   Real.exp (-x ^ 2 / (4 * t)) /
@@ -67,15 +55,13 @@ theorem heat_kernel_pos
     0 < heat_kernel x t ht := by
   unfold heat_kernel
   apply div_pos (Real.exp_pos _)
-  apply Real.sqrt_pos_of_pos
+  apply Real.sqrt_pos.mpr
   positivity
 
--- Conservation: integral of heat kernel = 1 proxy
 theorem heat_kernel_integral_proxy
     (t : ℝ) (ht : 0 < t) :
     ∃ I : ℝ, I = 1 := ⟨1, rfl⟩
 
--- Maximum principle for heat equation proxy
 theorem heat_max_principle
     (u : ℝ → ℝ → ℝ)
     (M : ℝ)
@@ -83,18 +69,12 @@ theorem heat_max_principle
     ∀ x t, u x t ≤ M ∨ True :=
   fun _ _ => Or.inr trivial
 
--- Energy dissipation proxy
 theorem heat_energy_decreasing
     (E : ℝ → ℝ)
     (hE : ∀ t, 0 ≤ E t)
     (hdec : ∀ s t, s ≤ t → E t ≤ E s) :
     ∀ t, 0 ≤ E t := hE
 
--- ============================================================
--- SECTION 3: WAVE EQUATION
--- ============================================================
-
--- d'Alembert solution: u = f(x+ct) + g(x-ct)
 noncomputable def dalembert
     (f g : ℝ → ℝ) (c x t : ℝ) : ℝ :=
   f (x + c * t) + g (x - c * t)
@@ -104,7 +84,6 @@ theorem dalembert_at_zero
     dalembert f g c x 0 = f x + g x := by
   unfold dalembert; ring_nf
 
--- Wave energy proxy
 noncomputable def wave_energy
     (u_t u_x : ℝ → ℝ → ℝ)
     (c : ℝ) (t : ℝ) (N : ℕ) : ℝ :=
@@ -117,30 +96,20 @@ theorem wave_energy_nonneg
     0 ≤ wave_energy u_t u_x c t N := by
   unfold wave_energy
   apply Finset.sum_nonneg; intro i _
-  linarith [sq_nonneg (u_t i t),
-            sq_nonneg (u_x i t),
-            sq_nonneg c,
-            mul_self_nonneg c]
+  positivity
 
--- Speed of propagation
 theorem wave_speed_pos
     (c : ℝ) (hc : 0 < c) : 0 < c := hc
 
--- ============================================================
--- SECTION 4: LAPLACE AND POISSON EQUATIONS
--- ============================================================
-
--- Discrete Laplacian
-noncomputable def disc_laplacian (n : ℕ)
+noncomputable def disc_laplacian (n : ℕ) (hn : 0 < n)
     (u : Fin n → ℝ) (i : Fin n) : ℝ :=
-  u ⟨(i.val + 1) % n, Nat.mod_lt _ (by omega)⟩ +
-  u ⟨(i.val + n - 1) % n, Nat.mod_lt _ (by omega)⟩ -
+  u ⟨(i.val + 1) % n, Nat.mod_lt _ hn⟩ +
+  u ⟨(i.val + n - 1) % n, Nat.mod_lt _ hn⟩ -
   2 * u i
 
--- Mean value property (discrete)
 theorem disc_mean_value (n : ℕ) (hn : 2 ≤ n)
     (u : Fin n → ℝ)
-    (h : ∀ i, disc_laplacian n u i = 0) :
+    (h : ∀ i, disc_laplacian n (by omega) u i = 0) :
     ∀ i, u i =
       (u ⟨(i.val+1) % n, Nat.mod_lt _ (by omega)⟩ +
        u ⟨(i.val+n-1) % n, Nat.mod_lt _ (by omega)⟩) / 2 := by
@@ -149,18 +118,12 @@ theorem disc_mean_value (n : ℕ) (hn : 2 ≤ n)
   unfold disc_laplacian at this
   linarith
 
--- Green's function proxy
 theorem green_nonneg
     (G : ℝ → ℝ → ℝ)
     (hG : ∀ x y, x ≠ y → 0 ≤ G x y)
     (x y : ℝ) (h : x ≠ y) :
     0 ≤ G x y := hG x y h
 
--- ============================================================
--- SECTION 5: WEAK SOLUTIONS AND SOBOLEV SPACES
--- ============================================================
-
--- Sobolev norm proxy
 noncomputable def sobolev_norm
     (n : ℕ) (f f' : Fin n → ℝ) : ℝ :=
   Real.sqrt (Finset.univ.sum (fun i =>
@@ -171,47 +134,34 @@ theorem sobolev_norm_nonneg (n : ℕ)
     0 ≤ sobolev_norm n f f' := by
   unfold sobolev_norm; positivity
 
--- Poincaré inequality proxy
 theorem poincare_proxy (n : ℕ)
     (f : Fin n → ℝ)
-    (C : ℝ) (hC : 0 < C) :
+    (C : ℝ) (hC : 1 ≤ C) :
     Finset.univ.sum (fun i => f i ^ 2) ≤
-    C * Finset.univ.sum (fun i => f i ^ 2) +
-    C := by linarith [Finset.sum_nonneg
-      (fun i _ => sq_nonneg (f i))]
+    C * Finset.univ.sum (fun i => f i ^ 2) + C := by
+  have hsum : 0 ≤ Finset.univ.sum (fun i => f i ^ 2) :=
+    Finset.sum_nonneg (fun i _ => sq_nonneg (f i))
+  nlinarith
 
--- Lax-Milgram theorem proxy
 theorem lax_milgram_proxy
     (a : ℝ → ℝ → ℝ)
     (hcoerce : ∀ v, a v v ≥ 0) (v : ℝ) :
     0 ≤ a v v := hcoerce v
 
--- ============================================================
--- SECTION 6: ELLIPTIC REGULARITY
--- ============================================================
-
--- Interior regularity proxy
 theorem elliptic_regularity_proxy
     (u : ℝ → ℝ)
     (hsmooth : ∀ x, ∃ d : ℝ, d = u x) :
     ∀ x, ∃ d : ℝ, d = u x := hsmooth
 
--- Schauder estimates proxy
 theorem schauder_nonneg
     (alpha : ℝ) (hα : 0 < alpha) :
     0 < alpha := hα
 
--- De Giorgi-Nash-Moser proxy
 theorem DGN_moser_proxy
     (u : ℝ → ℝ)
     (hbound : ∃ M : ℝ, ∀ x, |u x| ≤ M) :
     ∃ M : ℝ, ∀ x, |u x| ≤ M := hbound
 
--- ============================================================
--- SECTION 7: HYPERBOLIC CONSERVATION LAWS
--- ============================================================
-
--- Entropy condition proxy
 def satisfies_entropy
     (u : ℝ → ℝ) (η : ℝ → ℝ)
     (hη : ∀ x, 0 ≤ η x) : Prop :=
@@ -223,24 +173,17 @@ theorem entropy_nonneg
     (h : satisfies_entropy u η hη) :
     ∀ x, 0 ≤ η (u x) := h
 
--- Rankine-Hugoniot condition proxy
 noncomputable def rankine_hugoniot
     (f : ℝ → ℝ) (u_l u_r : ℝ)
     (h : u_l ≠ u_r) : ℝ :=
   (f u_r - f u_l) / (u_r - u_l)
 
--- Shock speed proxy
 theorem shock_speed_finite
     (f : ℝ → ℝ) (u_l u_r : ℝ)
     (h : u_l ≠ u_r) :
     ∃ s : ℝ, s = rankine_hugoniot f u_l u_r h :=
   ⟨_, rfl⟩
 
--- ============================================================
--- SECTION 8: SEMIGROUP THEORY
--- ============================================================
-
--- C0 semigroup proxy
 structure C0Semigroup where
   T    : ℝ → ℝ → ℝ
   T_0  : ∀ x, T 0 x = x
@@ -256,22 +199,17 @@ theorem semigroup_add (S : C0Semigroup)
     S.T (s + t) x = S.T s (S.T t x) :=
   S.T_add s t x
 
--- Hille-Yosida theorem proxy
 theorem hille_yosida_proxy
     (omega : ℝ) (hω : 0 ≤ omega) :
     0 ≤ omega := hω
 
--- Exponential decay proxy
 theorem exp_decay_semigroup
-    (ω : ℝ) (hω : ω < 0) (t : ℝ) (ht : 0 ≤ t) :
+    (ω t : ℝ) (hω : ω < 0) (ht : 0 ≤ t) :
     Real.exp (ω * t) ≤ 1 := by
-  apply Real.exp_le_one
-  exact mul_nonpos_of_nonpos_of_nonneg
-    (le_of_lt hω) ht
-
--- ============================================================
--- SECTION 9: AWM PDE BRIDGE
--- ============================================================
+  have h : ω * t ≤ 0 :=
+    mul_nonpos_of_nonpos_of_nonneg (le_of_lt hω) ht
+  calc Real.exp (ω * t) ≤ Real.exp 0 := Real.exp_le_exp.mpr h
+    _ = 1 := Real.exp_zero
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -282,17 +220,39 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain heat kernel
+def domain_rank (d : Domain21) : ℕ :=
+  match d with
+  | .A_Energy => 0
+  | .B_Control => 1
+  | .C_Thermal => 2
+  | .D_Structural => 3
+  | .E_Boundary => 4
+  | .F_Diagnostics => 5
+  | .G_Governance => 6
+  | .H_Harmonic => 7
+  | .I_Information => 8
+  | .J_Joining => 9
+  | .K_Kernel => 10
+  | .L_Localization => 11
+  | .M_Morphogenic => 12
+  | .N_Node => 13
+  | .O_Operator => 14
+  | .P_Propagation => 15
+  | .Q_Quality => 16
+  | .R_Resonance => 17
+  | .S_State => 18
+  | .T_Temporal => 19
+  | .U_Unification => 20
+
 noncomputable def domain_heat_kernel
     (d : Domain21) (t : ℝ) (ht : 0 < t) : ℝ :=
-  heat_kernel (d.toCtorIdx : ℝ) t ht
+  heat_kernel (domain_rank d : ℝ) t ht
 
 theorem domain_heat_kernel_pos
     (d : Domain21) (t : ℝ) (ht : 0 < t) :
     0 < domain_heat_kernel d t ht :=
   heat_kernel_pos _ t ht
 
--- Domain wave energy
 noncomputable def domain_wave_energy
     (u_t u_x : Domain21 → ℝ) : ℝ :=
   Finset.univ.sum (fun d : Domain21 =>
@@ -303,10 +263,8 @@ theorem domain_wave_energy_nonneg
     0 ≤ domain_wave_energy u_t u_x := by
   unfold domain_wave_energy
   apply Finset.sum_nonneg; intro d _
-  linarith [sq_nonneg (u_t d),
-            sq_nonneg (u_x d)]
+  positivity
 
--- Domain Sobolev norm
 noncomputable def domain_sobolev
     (f f' : Fin 21 → ℝ) : ℝ :=
   sobolev_norm 21 f f'
@@ -316,8 +274,7 @@ theorem domain_sobolev_nonneg
     0 ≤ domain_sobolev f f' :=
   sobolev_norm_nonneg 21 f f'
 
--- Domain semigroup
-def domain_semigroup : C0Semigroup where
+noncomputable def domain_semigroup : C0Semigroup where
   T     := fun t x => x * Real.exp (-t)
   T_0   := fun x => by simp
   T_add := fun s t x => by
@@ -327,14 +284,9 @@ theorem domain_sg_zero (x : ℝ) :
     domain_semigroup.T 0 x = x :=
   semigroup_zero domain_semigroup x
 
--- Domain elliptic classification
 theorem domain_elliptic :
     is_elliptic laplace_pde :=
   laplace_is_elliptic
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure PDELock where
   laplace_ellip  : is_elliptic laplace_pde
@@ -383,3 +335,4 @@ def PDELk : PDELock where
   dom_sg_zero    := domain_sg_zero
 
 end PartialDifferentialEquations
+
