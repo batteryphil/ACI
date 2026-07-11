@@ -1,4 +1,3 @@
--- FormalLanguageTheory.lean
 import Mathlib
 
 namespace FormalLanguageTheory
@@ -9,13 +8,10 @@ open Finset
 -- SECTION 1: ALPHABETS AND STRINGS
 -- ============================================================
 
--- String over alphabet Σ
-def String (α : Type*) := List α
+abbrev String (α : Type*) := List α
 
--- Empty string
 def empty_string (α : Type*) : String α := []
 
--- Concatenation
 def concat (α : Type*) (s t : String α) :
     String α := s ++ t
 
@@ -35,15 +31,15 @@ theorem concat_empty_right (α : Type*)
     concat α s (empty_string α) = s :=
   List.append_nil s
 
--- String length
 def str_length (α : Type*) (s : String α) :
     ℕ := s.length
 
 theorem length_concat (α : Type*)
     (s t : String α) :
     str_length α (concat α s t) =
-    str_length α s + str_length α t :=
-  List.length_append s t
+    str_length α s + str_length α t := by
+  unfold str_length concat
+  exact List.length_append
 
 theorem length_nonneg (α : Type*)
     (s : String α) :
@@ -54,23 +50,18 @@ theorem length_nonneg (α : Type*)
 -- SECTION 2: FORMAL LANGUAGES
 -- ============================================================
 
--- Language: set of strings
-def Language (α : Type*) := Set (String α)
+abbrev Language (α : Type*) := Set (String α)
 
--- Empty language
 def empty_lang (α : Type*) : Language α :=
   ∅
 
--- Universal language
 def univ_lang (α : Type*) : Language α :=
   Set.univ
 
--- Language union
 def lang_union (α : Type*)
     (L1 L2 : Language α) : Language α :=
   L1 ∪ L2
 
--- Language concatenation
 def lang_concat (α : Type*)
     (L1 L2 : Language α) : Language α :=
   {s | ∃ u v, u ∈ L1 ∧ v ∈ L2 ∧
@@ -92,8 +83,7 @@ theorem lang_union_assoc (α : Type*)
 -- SECTION 3: REGULAR LANGUAGES
 -- ============================================================
 
--- Regular expressions
-inductive RegExp (α : Type*) : Type* where
+inductive RegExp.{u} (α : Type u) : Type u where
   | empty   : RegExp α
   | epsilon : RegExp α
   | char    : α → RegExp α
@@ -102,7 +92,6 @@ inductive RegExp (α : Type*) : Type* where
   | star    : RegExp α → RegExp α
   deriving Repr
 
--- Language of a regex
 def regexp_lang (α : Type*) [DecidableEq α]
     (r : RegExp α) : Language α :=
   match r with
@@ -128,13 +117,11 @@ theorem epsilon_lang (α : Type*)
 -- SECTION 4: FINITE AUTOMATA
 -- ============================================================
 
--- DFA: deterministic finite automaton
 structure DFA (α : Type*) (n : ℕ) where
   trans  : Fin n → α → Fin n
   start  : Fin n
   accept : Finset (Fin n)
 
--- DFA run
 def DFA_run (α : Type*) (n : ℕ)
     (M : DFA α n) :
     Fin n → String α → Fin n
@@ -145,43 +132,36 @@ theorem DFA_run_empty (α : Type*)
     (n : ℕ) (M : DFA α n) (q : Fin n) :
     DFA_run α n M q [] = q := rfl
 
--- DFA acceptance
 def DFA_accepts (α : Type*) (n : ℕ)
     (M : DFA α n) (s : String α) : Prop :=
   DFA_run α n M M.start s ∈ M.accept
 
--- State count positive
 theorem DFA_states_pos (α : Type*)
     (n : ℕ) (hn : 0 < n)
-    (M : DFA α n) :
+    (_M : DFA α n) :
     0 < n := hn
 
 -- ============================================================
 -- SECTION 5: CONTEXT-FREE GRAMMARS
 -- ============================================================
 
--- CFG production rule
 structure CFGRule (N T : Type*) where
   lhs : N
   rhs : List (N ⊕ T)
 
--- Grammar
 structure CFG (N T : Type*) where
   rules : List (CFGRule N T)
   start : N
 
--- Rule count nonneg
 theorem CFG_rules_nonneg (N T : Type*)
     (G : CFG N T) :
     0 ≤ G.rules.length :=
   Nat.zero_le _
 
--- Chomsky normal form proxy
 theorem CNF_proxy (N T : Type*)
-    (G : CFG N T) :
+    (_G : CFG N T) :
     True := trivial
 
--- CYK algorithm proxy
 theorem CYK_proxy (n : ℕ) :
     0 ≤ (n : ℝ) ^ 3 := by positivity
 
@@ -189,15 +169,12 @@ theorem CYK_proxy (n : ℕ) :
 -- SECTION 6: PUSHDOWN AUTOMATA
 -- ============================================================
 
--- PDA stack alphabet proxy
 def PDA_stack_nonneg (n : ℕ) :
     0 ≤ n := Nat.zero_le n
 
--- Acceptance by empty stack proxy
 theorem PDA_empty_stack_proxy :
     True := trivial
 
--- PDA-CFG equivalence proxy
 theorem PDA_CFG_equiv_proxy :
     True := trivial
 
@@ -205,22 +182,18 @@ theorem PDA_CFG_equiv_proxy :
 -- SECTION 7: TURING MACHINES
 -- ============================================================
 
--- TM tape alphabet proxy
 def TM_tape_size (n : ℕ) : ℕ := n
 
 theorem TM_tape_nonneg (n : ℕ) :
     0 ≤ TM_tape_size n :=
   Nat.zero_le _
 
--- Halting problem proxy
 theorem halting_undecidable_proxy :
     True := trivial
 
--- Church-Turing thesis proxy
 theorem church_turing_proxy :
     True := trivial
 
--- Recursive enumerable proxy
 theorem RE_proxy (n : ℕ) :
     0 ≤ (n : ℝ) := Nat.cast_nonneg n
 
@@ -228,29 +201,22 @@ theorem RE_proxy (n : ℕ) :
 -- SECTION 8: CHOMSKY HIERARCHY
 -- ============================================================
 
--- Type 0: Recursively enumerable
 def type0_proxy : Prop := True
 
--- Type 1: Context sensitive
 def type1_proxy : Prop := True
 
--- Type 2: Context free
 def type2_proxy : Prop := True
 
--- Type 3: Regular
 def type3_proxy : Prop := True
 
--- Hierarchy: Type3 ⊂ Type2 ⊂ Type1 ⊂ Type0
 theorem chomsky_hierarchy_proxy :
     type3_proxy → type2_proxy →
     type1_proxy → type0_proxy :=
   fun _ _ _ => trivial
 
--- Pumping lemma for regular languages proxy
 theorem pumping_regular_proxy
     (p : ℕ) (hp : 0 < p) : 0 < p := hp
 
--- Pumping lemma for CFLs proxy
 theorem pumping_CFL_proxy
     (p : ℕ) (hp : 0 < p) : 0 < p := hp
 
@@ -267,14 +233,12 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain alphabet: 21 symbols
 def domain_alphabet_size : ℕ := 21
 
 theorem domain_alphabet_pos :
     0 < domain_alphabet_size := by
   unfold domain_alphabet_size; norm_num
 
--- Domain string concat assoc
 theorem domain_concat_assoc
     (s t u : String Domain21) :
     concat Domain21
@@ -283,19 +247,16 @@ theorem domain_concat_assoc
       (concat Domain21 t u) :=
   concat_assoc Domain21 s t u
 
--- Domain language union comm
 theorem domain_union_comm
     (L1 L2 : Language Domain21) :
     lang_union Domain21 L1 L2 =
     lang_union Domain21 L2 L1 :=
   lang_union_comm Domain21 L1 L2
 
--- Domain regex empty
 theorem domain_regex_empty :
     regexp_lang Domain21 (.empty) = ∅ :=
   empty_lang_empty Domain21
 
--- Domain DFA
 def domain_DFA : DFA Domain21 21 where
   trans  := fun q _ =>
     ⟨(q.val + 1) % 21, Nat.mod_lt _ (by norm_num)⟩
@@ -309,7 +270,6 @@ theorem domain_DFA_run_empty :
   DFA_run_empty Domain21 21 domain_DFA
     ⟨0, by norm_num⟩
 
--- Domain length nonneg
 theorem domain_length_nn
     (s : String Domain21) :
     0 ≤ str_length Domain21 s :=
@@ -374,7 +334,7 @@ structure FormalLanguageTheoryLock where
                       (.empty) = ∅
   dom_DFA_run    : DFA_run Domain21 21
                      domain_DFA
-                     ⟨0, by norm_num⟩ [] =
+                       ⟨0, by norm_num⟩ [] =
                    ⟨0, by norm_num⟩
   dom_length_nn  : ∀ s : String Domain21,
                      0 ≤ str_length Domain21 s
@@ -398,3 +358,4 @@ def FLTLock : FormalLanguageTheoryLock where
   dom_length_nn  := domain_length_nn
 
 end FormalLanguageTheory
+
