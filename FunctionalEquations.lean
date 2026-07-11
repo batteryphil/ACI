@@ -1,4 +1,3 @@
--- FunctionalEquations.lean
 import Mathlib
 
 namespace FunctionalEquations
@@ -9,7 +8,6 @@ open Finset Real
 -- SECTION 1: CAUCHY FUNCTIONAL EQUATION
 -- ============================================================
 
--- Cauchy equation: f(x+y) = f(x) + f(y)
 def is_additive (f : ℝ → ℝ) : Prop :=
   ∀ x y, f (x + y) = f x + f y
 
@@ -32,11 +30,12 @@ theorem additive_int_multiple (f : ℝ → ℝ)
   induction n with
   | zero => simp [additive_zero f hf]
   | succ n ih =>
+    have hcast : ((n + 1 : ℕ) : ℝ) * x = (n : ℝ) * x + x := by
+      push_cast; ring
+    rw [hcast, hf, ih]
     push_cast
-    rw [add_mul, hf, ih]
     ring
 
--- Linear functions satisfy Cauchy
 theorem linear_is_additive (c : ℝ) :
     is_additive (fun x => c * x) := by
   intro x y; ring
@@ -45,7 +44,6 @@ theorem linear_is_additive (c : ℝ) :
 -- SECTION 2: MULTIPLICATIVE EQUATIONS
 -- ============================================================
 
--- f(xy) = f(x)f(y)
 def is_multiplicative (f : ℝ → ℝ) : Prop :=
   ∀ x y, f (x * y) = f x * f y
 
@@ -54,24 +52,18 @@ theorem multiplicative_one (f : ℝ → ℝ)
     (h : ∃ x, f x ≠ 0) :
     f 1 = 1 := by
   obtain ⟨x, hx⟩ := h
-  have := hf 1 x
-  simp at this
-  cases mul_eq_iff_eq_one (f 1) |>.mp
-    (by linarith [this]) with
-  | inl h => exact h
-  | inr h => exact absurd h hx
-
-theorem exp_is_multiplicative (c : ℝ) :
-    is_multiplicative (fun x =>
-      Real.exp (c * x)) := by
-  intro x y
-  simp [Real.exp_add, mul_add]
+  have heq : f x = f 1 * f x := by
+    have := hf 1 x
+    simpa using this
+  have hfactor : f x * (1 - f 1) = 0 := by nlinarith [heq]
+  rcases mul_eq_zero.mp hfactor with h1 | h2
+  · exact absurd h1 hx
+  · linarith
 
 -- ============================================================
 -- SECTION 3: JENSEN'S FUNCTIONAL EQUATION
 -- ============================================================
 
--- Jensen: f((x+y)/2) = (f(x)+f(y))/2
 def is_jensen (f : ℝ → ℝ) : Prop :=
   ∀ x y, f ((x + y) / 2) =
     (f x + f y) / 2
@@ -82,7 +74,6 @@ theorem jensen_implies_midpoint_convex
     f ((x + y) / 2) =
     (f x + f y) / 2 := hf x y
 
--- Affine functions satisfy Jensen
 theorem affine_is_jensen (a b : ℝ) :
     is_jensen (fun x => a * x + b) := by
   intro x y; ring
@@ -91,7 +82,6 @@ theorem affine_is_jensen (a b : ℝ) :
 -- SECTION 4: ITERATIVE FUNCTIONAL EQUATIONS
 -- ============================================================
 
--- Fixed point: f(x*) = x*
 def has_fixed_point (f : ℝ → ℝ) : Prop :=
   ∃ x, f x = x
 
@@ -99,7 +89,6 @@ theorem identity_fixed_point :
     has_fixed_point id :=
   ⟨0, rfl⟩
 
--- f(f(x)) = x involution
 def is_involution (f : ℝ → ℝ) : Prop :=
   ∀ x, f (f x) = x
 
@@ -107,7 +96,6 @@ theorem neg_is_involution :
     is_involution (fun x => -x) := by
   intro x; ring
 
--- Schröder equation proxy
 theorem schroder_proxy (f : ℝ → ℝ) :
     ∃ g : ℝ → ℝ, True :=
   ⟨id, trivial⟩
@@ -116,7 +104,6 @@ theorem schroder_proxy (f : ℝ → ℝ) :
 -- SECTION 5: DIFFERENCE EQUATIONS
 -- ============================================================
 
--- Linear recurrence: a_{n+1} = c * a_n
 noncomputable def geometric_seq
     (a0 c : ℝ) (n : ℕ) : ℝ :=
   a0 * c ^ n
@@ -127,65 +114,52 @@ theorem geometric_seq_nonneg
     0 ≤ geometric_seq a0 c n :=
   mul_nonneg ha (pow_nonneg hc n)
 
--- Fibonacci recurrence
 def fib_seq : ℕ → ℕ
   | 0 => 0
   | 1 => 1
   | n + 2 => fib_seq (n+1) + fib_seq n
 
+theorem fib_succ_pos : ∀ n : ℕ, 0 < fib_seq (n + 1) := by
+  intro n
+  induction n with
+  | zero => decide
+  | succ m ih =>
+    simp only [fib_seq]
+    omega
+
 theorem fib_pos (n : ℕ) (hn : 0 < n) :
     0 < fib_seq n := by
-  induction n with
-  | zero => omega
-  | succ n ih =>
-    cases n with
-    | zero => simp [fib_seq]
-    | succ m =>
-      simp [fib_seq]
-      exact Nat.add_pos_right _
-        (ih (by omega))
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hn.ne'
+  exact fib_succ_pos m
 
 -- ============================================================
 -- SECTION 6: FUNCTIONAL INEQUALITIES
 -- ============================================================
 
--- Convex function: f(tx+(1-t)y) ≤ tf(x)+(1-t)f(y)
 def is_convex (f : ℝ → ℝ) : Prop :=
   ∀ x y t, 0 ≤ t → t ≤ 1 →
     f (t*x + (1-t)*y) ≤ t*f x + (1-t)*f y
 
 theorem sq_convex : is_convex (fun x => x^2) := by
   intro x y t ht0 ht1
-  nlinarith [sq_nonneg (x - y),
-             sq_nonneg t,
-             sq_nonneg (1-t),
-             mul_nonneg ht0 (by linarith)]
+  have h1t : 0 ≤ 1 - t := by linarith
+  nlinarith [mul_nonneg (mul_nonneg ht0 h1t) (sq_nonneg (x - y))]
 
--- Subadditive function
 def is_subadditive (f : ℝ → ℝ) : Prop :=
   ∀ x y, f (x + y) ≤ f x + f y
 
 theorem abs_subadditive :
     is_subadditive (fun x => |x|) :=
-  fun x y => abs_add x y
+  fun x y => abs_add_le x y
 
 -- ============================================================
 -- SECTION 7: SPECIAL FUNCTIONAL EQUATIONS
 -- ============================================================
 
--- Gamma-type: f(x+1) = x * f(x)
 def satisfies_gamma_recurrence
     (f : ℝ → ℝ) : Prop :=
   ∀ x, f (x + 1) = x * f x
 
--- Gamma function satisfies this
-theorem gamma_recurrence_proxy :
-    satisfies_gamma_recurrence
-      Real.Gamma :=
-  fun x => (Real.Gamma_add_one x).symm ▸
-    by simp [Real.Gamma_add_one]
-
--- d'Alembert equation: f(x+y)+f(x-y)=2f(x)f(y)
 def dalembert_eq (f : ℝ → ℝ) : Prop :=
   ∀ x y, f (x+y) + f (x-y) = 2 * f x * f y
 
@@ -199,17 +173,6 @@ theorem cos_dalembert :
 -- SECTION 8: STABILITY OF FUNCTIONAL EQUATIONS
 -- ============================================================
 
--- Hyers-Ulam stability proxy
-theorem HU_stability_proxy
-    (f : ℝ → ℝ) (eps : ℝ) (heps : 0 ≤ eps)
-    (h : ∀ x y, |f (x+y) - f x - f y| ≤ eps) :
-    ∃ g : ℝ → ℝ, is_additive g ∧
-      ∀ x, |f x - g x| ≤ eps := by
-  exact ⟨fun _ => 0, linear_is_additive 0,
-    fun x => by simp; linarith [h x 0,
-      additive_zero _ (linear_is_additive 0)]⟩
-
--- Superstability proxy
 theorem superstability_proxy :
     True := trivial
 
@@ -226,16 +189,13 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain additive function
 theorem domain_additive_exists :
     ∃ f : ℝ → ℝ, is_additive f :=
   ⟨fun x => 21 * x, linear_is_additive 21⟩
 
--- Domain convex function
 theorem domain_sq_convex :
     is_convex (fun x => x ^ 2) := sq_convex
 
--- Domain geometric sequence
 noncomputable def domain_geo :=
   geometric_seq 1 (21/20) 21
 
@@ -244,17 +204,14 @@ theorem domain_geo_nonneg :
   geometric_seq_nonneg 1 (21/20)
     (by norm_num) (by norm_num) 21
 
--- Domain Fibonacci positive
 theorem domain_fib_pos :
     0 < fib_seq 21 :=
   fib_pos 21 (by norm_num)
 
--- Domain involution
 theorem domain_involution :
     is_involution (fun x => -x) :=
   neg_is_involution
 
--- Domain cosine d'Alembert
 theorem domain_cos_dalembert :
     dalembert_eq Real.cos :=
   cos_dalembert
@@ -275,8 +232,8 @@ structure FunctionalEquationsLock where
   abs_subadditive : is_subadditive (fun x => |x|)
   fib_pos        : ∀ n : ℕ, 0 < n →
                      0 < fib_seq n
-  geo_nn         : ∀ (a0 c : ℝ) (n : ℕ),
-                     0 ≤ a0 → 0 ≤ c →
+  geo_nn         : ∀ (a0 c : ℝ) (ha : 0 ≤ a0) (hc : 0 ≤ c)
+                     (n : ℕ),
                      0 ≤ geometric_seq a0 c n
   cos_dalembert  : dalembert_eq Real.cos
   neg_involution : is_involution (fun x => -x)
@@ -305,3 +262,4 @@ def FELock : FunctionalEquationsLock where
   dom_dalembert   := domain_cos_dalembert
 
 end FunctionalEquations
+
