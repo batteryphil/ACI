@@ -1,23 +1,17 @@
--- GameTheory.lean
 import Mathlib
 
 namespace GameTheory
 
 open Finset Real
 
--- ============================================================
--- SECTION 1: STRATEGIC FORM GAMES
--- G = (N, S, u) — players, strategies, payoffs
--- ============================================================
-
 structure TwoPlayerGame where
-  strat1 strat2 : ℕ
+  strat1        : ℕ
+  strat2        : ℕ
   payoff1       : Fin strat1 → Fin strat2 → ℝ
   payoff2       : Fin strat1 → Fin strat2 → ℝ
   strat1_pos    : 0 < strat1
   strat2_pos    : 0 < strat2
 
--- Pure strategy Nash equilibrium
 def is_nash_pure (g : TwoPlayerGame)
     (s1 : Fin g.strat1) (s2 : Fin g.strat2) : Prop :=
   (∀ t1 : Fin g.strat1,
@@ -39,7 +33,6 @@ theorem nash_player2_optimal
     ∀ t2, g.payoff2 s1 t2 ≤ g.payoff2 s1 s2 :=
   h.2
 
--- Nash equilibrium is stable: no unilateral deviation helps
 theorem nash_no_profitable_deviation
     (g : TwoPlayerGame)
     (s1 : Fin g.strat1) (s2 : Fin g.strat2)
@@ -49,11 +42,6 @@ theorem nash_no_profitable_deviation
     g.payoff2 s1 t2 ≤ g.payoff2 s1 s2 :=
   ⟨h.1 t1, h.2 t2⟩
 
--- ============================================================
--- SECTION 2: ZERO-SUM GAMES
--- u1 + u2 = 0 everywhere
--- ============================================================
-
 structure ZeroSumGame where
   n_strat      : ℕ
   payoff       : Fin n_strat → Fin n_strat → ℝ
@@ -61,7 +49,8 @@ structure ZeroSumGame where
   n_pos        : 0 < n_strat
 
 theorem zero_sum_antisymm
-    (g : ZeroSumGame) (i j : Fin g.n_strat) :
+    (g : ZeroSumGame)
+    (i : Fin g.n_strat) (j : Fin g.n_strat) :
     g.payoff i j = -g.payoff j i :=
   g.zero_sum i j
 
@@ -72,25 +61,23 @@ theorem zero_sum_self_zero
   linarith
 
 theorem zero_sum_constant_total
-    (g : ZeroSumGame) (i j : Fin g.n_strat) :
+    (g : ZeroSumGame)
+    (i : Fin g.n_strat) (j : Fin g.n_strat) :
     g.payoff i j + g.payoff j i = 0 := by
   linarith [g.zero_sum i j]
 
--- Minimax theorem: max_i min_j u(i,j) = min_j max_i u(i,j)
--- Value of the game
 noncomputable def game_value_lower
     (g : ZeroSumGame) : ℝ :=
-  Finset.univ.sup' Finset.univ_nonempty (fun i =>
-    Finset.univ.inf' Finset.univ_nonempty (fun j =>
+  Finset.univ.sup' ⟨⟨0, g.n_pos⟩, Finset.mem_univ _⟩ (fun i =>
+    Finset.univ.inf' ⟨⟨0, g.n_pos⟩, Finset.mem_univ _⟩ (fun j =>
       g.payoff i j))
 
 noncomputable def game_value_upper
     (g : ZeroSumGame) : ℝ :=
-  Finset.univ.inf' Finset.univ_nonempty (fun j =>
-    Finset.univ.sup' Finset.univ_nonempty (fun i =>
+  Finset.univ.inf' ⟨⟨0, g.n_pos⟩, Finset.mem_univ _⟩ (fun j =>
+    Finset.univ.sup' ⟨⟨0, g.n_pos⟩, Finset.mem_univ _⟩ (fun i =>
       g.payoff i j))
 
--- Lower value ≤ Upper value (weak minimax)
 theorem minimax_weak
     (g : ZeroSumGame) :
     game_value_lower g ≤ game_value_upper g := by
@@ -99,14 +86,9 @@ theorem minimax_weak
   intro i _
   apply Finset.le_inf'
   intro j _
-  apply le_trans
-  · exact Finset.inf'_le _ (mem_univ j)
-  · exact Finset.le_sup' _ (mem_univ i)
-
--- ============================================================
--- SECTION 3: MIXED STRATEGIES
--- σ ∈ Δ(S): probability distribution over pure strategies
--- ============================================================
+  exact le_trans
+    (Finset.inf'_le (fun j' => g.payoff i j') (mem_univ j))
+    (Finset.le_sup' (fun i' => g.payoff i' j) (mem_univ i))
 
 structure MixedStrategy (n : ℕ) where
   prob    : Fin n → ℝ
@@ -124,7 +106,6 @@ theorem mixed_prob_nonneg
     (n : ℕ) (sigma : MixedStrategy n) (i : Fin n) :
     0 ≤ sigma.prob i := sigma.prob_nn i
 
--- Pure strategy as mixed strategy
 noncomputable def pure_as_mixed
     (n : ℕ) (hn : 0 < n) (i0 : Fin n) :
     MixedStrategy n where
@@ -133,7 +114,6 @@ noncomputable def pure_as_mixed
   sum_one := by
     simp [Finset.sum_ite_eq', mem_univ]
 
--- Expected payoff under mixed strategies
 noncomputable def expected_payoff
     (g : TwoPlayerGame)
     (sigma1 : MixedStrategy g.strat1)
@@ -144,12 +124,12 @@ noncomputable def expected_payoff
 
 theorem expected_payoff_linear_sigma1
     (g : TwoPlayerGame)
-    (sigma1 sigma1' : MixedStrategy g.strat1)
+    (sigma1 : MixedStrategy g.strat1)
+    (sigma1' : MixedStrategy g.strat1)
     (sigma2 : MixedStrategy g.strat2)
     (t : ℝ) (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
     True := trivial
 
--- Mixed Nash: each player maximizes expected payoff
 def is_nash_mixed
     (g : TwoPlayerGame)
     (sigma1 : MixedStrategy g.strat1)
@@ -163,29 +143,23 @@ def is_nash_mixed
     univ.sum (fun i => univ.sum (fun j =>
       sigma1.prob i * sigma2.prob j * g.payoff2 i j)))
 
--- ============================================================
--- SECTION 4: DOMINANT STRATEGIES
--- ============================================================
-
--- Strict dominance: s strictly dominates t
 def strictly_dominates
     (g : TwoPlayerGame)
-    (s t : Fin g.strat1) : Prop :=
+    (s : Fin g.strat1) (t : Fin g.strat1) : Prop :=
   ∀ j : Fin g.strat2,
     g.payoff1 t j < g.payoff1 s j
 
 theorem dominated_never_best_response
     (g : TwoPlayerGame)
-    (s t : Fin g.strat1)
+    (s : Fin g.strat1) (t : Fin g.strat1)
     (hdom : strictly_dominates g s t)
     (j : Fin g.strat2) :
     g.payoff1 t j < g.payoff1 s j :=
   hdom j
 
--- Iterated elimination of dominated strategies
 def weakly_dominates
     (g : TwoPlayerGame)
-    (s t : Fin g.strat1) : Prop :=
+    (s : Fin g.strat1) (t : Fin g.strat1) : Prop :=
   (∀ j : Fin g.strat2,
     g.payoff1 t j ≤ g.payoff1 s j) ∧
   (∃ j : Fin g.strat2,
@@ -193,26 +167,20 @@ def weakly_dominates
 
 theorem weak_dominance_implies_not_best
     (g : TwoPlayerGame)
-    (s t : Fin g.strat1)
+    (s : Fin g.strat1) (t : Fin g.strat1)
     (hdom : weakly_dominates g s t) :
     ∃ j, g.payoff1 t j < g.payoff1 s j :=
   hdom.2
 
--- ============================================================
--- SECTION 5: PARETO OPTIMALITY
--- ============================================================
-
--- Pareto improvement: both players weakly better, one strictly
 def pareto_improvement
     (g : TwoPlayerGame)
-    (s1 t1 : Fin g.strat1)
-    (s2 t2 : Fin g.strat2) : Prop :=
+    (s1 : Fin g.strat1) (t1 : Fin g.strat1)
+    (s2 : Fin g.strat2) (t2 : Fin g.strat2) : Prop :=
   g.payoff1 s1 s2 ≤ g.payoff1 t1 t2 ∧
   g.payoff2 s1 s2 ≤ g.payoff2 t1 t2 ∧
   (g.payoff1 s1 s2 < g.payoff1 t1 t2 ∨
    g.payoff2 s1 s2 < g.payoff2 t1 t2)
 
--- Pareto optimal: no Pareto improvement exists
 def pareto_optimal
     (g : TwoPlayerGame)
     (s1 : Fin g.strat1)
@@ -220,11 +188,10 @@ def pareto_optimal
   ∀ t1 : Fin g.strat1, ∀ t2 : Fin g.strat2,
     ¬ pareto_improvement g s1 t1 s2 t2
 
--- Pareto improvement strictly increases total welfare
 theorem pareto_welfare_increase
     (g : TwoPlayerGame)
-    (s1 t1 : Fin g.strat1)
-    (s2 t2 : Fin g.strat2)
+    (s1 : Fin g.strat1) (t1 : Fin g.strat1)
+    (s2 : Fin g.strat2) (t2 : Fin g.strat2)
     (h : pareto_improvement g s1 t1 s2 t2) :
     g.payoff1 s1 s2 + g.payoff2 s1 s2 <
     g.payoff1 t1 t2 + g.payoff2 t1 t2 := by
@@ -233,12 +200,6 @@ theorem pareto_welfare_increase
   · linarith [h.1, h.2.1]
   · linarith [h.1, h.2.1]
 
--- ============================================================
--- SECTION 6: COOPERATIVE GAME THEORY
--- v: 2^N → ℝ, characteristic function
--- ============================================================
-
--- Characteristic function game
 structure CoopGame where
   n_players : ℕ
   v         : Finset (Fin n_players) → ℝ
@@ -250,24 +211,22 @@ theorem coop_empty_zero (g : CoopGame) :
     g.v ∅ = 0 := g.v_empty
 
 theorem coop_monotone (g : CoopGame)
-    (S T : Finset (Fin g.n_players))
+    (S : Finset (Fin g.n_players))
+    (T : Finset (Fin g.n_players))
     (h : S ⊆ T) : g.v S ≤ g.v T :=
   g.monotone S T h
 
--- Superadditivity: v(S ∪ T) ≥ v(S) + v(T) for disjoint S,T
 def superadditive (g : CoopGame) : Prop :=
   ∀ S T : Finset (Fin g.n_players),
     Disjoint S T →
     g.v S + g.v T ≤ g.v (S ∪ T)
 
--- Core: allocations stable against deviation
 def in_core (g : CoopGame)
     (allocation : Fin g.n_players → ℝ) : Prop :=
   univ.sum allocation = g.v univ ∧
   ∀ S : Finset (Fin g.n_players),
     g.v S ≤ S.sum allocation
 
--- Shapley value: fair allocation
 noncomputable def shapley_value
     (g : CoopGame) (i : Fin g.n_players) : ℝ :=
   Finset.univ.sum (fun S : Finset (Fin g.n_players) =>
@@ -276,11 +235,6 @@ noncomputable def shapley_value
       g.n_players
     else 0)
 
--- ============================================================
--- SECTION 7: EVOLUTIONARY GAME THEORY
--- ============================================================
-
--- Replicator dynamics: ẋ_i = x_i(f_i - f̄)
 noncomputable def fitness
     (payoff_matrix : Fin 3 → Fin 3 → ℝ)
     (x : Fin 3 → ℝ) (i : Fin 3) : ℝ :=
@@ -291,14 +245,12 @@ noncomputable def mean_fitness
     (x : Fin 3 → ℝ) : ℝ :=
   univ.sum (fun i => x i * fitness payoff_matrix x i)
 
--- Replicator: growth rate proportional to excess fitness
 noncomputable def replicator_derivative
     (payoff_matrix : Fin 3 → Fin 3 → ℝ)
     (x : Fin 3 → ℝ) (i : Fin 3) : ℝ :=
   x i * (fitness payoff_matrix x i -
          mean_fitness payoff_matrix x)
 
--- Evolutionarily stable strategy
 def is_ESS
     (payoff_matrix : Fin 3 → Fin 3 → ℝ)
     (x_star : Fin 3 → ℝ) : Prop :=
@@ -313,30 +265,29 @@ def is_ESS
      univ.sum (fun i => x_star i *
        fitness payoff_matrix y i))
 
--- Total population conserved by replicator
 theorem replicator_sum_zero
     (payoff_matrix : Fin 3 → Fin 3 → ℝ)
     (x : Fin 3 → ℝ)
     (hx : univ.sum x = 1) :
     univ.sum (replicator_derivative payoff_matrix x) = 0 := by
   unfold replicator_derivative
-  simp [Finset.sum_sub_distrib, ← Finset.sum_mul,
-        Finset.mul_sum]
-  ring_nf
-  simp [mean_fitness, fitness, ← Finset.sum_mul]
+  have key : univ.sum (fun i => x i *
+      (fitness payoff_matrix x i - mean_fitness payoff_matrix x))
+      = univ.sum (fun i => x i * fitness payoff_matrix x i)
+        - mean_fitness payoff_matrix x * univ.sum x := by
+    rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro i _
+    ring
+  rw [key, hx, mul_one]
+  unfold mean_fitness
   ring
 
--- ============================================================
--- SECTION 8: MECHANISM DESIGN
--- ============================================================
-
--- Social choice function
 structure Mechanism where
   n_agents  : ℕ
   outcomes  : ℕ
   rule      : (Fin n_agents → ℕ) → Fin outcomes
 
--- Incentive compatibility: truthful reporting is optimal
 def incentive_compatible (m : Mechanism)
     (valuation : Fin m.n_agents → Fin m.outcomes → ℝ) : Prop :=
   ∀ i : Fin m.n_agents,
@@ -344,7 +295,6 @@ def incentive_compatible (m : Mechanism)
     true_type i = reported_type i →
     True
 
--- Individual rationality
 def individually_rational (m : Mechanism)
     (allocation : Fin m.n_agents → ℝ)
     (reservation : Fin m.n_agents → ℝ) : Prop :=
@@ -353,20 +303,15 @@ def individually_rational (m : Mechanism)
 
 theorem IR_all_above_reservation
     (m : Mechanism)
-    (alloc res : Fin m.n_agents → ℝ)
+    (alloc : Fin m.n_agents → ℝ)
+    (res : Fin m.n_agents → ℝ)
     (h : individually_rational m alloc res)
     (i : Fin m.n_agents) :
     res i ≤ alloc i := h i
 
--- Revenue equivalence theorem (sketch)
 theorem revenue_equivalence
-    (rev1 rev2 : ℝ)
+    (rev1 : ℝ) (rev2 : ℝ)
     (h : rev1 = rev2) : rev1 = rev2 := h
-
--- ============================================================
--- SECTION 9: AWM GAME THEORY BRIDGE
--- Multi-domain coordination game
--- ============================================================
 
 inductive Domain21 : Type where
   | A_Energy | B_Control | C_Thermal | D_Structural
@@ -377,12 +322,12 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Each domain chooses a margin level
+instance : Nonempty Domain21 := ⟨.A_Energy⟩
+
 structure DomainStrategy where
   margin    : Domain21 → ℝ
   margin_pos : ∀ d, 0 < margin d
 
--- System payoff: minimum margin (worst case)
 noncomputable def system_payoff
     (ds : DomainStrategy) : ℝ :=
   Finset.univ.inf' Finset.univ_nonempty ds.margin
@@ -391,10 +336,11 @@ theorem system_payoff_pos
     (ds : DomainStrategy) :
     0 < system_payoff ds := by
   unfold system_payoff
-  apply Finset.lt_inf'_iff.mpr
-  intro d _; exact ds.margin_pos d
+  obtain ⟨d, _, hd⟩ :=
+    Finset.exists_mem_eq_inf' Finset.univ_nonempty ds.margin
+  rw [hd]
+  exact ds.margin_pos d
 
--- Nash equilibrium: all domains at optimal margin
 def AWM_nash_equilibrium
     (ds : DomainStrategy) (threshold : ℝ) : Prop :=
   ∀ d : Domain21,
@@ -406,37 +352,31 @@ theorem AWM_nash_system_safe
     (h : AWM_nash_equilibrium ds threshold) :
     threshold ≤ system_payoff ds := by
   unfold system_payoff
-  apply Finset.le_inf'_iff.mpr
-  intro d _; exact h d
+  apply Finset.le_inf'
+  intro d _
+  exact h d
 
--- Cooperative AWM: domains coordinate to maximize min margin
 theorem cooperative_dominates_noncooperative
-    (ds_coop ds_nonc : DomainStrategy)
+    (ds_coop : DomainStrategy) (ds_nonc : DomainStrategy)
     (h : system_payoff ds_nonc ≤
          system_payoff ds_coop) :
     system_payoff ds_nonc ≤
     system_payoff ds_coop := h
 
--- Pareto improvement in AWM: raise all margins
 theorem AWM_pareto_improvement
-    (ds1 ds2 : DomainStrategy)
+    (ds1 : DomainStrategy) (ds2 : DomainStrategy)
     (h : ∀ d, ds1.margin d ≤ ds2.margin d)
     (hstrict : ∃ d, ds1.margin d < ds2.margin d) :
     system_payoff ds1 ≤ system_payoff ds2 := by
   unfold system_payoff
-  apply Finset.inf'_mono
-  intro d _; exact h d
+  apply Finset.le_inf'
+  intro d _
+  exact le_trans (Finset.inf'_le _ (Finset.mem_univ d)) (h d)
 
--- Governance as mechanism designer
--- Forces domains to report true margins
 theorem governance_mechanism_truthful
-    (true_margin reported_margin : Domain21 → ℝ)
+    (true_margin : Domain21 → ℝ) (reported_margin : Domain21 → ℝ)
     (h : ∀ d, true_margin d = reported_margin d) :
     ∀ d, true_margin d = reported_margin d := h
-
--- ============================================================
--- SYSTEM LOCK
--- ============================================================
 
 structure GameTheoryLock where
   nash_p1          : ∀ (g : TwoPlayerGame)
@@ -466,8 +406,10 @@ structure GameTheoryLock where
                        (i : Fin n),
                        sigma.prob i ≤ 1
   pareto_welfare   : ∀ (g : TwoPlayerGame)
-                       (s1 t1 : Fin g.strat1)
-                       (s2 t2 : Fin g.strat2),
+                       (s1 : Fin g.strat1)
+                       (t1 : Fin g.strat1)
+                       (s2 : Fin g.strat2)
+                       (t2 : Fin g.strat2),
                        pareto_improvement g s1 t1 s2 t2 →
                        g.payoff1 s1 s2 + g.payoff2 s1 s2 <
                        g.payoff1 t1 t2 + g.payoff2 t1 t2
