@@ -49,29 +49,12 @@ theorem projection_valid (s : State) : Valid (Proj s) := by
 theorem evolution_valid (s : State) : Valid (T s) := projection_valid (U s)
 
 theorem clamp_nonexpansive (x y : ℚ) : |clamp x - clamp y| ≤ |x - y| := by
-  unfold clamp cfg; simp only
-  split_ifs with hx1 hx2 hy1 hy2 hy1 hy2 hy1 hy2 <;>
-  (try simp only [not_lt] at *)
-  · rw [show (-5:ℚ) - 5 = -10 from by norm_num, abs_of_neg (by norm_num : (-10:ℚ) < 0)]
-    rw [abs_of_neg (by linarith : x - y < 0)]; linarith
-  · rw [abs_of_nonpos (by linarith : -5 - y ≤ 0), abs_of_nonpos (by linarith : x - y ≤ 0)]
-    linarith
-  · rw [show (5:ℚ) - -5 = 10 from by norm_num, abs_of_pos (by norm_num : (0:ℚ) < 10)]
-    rw [abs_of_pos (by linarith : 0 < x - y)]; linarith
-  · rw [abs_of_nonneg (by linarith : 0 ≤ 5 - y), abs_of_nonneg (by linarith : 0 ≤ x - y)]
-    linarith
-  · rw [abs_of_nonneg (by linarith : 0 ≤ x - -5), abs_of_nonneg (by linarith : 0 ≤ x - y)]
-    linarith
-  · rw [abs_of_nonpos (by linarith : x - 5 ≤ 0), abs_of_nonpos (by linarith : x - y ≤ 0)]
-    linarith
-  · exact le_refl _
-  · rw [abs_of_nonneg (by linarith : 0 ≤ 5 - y), abs_of_nonneg (by linarith : 0 ≤ x - y)]
-    linarith
-  · rw [abs_of_nonneg (by linarith : 0 ≤ x - -5), abs_of_nonneg (by linarith : 0 ≤ x - y)]
-    linarith
-  · rw [abs_of_nonpos (by linarith : x - 5 ≤ 0), abs_of_nonpos (by linarith : x - y ≤ 0)]
-    linarith
-  · exact le_refl _
+  unfold clamp cfg
+  dsimp only
+  rw [abs_le]
+  constructor <;>
+    split_ifs <;>
+    linarith [le_abs_self (x - y), neg_abs_le (x - y)]
 
 theorem proj_nonexpansive (x y : State) : dist (Proj x) (Proj y) ≤ dist x y := by
   unfold dist norm Proj; apply Finset.sum_le_sum
@@ -136,4 +119,3 @@ def SystemLock : Certified := {
   zero_fp := zero_fixed, decay_bound := decay, convergence := convergence }
 
 end ACI_Certified
-
