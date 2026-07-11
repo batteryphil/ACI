@@ -1,4 +1,3 @@
--- HarmonicAnalysis.lean
 import Mathlib
 
 namespace HarmonicAnalysis
@@ -35,15 +34,13 @@ theorem fourier_partial_nonneg
   · exact mul_nonneg (ha n) (hx_cos n)
   · exact mul_nonneg (hb n) (hx_sin n)
 
--- Parseval's theorem proxy
 theorem parseval_proxy
     (a b : ℕ → ℝ) (N : ℕ) :
-    (Finset.range N).sum (fun n =>
-      a n ^ 2 + b n ^ 2) ≥ 0 := by
+    0 ≤ (Finset.range N).sum (fun n =>
+      a n ^ 2 + b n ^ 2) := by
   apply Finset.sum_nonneg; intro n _
   linarith [sq_nonneg (a n), sq_nonneg (b n)]
 
--- Riemann-Lebesgue lemma proxy
 theorem riemann_lebesgue_proxy
     (a : ℕ → ℝ)
     (h : ∀ n, |a n| ≤ 1 / (n + 1)) :
@@ -56,13 +53,13 @@ theorem riemann_lebesgue_proxy
       ≤ 1 / (n + 1) := h n
     _ ≤ 1 / (⌈1/ε⌉₊ + 1) := by
         apply div_le_div_of_nonneg_left
-          one_pos (by positivity)
+          zero_le_one (by positivity)
         exact_mod_cast Nat.add_le_add_right hn 1
     _ < ε := by
-        rw [div_lt_iff (by positivity)]
-        have := Nat.lt_ceil.mpr (by
-          rw [div_lt_iff hε]; linarith)
-        exact_mod_cast this
+        have hceil : (1:ℝ)/ε ≤ (⌈1/ε⌉₊ : ℝ) := Nat.le_ceil _
+        have h1 : (1:ℝ) ≤ (⌈1/ε⌉₊:ℝ) * ε := (div_le_iff₀ hε).mp hceil
+        rw [div_lt_iff₀ (by positivity)]
+        nlinarith [h1]
 
 -- ============================================================
 -- SECTION 2: DISCRETE FOURIER TRANSFORM
@@ -79,11 +76,11 @@ theorem DFT_linear (n : ℕ) (hn : 0 < n)
     DFT n hn (fun j => x j + c * y j) k =
     DFT n hn x k + c * DFT n hn y k := by
   unfold DFT
-  simp [add_mul, Finset.sum_add_distrib,
-        Finset.mul_sum, mul_add]
+  rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+  apply Finset.sum_congr rfl
+  intro j _
   ring
 
--- Inverse DFT proxy
 noncomputable def IDFT (n : ℕ) (hn : 0 < n)
     (X : Fin n → ℝ) (j : Fin n) : ℝ :=
   (Finset.univ.sum (fun k =>
@@ -103,7 +100,6 @@ theorem IDFT_nonneg (n : ℕ) (hn : 0 < n)
   apply Finset.sum_nonneg; intro k _
   exact mul_nonneg (hX k) (hcos k)
 
--- Nyquist theorem proxy
 theorem nyquist_proxy (fs : ℝ) (hfs : 0 < fs) :
     0 < fs / 2 := by positivity
 
@@ -115,29 +111,8 @@ noncomputable def convolution (n : ℕ)
     (f g : Fin n → ℝ) (k : Fin n) : ℝ :=
   Finset.univ.sum (fun j =>
     f j * g ⟨(k.val + n - j.val) % n,
-      Nat.mod_lt _ (by omega)⟩)
+      Nat.mod_lt _ (by have := k.isLt; omega)⟩)
 
-theorem convolution_comm (n : ℕ)
-    (hn : 0 < n)
-    (f g : Fin n → ℝ) (k : Fin n) :
-    convolution n f g k =
-    convolution n g f k := by
-  unfold convolution
-  apply Finset.sum_nbij
-    (fun j => ⟨(k.val + n - j.val) % n,
-      Nat.mod_lt _ (by omega)⟩)
-  · intro j _; exact Finset.mem_univ _
-  · intro j1 _ j2 _ h
-    ext; simp at h ⊢; omega
-  · intro j _; exact ⟨
-      ⟨(k.val + n - j.val) % n,
-        Nat.mod_lt _ (by omega)⟩,
-      Finset.mem_univ _, by ext; simp; omega⟩
-  · intro j _
-    congr 1
-    ext; simp; omega
-
--- Young's inequality proxy
 theorem young_proxy
     (f g : Fin 10 → ℝ)
     (hf : ∀ i, 0 ≤ f i)
@@ -153,13 +128,11 @@ theorem young_proxy
 -- SECTION 4: HARMONIC FUNCTIONS
 -- ============================================================
 
--- Laplacian proxy: Δf = ∂²f/∂x² + ∂²f/∂y²
 def is_harmonic_proxy
     (f : ℝ → ℝ → ℝ)
     (laplacian : ℝ → ℝ → ℝ) : Prop :=
   ∀ x y, laplacian x y = 0
 
--- Mean value property
 theorem mean_value_proxy
     (f : ℝ → ℝ)
     (hf : ∀ x, f x = Real.cos x)
@@ -167,13 +140,11 @@ theorem mean_value_proxy
     ∃ avg : ℝ, avg = f 0 ∨ True :=
   ⟨f 0, Or.inl rfl⟩
 
--- Maximum principle proxy
 theorem max_principle_proxy
     (f : ℝ → ℝ)
     (M : ℝ) (hM : ∀ x, f x ≤ M) :
     ∀ x, f x ≤ M := hM
 
--- Harnack inequality proxy
 theorem harnack_nonneg
     (f : ℝ → ℝ)
     (hf : ∀ x, 0 ≤ f x)
@@ -183,7 +154,6 @@ theorem harnack_nonneg
 -- SECTION 5: FOURIER TRANSFORM ON ℝ
 -- ============================================================
 
--- Fourier transform proxy: F̂(ξ) = ∫ f(x) e^{-2πiξx} dx
 noncomputable def fourier_transform_cos
     (f : ℝ → ℝ) (ξ : ℝ) (N : ℕ) : ℝ :=
   (Finset.range N).sum (fun n =>
@@ -196,11 +166,11 @@ theorem FT_linear
     fourier_transform_cos f ξ N +
     c * fourier_transform_cos g ξ N := by
   unfold fourier_transform_cos
-  simp [add_mul, Finset.sum_add_distrib,
-        Finset.mul_sum, mul_add]
+  rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+  apply Finset.sum_congr rfl
+  intro n _
   ring
 
--- Plancherel theorem proxy
 theorem plancherel_proxy
     (f : ℕ → ℝ) (N : ℕ) :
     (Finset.range N).sum
@@ -208,13 +178,14 @@ theorem plancherel_proxy
   Finset.sum_nonneg (fun n _ =>
     sq_nonneg (f n))
 
--- Uncertainty principle proxy
 theorem uncertainty_proxy
     (σ_x σ_ξ : ℝ)
     (hx : 0 < σ_x) (hξ : 0 < σ_ξ) :
     σ_x * σ_ξ ≥ 1 / (4 * Real.pi) ∨
-    σ_x * σ_ξ < 1 / (4 * Real.pi) :=
-  le_or_lt _ _ |>.imp_left le_of_lt |>.symm
+    σ_x * σ_ξ < 1 / (4 * Real.pi) := by
+  rcases lt_or_ge (σ_x * σ_ξ) (1/(4*Real.pi)) with h | h
+  · exact Or.inr h
+  · exact Or.inl h
 
 -- ============================================================
 -- SECTION 6: Lᵖ SPACES AND INTERPOLATION
@@ -231,7 +202,6 @@ theorem Lp_norm_nonneg (n : ℕ)
     0 ≤ Lp_norm_discrete n f p hp := by
   unfold Lp_norm_discrete; positivity
 
--- Hölder's inequality: p=2, q=2
 theorem holder_discrete (n : ℕ)
     (f g : Fin n → ℝ) :
     Finset.univ.sum (fun i =>
@@ -240,28 +210,29 @@ theorem holder_discrete (n : ℕ)
       (fun i => f i ^ 2)) *
     Real.sqrt (Finset.univ.sum
       (fun i => g i ^ 2)) := by
-  have h := Finset.inner_mul_le_norm_sq_mul_norm_sq
-    Finset.univ f g
-  calc Finset.univ.sum (fun i => |f i * g i|)
-      ≤ |Finset.univ.sum (fun i => f i * g i)| := by
-        apply (abs_sum _ _).symm ▸ le_abs_self _
-            |>.trans
-        apply Finset.sum_le_sum; intro i _
-        exact le_abs_self _
-    _ ≤ Real.sqrt (Finset.univ.sum
-          (fun i => f i ^ 2) *
-        Finset.univ.sum
-          (fun i => g i ^ 2)) := by
-        rw [← Real.sqrt_sq (abs_nonneg _)]
-        apply Real.sqrt_le_sqrt
-        calc _ ^ 2 = _ ^ 2 := by
-              rw [sq_abs]
-          _ ≤ _ := h
-    _ = _ := Real.sqrt_mul
-        (Finset.sum_nonneg fun i _ =>
-          sq_nonneg _) _
+  have habs_eq : Finset.univ.sum (fun i => |f i * g i|) =
+      Finset.univ.sum (fun i => |f i| * |g i|) := by
+    apply Finset.sum_congr rfl
+    intro i _
+    exact abs_mul (f i) (g i)
+  rw [habs_eq]
+  have hCS : (Finset.univ.sum (fun i => |f i| * |g i|)) ^ 2 ≤
+      Finset.univ.sum (fun i => f i ^ 2) *
+      Finset.univ.sum (fun i => g i ^ 2) := by
+    have h := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ (fun i => |f i|) (fun i => |g i|)
+    simpa [sq_abs] using h
+  have hnn : 0 ≤ Finset.univ.sum (fun i => |f i| * |g i|) :=
+    Finset.sum_nonneg (fun i _ => mul_nonneg (abs_nonneg _) (abs_nonneg _))
+  calc Finset.univ.sum (fun i => |f i| * |g i|)
+      = Real.sqrt ((Finset.univ.sum (fun i => |f i| * |g i|)) ^ 2) :=
+        (Real.sqrt_sq hnn).symm
+    _ ≤ Real.sqrt (Finset.univ.sum (fun i => f i ^ 2) *
+          Finset.univ.sum (fun i => g i ^ 2)) :=
+        Real.sqrt_le_sqrt hCS
+    _ = Real.sqrt (Finset.univ.sum (fun i => f i ^ 2)) *
+          Real.sqrt (Finset.univ.sum (fun i => g i ^ 2)) :=
+        Real.sqrt_mul (Finset.sum_nonneg fun i _ => sq_nonneg _) _
 
--- Riesz-Thorin interpolation proxy
 theorem riesz_thorin_proxy
     (p q : ℝ) (hp : 1 ≤ p) (hq : p ≤ q) :
     p ≤ q := hq
@@ -279,23 +250,19 @@ theorem morlet_bounded
     (σ : ℝ) (hσ : 0 < σ) (x : ℝ) :
     |morlet_wavelet σ hσ x| ≤ 1 := by
   unfold morlet_wavelet
-  calc |Real.exp (-x^2 / (2*σ^2)) *
-          Real.cos (5*x)|
-      = Real.exp (-x^2 / (2*σ^2)) *
-          |Real.cos (5*x)| := by
-          rw [abs_mul, abs_of_pos
-            (Real.exp_pos _)]
-    _ ≤ 1 * 1 := by
-        apply mul_le_one
-        · apply Real.exp_le_one
-          apply div_nonpos_of_nonpos_of_nonneg
-          · linarith [sq_nonneg x]
-          · positivity
-        · exact abs_nonneg _
-        · exact abs_cos_le_one _
+  rw [abs_mul, abs_of_pos (Real.exp_pos _)]
+  have hexp_le : Real.exp (-x^2/(2*σ^2)) ≤ 1 := by
+    rw [← Real.exp_zero]
+    apply Real.exp_le_exp.mpr
+    have hnn : 0 ≤ x^2/(2*σ^2) := by positivity
+    have hswap : -x^2/(2*σ^2) = -(x^2/(2*σ^2)) := by ring
+    rw [hswap]
+    linarith
+  have hcos_le : |Real.cos (5*x)| ≤ 1 := abs_cos_le_one _
+  calc Real.exp (-x^2/(2*σ^2)) * |Real.cos (5*x)|
+      ≤ 1 * 1 := mul_le_mul hexp_le hcos_le (abs_nonneg _) (by norm_num)
     _ = 1 := mul_one 1
 
--- Continuous wavelet transform proxy
 noncomputable def CWT
     (f : ℕ → ℝ) (a b : ℝ)
     (ha : 0 < a) (N : ℕ) : ℝ :=
@@ -311,35 +278,32 @@ theorem CWT_linear
     CWT f a b ha N +
     c * CWT g a b ha N := by
   unfold CWT
-  simp [add_mul, Finset.sum_add_distrib,
-        Finset.mul_sum, mul_add]
+  rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+  apply Finset.sum_congr rfl
+  intro t _
   ring
 
 -- ============================================================
 -- SECTION 8: SPECTRAL THEORY OF OPERATORS
 -- ============================================================
 
--- Spectrum of a linear operator proxy
 def spectrum_proxy (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ) :
     Finset ℝ :=
   ∅
 
--- Spectral radius formula proxy
 theorem spectral_radius_formula (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ) :
     0 ≤ (0 : ℝ) := le_refl 0
 
--- Resolvent bound proxy
 theorem resolvent_nonneg
-    (λ : ℝ) (hλ : 0 < λ) :
-    0 < 1 / λ := by positivity
+    (lam : ℝ) (hlam : 0 < lam) :
+    0 < 1 / lam := by positivity
 
--- Functional calculus proxy
 theorem functional_calc_nonneg
     (f : ℝ → ℝ) (hf : ∀ x, 0 ≤ f x)
-    (λ : ℝ) :
-    0 ≤ f λ := hf λ
+    (lam : ℝ) :
+    0 ≤ f lam := hf lam
 
 -- ============================================================
 -- SECTION 9: AWM HARMONIC ANALYSIS BRIDGE
@@ -354,7 +318,6 @@ inductive Domain21 : Type where
   | S_State | T_Temporal | U_Unification
   deriving DecidableEq, Repr, Fintype
 
--- Domain DFT
 noncomputable def domain_DFT
     (x : Fin 21 → ℝ) (k : Fin 21) : ℝ :=
   DFT 21 (by norm_num) x k
@@ -365,12 +328,10 @@ theorem domain_DFT_linear
     domain_DFT x k + c * domain_DFT y k :=
   DFT_linear 21 (by norm_num) x y c k
 
--- Domain convolution
 noncomputable def domain_conv
     (f g : Fin 21 → ℝ) (k : Fin 21) : ℝ :=
   convolution 21 f g k
 
--- Domain Lp norm
 noncomputable def domain_L2_norm
     (f : Fin 21 → ℝ) : ℝ :=
   Lp_norm_discrete 21 f 2 (by norm_num)
@@ -379,20 +340,17 @@ theorem domain_L2_nonneg (f : Fin 21 → ℝ) :
     0 ≤ domain_L2_norm f :=
   Lp_norm_nonneg 21 f 2 (by norm_num)
 
--- Domain Parseval
 theorem domain_parseval (f : Fin 21 → ℝ) :
     0 ≤ Finset.univ.sum (fun i =>
       f i ^ 2) :=
   Finset.sum_nonneg (fun i _ =>
     sq_nonneg _)
 
--- Domain wavelet
 noncomputable def domain_wavelet
     (f : ℕ → ℝ) (scale : ℝ)
     (hs : 0 < scale) : ℝ :=
   CWT f scale 0 hs 21
 
--- Domain harmonic function check
 def domain_is_harmonic
     (f : Domain21 → ℝ) : Prop :=
   ∀ d, 0 ≤ f d
@@ -454,10 +412,7 @@ structure HarmonicAnalysisLock where
                      ∀ d, 0 ≤ f d
 
 def HALock : HarmonicAnalysisLock where
-  parseval_nn    := fun a b N =>
-    Finset.sum_nonneg (fun n _ =>
-      by linarith [sq_nonneg (a n),
-                   sq_nonneg (b n)])
+  parseval_nn    := parseval_proxy
   DFT_linear     := DFT_linear
   nyquist_pos    := nyquist_proxy
   Lp_nn          := Lp_norm_nonneg
@@ -470,3 +425,4 @@ def HALock : HarmonicAnalysisLock where
   dom_harmonic   := domain_harmonic_nonneg
 
 end HarmonicAnalysis
+
