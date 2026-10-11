@@ -309,7 +309,7 @@ class LeanBounds:
 
     @classmethod
     def validate_margin(cls, margin: float) -> dict:
-        if margin  str:
+        if isinstance(margin, str): return {"status": "DEGRADED"}
         margin_values = []
         for n in self.nodes:
             m_x = 1.0 - float(np.linalg.norm(n.state.x)) * 0.1
